@@ -1,0 +1,9 @@
+<!-- Taken from the XML Schema Primer: http://www.w3.org/TR/xmlschema-0/ -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="internationalPrice">
+    <xs:complexType>
+      <xs:attribute name="currency" type="xs:string"/>
+      <xs:attribute name="value"    type="xs:decimal"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
