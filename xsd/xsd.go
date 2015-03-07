@@ -177,10 +177,9 @@ type ComplexType struct {
 	// An abstract type does not appear in the xml document, but
 	// is "implemented" by other types in its substitution group.
 	Abstract bool
-	// If true, this type is an extension to the the type returned
-	// by the Base method. Otherwise, this type is derived by
-	// restricting the set of elements and attributes allowed in
-	// the type returned by the Base method.
+	// If true, this type is an extension to Base.  Otherwise,
+	// this type is derived by restricting the set of elements and
+	// attributes allowed in Base.
 	Extends bool
 }
 
@@ -202,8 +201,8 @@ func (*ComplexType) isType() {}
 type SimpleType struct {
 	// True if this is an anonymous type
 	Anonymous bool
-	// True if this type is a whitespace-delimited list of the
-	// Type returned by the Base method.
+	// True if this type is a whitespace-delimited list, with
+	// items of type Base.
 	List bool
 	// A simpleType may be described as a union: one of many
 	// possible simpleTypes.
@@ -322,5 +321,4 @@ func Base(t Type) Type {
 		return nil
 	}
 	panic(fmt.Sprintf("xsd: unexpected xsd.Type %[1]T %[1]v passed to Base", t))
-	return nil
 }

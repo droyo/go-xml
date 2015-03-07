@@ -10,8 +10,8 @@ import (
 	"aqwari.net/xml/xmltree"
 )
 
-// A Reference contains the canonical namespace of a schema document,
-// and possibly a URI to retrieve the document from. It is not required
+// A Ref contains the canonical namespace of a schema document, and
+// possibly a URI to retrieve the document from. It is not required
 // for XML Schema documents to provide the location of schema that
 // they import; it is expected that all well-known schema namespaces
 // are available to the consumer of a schema beforehand.
