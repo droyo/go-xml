@@ -1,5 +1,3 @@
-// Package xsdgen implements a Go source code generator
-// for XML Schema.
 package xsdgen // import "aqwari.net/xml/xsdgen"
 
 import (
