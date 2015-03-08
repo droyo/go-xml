@@ -289,7 +289,7 @@ func HandleSOAPArrayType() Option {
 // 	}
 //
 // While the encoding/xml package can easily marshal and unmarshal
-// from and to such a Go type, it is not idea to use. When using the
+// from and to such a Go type, it is not ideal to use. When using the
 // SOAPArrayAsSlice option, if there is only one field in the Go type
 // expression, and that field is plural, it is "unpacked", so that the
 // above declaration becomes
