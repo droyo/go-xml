@@ -272,8 +272,76 @@ func HandleSOAPArrayType() Option {
 	}
 }
 
-// The Option SOAPArrayAsSlice converts complex types with a single, plural
-// element to a slice of the element's type.
+// For instance, the following schema
+//
+//	<xs:schema targetNamespace="http://example.com/ip/">
+// 	  <xs:complexType name="StringArray">
+// 	    <xs:complexContent>
+// 	      <xs:restriction base="soapenc:Array">
+// 	        <xs:attribute ref="soapenc:arrayType" wsdl:arrayType="soapenc:string[]" />
+// 	      </xs:restriction>
+// 	    </xs:complexContent>
+// 	  </xs:complexType>
+// 	</xs:schema>
+//
+// Generates the following Go code:
+//
+// 	type StringArray []string
+// 	func MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+// 		tag := xml.StartElement{Name: xml.Name{"", "item"}}
+// 		for _, elt := range *a {
+// 			if err := e.EncodeElement(elt, tag); err != nil {
+// 				return err
+// 			}
+// 		}
+// 		return nil
+// 	}
+// 	func (a *StringArray) UnmarshalXML(d *xml.Decoder, start xml.StartElement) (err error) {
+// 		var tok xml.Token
+// 		var itemTag = xml.Name{"", ",any"}
+// 		for tok, err = d.Token(); err == nil; tok, err = d.Token() {
+// 			if tok, ok := tok.(xml.StartElement); ok {
+// 				var item string
+// 				if itemTag.Local != ",any" && itemTag != tok.Name {
+// 					err = d.Skip()
+// 					continue
+// 				}
+// 				if err = d.DecodeElement(&item, &tok); err == nil {
+// 					*a = append(*a, item)
+// 				}
+// 			}
+// 			if _, ok := tok.(xml.EndElement); ok {
+// 				break
+// 			}
+// 		}
+// 		return err
+// 	}
+// SOAP 1.1 defines an Array as
+//
+// 	<xs:complexType name="Array">
+// 	  <xs:any namespace="##any" maxOccurs="unbounded" />
+// 	  <xs:attribute name="arrayType" type="xs:string" />
+// 	  <!-- common attributes ellided -->
+// 	</xs:complexType>
+//
+// Following the normal procedure of the xsdgen package, this
+// would map to the following Go source (with arrayType as 'int'):
+//
+// 	type Array struct {
+// 		Item      []int  `xml:",any"`
+// 		ArrayType string `xml:"http://schemas.xmlsoap.org/soap/encoding/ arrayType"`
+// 	}
+//
+// While the encoding/xml package can easily marshal and unmarshal
+// from and to such a Go type, it is not idea to use. When using the
+// SOAPArrayAsSlice option, if there is only one field in the Go type
+// expression, and that field is plural, it is "unpacked", so that the
+// above declaration becomes
+//
+// 	type Array []int
+//
+// In addition, MarshalXML/UnmarshalXML methods are generated so
+// that values can be decoded into this type.
 func SOAPArrayAsSlice() Option {
 	return func(cfg *Config) Option {
 		prev := cfg.postprocessType
