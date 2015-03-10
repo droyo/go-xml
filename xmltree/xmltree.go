@@ -24,12 +24,14 @@ var errDeepXML = errors.New("xmltree: xml document too deeply nested")
 // that arbitrary QNames in attribute values can be resolved.
 type Element struct {
 	xml.StartElement
-	Content  []byte
+	// The XML namespace scope at this element's location in the
+	// document.
+	Scope
+	// The raw content contained within this element's start and
+	// end tags. Uses the underlying byte array passed to Parse.
+	Content []byte
+	// Sub-elements contained within this element.
 	Children []Element
-	// A list of defined XML namespace prefixes, from least specific to
-	// most specific. The Space field is the canonical xml namespace,
-	// and the Local field is the prefix.
-	Scope []xml.Name
 }
 
 // Attr gets the value of the first attribute whose name matches the
@@ -48,13 +50,20 @@ func (el *Element) Attr(space, local string) string {
 	return ""
 }
 
+// The JoinScope method joins two Scopes together. When resolving
+// prefixes using the returned scope, the prefix list in the argument
+// Scope is searched before that of the receiver Scope.
+func (outer *Scope) JoinScope(inner *Scope) *Scope {
+	return &Scope{append(outer.ns, inner.ns...)}
+}
+
 // Unmarshal parses the XML encoding of the Element and stores the result
 // in the value pointed to by v. Unmarshal follows the same rules as
 // xml.Unmarshal, but only parses the portion of the XML document
 // contained by the Element.
 func (el *Element) Unmarshal(v interface{}) error {
 	start := el.StartElement
-	for _, ns := range el.Scope {
+	for _, ns := range el.ns {
 		name := xml.Name{"", "xmlns"}
 		if ns.Local != "" {
 			name.Local += ":" + ns.Local
@@ -62,10 +71,10 @@ func (el *Element) Unmarshal(v interface{}) error {
 		start.Attr = append(start.Attr, xml.Attr{name, ns.Space})
 	}
 	if start.Name.Space != "" {
-		for i := len(el.Scope) - 1; i >= 0; i-- {
-			if el.Scope[i].Space == start.Name.Space {
+		for i := len(el.ns) - 1; i >= 0; i-- {
+			if el.ns[i].Space == start.Name.Space {
 				start.Name.Space = ""
-				start.Name.Local = el.Scope[i].Local + ":" + start.Name.Local
+				start.Name.Local = el.ns[i].Local + ":" + start.Name.Local
 				break
 			}
 		}
@@ -98,6 +107,12 @@ func (el *Element) Unmarshal(v interface{}) error {
 	return xml.Unmarshal(buf.Bytes(), v)
 }
 
+// A Scope represents the xml namespace scope at a given position in
+// the document.
+type Scope struct {
+	ns []xml.Name
+}
+
 // Resolve translates an XML QName (namespace-prefixed string) to an
 // xml.Name with a canonicalized namespace in its Space field.  This can
 // be used when working with XSD documents, which put QNames in attribute
@@ -105,14 +120,14 @@ func (el *Element) Unmarshal(v interface{}) error {
 // a namespace prefix cannot be resolved, the returned value's Space field
 // will be the unresolved prefix. Use the ResolveNS function to detect when
 // a namespace prefix cannot be resolved.
-func (el *Element) Resolve(qname string) xml.Name {
-	name, _ := el.ResolveNS(qname)
+func (scope *Scope) Resolve(qname string) xml.Name {
+	name, _ := scope.ResolveNS(qname)
 	return name
 }
 
 // The ResolveNS method is like Resolve, but returns false for its second
 // return value if a namespace prefix cannot be resolved.
-func (el *Element) ResolveNS(qname string) (xml.Name, bool) {
+func (scope *Scope) ResolveNS(qname string) (xml.Name, bool) {
 	var prefix, local string
 	parts := strings.SplitN(qname, ":", 2)
 	if len(parts) == 2 {
@@ -120,9 +135,9 @@ func (el *Element) ResolveNS(qname string) (xml.Name, bool) {
 	} else {
 		prefix, local = "", parts[0]
 	}
-	for i := len(el.Scope) - 1; i >= 0; i-- {
-		if el.Scope[i].Local == prefix {
-			return xml.Name{Space: el.Scope[i].Space, Local: local}, true
+	for i := len(scope.ns) - 1; i >= 0; i-- {
+		if scope.ns[i].Local == prefix {
+			return xml.Name{Space: scope.ns[i].Space, Local: local}, true
 		}
 	}
 	return xml.Name{Space: prefix, Local: local}, false
@@ -131,43 +146,49 @@ func (el *Element) ResolveNS(qname string) (xml.Name, bool) {
 // ResolveDefault is like Resolve, but allows for the default namespace to
 // be overridden. The namespace of strings without a namespace prefix
 // (known as an NCName in XML terminology) will be defaultns.
-func (el *Element) ResolveDefault(qname, defaultns string) xml.Name {
+func (scope *Scope) ResolveDefault(qname, defaultns string) xml.Name {
 	if defaultns == "" || strings.Contains(qname, ":") {
-		return el.Resolve(qname)
+		return scope.Resolve(qname)
 	}
 	return xml.Name{defaultns, qname}
 }
 
 // Prefix is the inverse of Resolve. It uses the closest prefix
 // defined for a namespace to create a string of the form
-// prefix:local. If the namespace cannot be found, an empty string
-// is returned.
-func (el *Element) Prefix(name xml.Name) (qname string) {
-	for i := len(el.Scope) - 1; i >= 0; i-- {
-		if el.Scope[i].Space == name.Space {
-			return el.Scope[i].Local + ":" + name.Local
+// prefix:local. If the namespace cannot be found, or is the
+// default namespace, an unqualified name is returned.
+func (scope *Scope) Prefix(name xml.Name) (qname string) {
+	if name.Space == "" {
+		return name.Local
+	}
+	for i := len(scope.ns) - 1; i >= 0; i-- {
+		if scope.ns[i].Space == name.Space {
+			if scope.ns[i].Local == "" {
+				return name.Local
+			}
+			return scope.ns[i].Local + ":" + name.Local
 		}
 	}
-	return ""
+	return name.Local
 }
 
-func (el *Element) pushNS(tag xml.StartElement) {
-	var scope []xml.Name
+func (scope *Scope) pushNS(tag xml.StartElement) {
+	var ns []xml.Name
 	for _, attr := range tag.Attr {
 		if attr.Name.Space == "xmlns" {
-			scope = append(scope, xml.Name{attr.Value, attr.Name.Local})
+			ns = append(ns, xml.Name{attr.Value, attr.Name.Local})
 		} else if attr.Name.Local == "xmlns" {
-			scope = append(scope, xml.Name{attr.Value, ""})
+			ns = append(ns, xml.Name{attr.Value, ""})
 		} else {
 			continue
 		}
 	}
-	if len(scope) > 0 {
-		el.Scope = append(el.Scope, scope...)
+	if len(ns) > 0 {
+		scope.ns = append(scope.ns, ns...)
 		// Ensure that future additions to the scope create
 		// a new backing array. This prevents the scope from
 		// being clobbered during parsing.
-		el.Scope = el.Scope[:len(el.Scope):len(el.Scope)]
+		scope.ns = scope.ns[:len(scope.ns):len(scope.ns)]
 	}
 }
 

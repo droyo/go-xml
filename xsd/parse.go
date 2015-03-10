@@ -226,15 +226,6 @@ var (
 	hasAnonymousType = hasChild(isAnonymousType)
 )
 
-func findRef(list []xmltree.Element, ref xml.Name, defaultns string) (xmltree.Element, bool) {
-	for _, v := range list {
-		if v.ResolveDefault(v.Attr("", "name"), defaultns) == ref {
-			return v, true
-		}
-	}
-	return xmltree.Element{}, false
-}
-
 func parseType(name xml.Name) Type {
 	if name.Space != schemaNS {
 		return linkedType(name)
@@ -246,8 +237,8 @@ func parseType(name xml.Name) Type {
 	return builtin
 }
 
-func anonTypeName(n int) string {
-	return fmt.Sprintf("_anon%d", n)
+func anonTypeName(n int, ns string) xml.Name {
+	return xml.Name{ns, fmt.Sprintf("_anon%d", n)}
 }
 
 func (s *Schema) parse(root *xmltree.Element, extra map[string]*xmltree.Element) (err error) {
@@ -282,13 +273,15 @@ func (s *Schema) parse(root *xmltree.Element, extra map[string]*xmltree.Element)
 		}
 		for _, t := range el.SearchFunc(isType) {
 			typeCounter++
-			name := anonTypeName(typeCounter)
-			t.SetAttr("", "name", name)
+			name := anonTypeName(typeCounter, s.TargetNS)
+			qname := el.Prefix(name)
+
+			t.SetAttr("", "name", name.Local)
 			t.SetAttr("", "_isAnonymous", "true")
 			if accum {
-				name = el.Attr("", updateAttr) + " " + name
+				qname = el.Attr("", updateAttr) + " " + qname
 			}
-			el.SetAttr("", updateAttr, name)
+			el.SetAttr("", updateAttr, qname)
 			if !accum {
 				break
 			}
@@ -311,7 +304,7 @@ func (s *Schema) parse(root *xmltree.Element, extra map[string]*xmltree.Element)
 					el.Content = real.Content
 					el.StartElement = real.StartElement
 					el.Children = real.Children
-					el.Scope = append(real.Scope, el.Scope...)
+					el.Scope = *real.JoinScope(&el.Scope)
 					// In XML Schema, it is valid to
 					// reference another element and
 					// at the same time add attributes
@@ -335,6 +328,9 @@ func (s *Schema) parse(root *xmltree.Element, extra map[string]*xmltree.Element)
 	}
 
 	// Final pass: parse all type declarations.
+	if s.TargetNS == "" {
+		println(root.String())
+	}
 	for _, el := range root.Search(schemaNS, "complexType") {
 		t := s.parseComplexType(el)
 		s.Types[t.Name] = t
@@ -351,7 +347,7 @@ func (s *Schema) parse(root *xmltree.Element, extra map[string]*xmltree.Element)
 func (s *Schema) parseComplexType(root *xmltree.Element) *ComplexType {
 	var t ComplexType
 	var doc annotation
-	t.Name = xml.Name{s.TargetNS, root.Attr("", "name")}
+	t.Name = root.ResolveDefault(root.Attr("", "name"), s.TargetNS)
 	t.Abstract = parseBool(root.Attr("", "abstract"))
 
 	walk(root, func(el *xmltree.Element) {
@@ -494,14 +490,14 @@ func parseElement(ns string, el *xmltree.Element) Element {
 	var doc annotation
 	e := Element{
 		Name:     el.ResolveDefault(el.Attr("", "name"), ns),
-		Type:     parseType(el.ResolveDefault(el.Attr("", "type"), ns)),
+		Type:     parseType(el.Resolve(el.Attr("", "type"))),
 		Default:  el.Attr("", "default"),
 		Fixed:    el.Attr("", "fixed"),
 		Abstract: parseBool(el.Attr("", "abstract")),
 		Nillable: parseBool(el.Attr("", "nillable")),
 		Optional: (el.Attr("", "use") == "optional"),
 		Plural:   parsePlural(el),
-		tree:     el,
+		Scope:    el.Scope,
 	}
 
 	walk(el, func(el *xmltree.Element) {
@@ -523,10 +519,10 @@ func parseAttribute(ns string, el *xmltree.Element) Attribute {
 	} else {
 		a.Name.Local = name
 	}
-	a.Type = parseType(el.ResolveDefault(el.Attr("", "type"), ns))
+	a.Type = parseType(el.Resolve(el.Attr("", "type")))
 	a.Default = el.Attr("", "default")
 	a.Fixed = el.Attr("", "fixed")
-	a.tree = el
+	a.Scope = el.Scope
 
 	walk(el, func(el *xmltree.Element) {
 		if el.Name.Local == "annotation" {
@@ -544,19 +540,19 @@ func (s *Schema) parseSimpleType(root *xmltree.Element) *SimpleType {
 	var t SimpleType
 	var doc annotation
 
-	t.Name = xml.Name{s.TargetNS, root.Attr("", "name")}
+	t.Name = root.ResolveDefault(root.Attr("", "name"), s.TargetNS)
 	t.Anonymous = (root.Attr("", "_isAnonymous") == "true")
 	walk(root, func(el *xmltree.Element) {
 		switch el.Name.Local {
 		case "restriction":
-			t.Base = parseType(el.ResolveDefault(el.Attr("", "base"), s.TargetNS))
+			t.Base = parseType(el.Resolve(el.Attr("", "base")))
 			t.Restriction = parseSimpleRestriction(el)
 		case "list":
-			t.Base = parseType(el.ResolveDefault(el.Attr("", "itemType"), s.TargetNS))
+			t.Base = parseType(el.Resolve(el.Attr("", "itemType")))
 			t.List = true
 		case "union":
 			for _, name := range strings.Fields(el.Attr("", "memberTypes")) {
-				type_ := parseType(el.ResolveDefault(name, s.TargetNS))
+				type_ := parseType(el.Resolve(name))
 				t.Union = append(t.Union, type_)
 			}
 		case "annotation":

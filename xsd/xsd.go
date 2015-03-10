@@ -66,15 +66,8 @@ type Element struct {
 	Default, Fixed string
 	// Any additional attributes provided in the <xs:element> element.
 	Attr []xml.Attr
-	tree *xmltree.Element
-}
-
-// Resolve converts a namespace-prefixed string to an xml.Name, using
-// the scope present in the XML schema document where the Element
-// is declared. Resolve can be used to parse additional xml attributes
-// that contain QNames in their values.
-func (el *Element) Resolve(qname string) xml.Name {
-	return el.tree.Resolve(qname)
+	// Used for resolving prefixed strings in extra attribute values.
+	xmltree.Scope
 }
 
 // An Attribute describes the key=value pairs that may appear within the
@@ -97,15 +90,8 @@ type Attribute struct {
 	Default, Fixed string
 	// Any additional attributes provided in the <xs:attribute> element.
 	Attr []xml.Attr
-	tree *xmltree.Element
-}
-
-// Resolve converts a namespace-prefixed string to an xml.Name, using
-// the scope present in the XML schema document where the Attribute
-// is declared. Resolve can be used to parse additional xml attributes
-// that contain QNames in their values.
-func (attr *Attribute) Resolve(qname string) xml.Name {
-	return attr.tree.Resolve(qname)
+	// Used for resolving qnames in additional attributes.
+	xmltree.Scope
 }
 
 // A Schema is the decoded form of an XSD <schema> element. It contains
