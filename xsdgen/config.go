@@ -16,6 +16,7 @@ import (
 type Config struct {
 	logger          Logger
 	loglevel        int
+	namespaces      []string
 	pkgname         string
 	preprocessType  typeTransform
 	postprocessType specTransform
@@ -69,6 +70,18 @@ var DefaultOptions = []Option{
 	PackageName("ws"),
 	HandleSOAPArrayType(),
 	SOAPArrayAsSlice(),
+	ProcessTypes(UseFieldNames),
+}
+
+// The Namespaces option configures the code generation process
+// to only generate code for types declared in the configured target
+// namespaces.
+func Namespaces(xmlns ...string) Option {
+	return func(cfg *Config) Option {
+		prev := cfg.namespaces
+		cfg.namespaces = xmlns
+		return Namespaces(prev...)
+	}
 }
 
 // The Option method is used to configure an existing configuration.
@@ -242,9 +255,80 @@ func replaceAllNamesRegex(reg *regexp.Regexp, repl string) Option {
 	}
 }
 
+// Users may manipulate xsd types arbitrarily by passing a TypeProcessor
+// to the ProcessTypes Option.
+type TypeProcessor func(xsd.Schema, xsd.Type) xsd.Type
+
+// UseFieldNames is a TypeProcessor that names anonymous
+// types based on the name of the element or attribute they
+// describe. For instance, the xsd schema
+//
+// 	<complexType="library">
+// 	  <sequence>
+// 	    <element name="book" maxOccurs="unbounded">
+// 	      <complexType>
+// 	        <sequence>
+// 	          <element name="title" type="xs:string" />
+// 	          <element name="author" type="xs:string" />
+// 	        </sequence>
+// 	      </complexType>
+// 	    </element>
+// 	  </sequence>
+// 	</complexType>
+//
+// Will generate the following Go source
+//
+// 	type Library struct {
+// 		Book []Book
+// 	}
+//
+// 	type Book struct {
+// 		Title string
+// 		Author string
+// 	}
+func UseFieldNames(s xsd.Schema, t xsd.Type) xsd.Type {
+	c, ok := t.(*xsd.ComplexType)
+	if !ok {
+		return t
+	}
+	for _, el := range c.Elements {
+		switch base := el.Type.(type) {
+		case *xsd.SimpleType:
+			if !base.Anonymous {
+				break
+			}
+			base.Name = el.Name
+			base.Anonymous = false
+		case *xsd.ComplexType:
+			if !base.Anonymous {
+				break
+			}
+			base.Name = el.Name
+			base.Anonymous = false
+		}
+	}
+	for _, attr := range c.Attributes {
+		switch base := attr.Type.(type) {
+		case *xsd.SimpleType:
+			if !base.Anonymous {
+				break
+			}
+			base.Name = attr.Name
+			base.Anonymous = false
+		case *xsd.ComplexType:
+			if !base.Anonymous {
+				break
+			}
+			base.Name = attr.Name
+			base.Anonymous = false
+		}
+	}
+	return t
+}
+
 // ProcessTypes allows for users to make arbitrary changes to a type before
 // Go source code is generated.
-func ProcessTypes(fn func(xsd.Schema, xsd.Type) xsd.Type) Option {
+func ProcessTypes(fn TypeProcessor) Option {
 	return func(cfg *Config) Option {
 		prev := cfg.preprocessType
 		return replacePreprocessType(&cfg.preprocessType, func(s xsd.Schema, t xsd.Type) xsd.Type {
