@@ -70,7 +70,7 @@ var DefaultOptions = []Option{
 	PackageName("ws"),
 	HandleSOAPArrayType(),
 	SOAPArrayAsSlice(),
-	ProcessTypes(UseFieldNames),
+	UseFieldNames(),
 }
 
 // The Namespaces option configures the code generation process
@@ -255,13 +255,9 @@ func replaceAllNamesRegex(reg *regexp.Regexp, repl string) Option {
 	}
 }
 
-// Users may manipulate xsd types arbitrarily by passing a TypeProcessor
-// to the ProcessTypes Option.
-type TypeProcessor func(xsd.Schema, xsd.Type) xsd.Type
-
-// UseFieldNames is a TypeProcessor that names anonymous
-// types based on the name of the element or attribute they
-// describe. For instance, the xsd schema
+// The UseFieldNames Option names anonymous types based on the name
+// of the element or attribute they describe. For instance, the xsd
+// schema
 //
 // 	<complexType="library">
 // 	  <sequence>
@@ -286,7 +282,11 @@ type TypeProcessor func(xsd.Schema, xsd.Type) xsd.Type
 // 		Title string
 // 		Author string
 // 	}
-func UseFieldNames(s xsd.Schema, t xsd.Type) xsd.Type {
+func UseFieldNames() Option {
+	return ProcessTypes(useFieldNames)
+}
+
+func useFieldNames(s xsd.Schema, t xsd.Type) xsd.Type {
 	c, ok := t.(*xsd.ComplexType)
 	if !ok {
 		return t
@@ -328,7 +328,7 @@ func UseFieldNames(s xsd.Schema, t xsd.Type) xsd.Type {
 
 // ProcessTypes allows for users to make arbitrary changes to a type before
 // Go source code is generated.
-func ProcessTypes(fn TypeProcessor) Option {
+func ProcessTypes(fn func(xsd.Schema, xsd.Type) xsd.Type) Option {
 	return func(cfg *Config) Option {
 		prev := cfg.preprocessType
 		return replacePreprocessType(&cfg.preprocessType, func(s xsd.Schema, t xsd.Type) xsd.Type {
