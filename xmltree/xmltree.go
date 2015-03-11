@@ -13,7 +13,11 @@ import (
 	"strings"
 )
 
-const recursionLimit = 3000
+const (
+	xmlNamespaceURI = "http://www.w3.org/2000/xmlns/"
+	xmlLangURI      = "http://www.w3.org/XML/1998/namespace"
+	recursionLimit  = 3000
+)
 
 var errDeepXML = errors.New("xmltree: xml document too deeply nested")
 
@@ -135,6 +139,12 @@ func (scope *Scope) ResolveNS(qname string) (xml.Name, bool) {
 	} else {
 		prefix, local = "", parts[0]
 	}
+	switch prefix {
+	case "xml":
+		return xml.Name{Space: xmlLangURI, Local: local}, true
+	case "xmlns":
+		return xml.Name{Space: xmlNamespaceURI, Local: local}, true
+	}
 	for i := len(scope.ns) - 1; i >= 0; i-- {
 		if scope.ns[i].Local == prefix {
 			return xml.Name{Space: scope.ns[i].Space, Local: local}, true
@@ -158,8 +168,13 @@ func (scope *Scope) ResolveDefault(qname, defaultns string) xml.Name {
 // prefix:local. If the namespace cannot be found, or is the
 // default namespace, an unqualified name is returned.
 func (scope *Scope) Prefix(name xml.Name) (qname string) {
-	if name.Space == "" {
+	switch name.Space {
+	case "":
 		return name.Local
+	case xmlLangURI:
+		return "xml:" + name.Local
+	case xmlNamespaceURI:
+		return "xmlns:" + name.Local
 	}
 	for i := len(scope.ns) - 1; i >= 0; i-- {
 		if scope.ns[i].Space == name.Space {

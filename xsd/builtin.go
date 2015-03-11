@@ -63,20 +63,29 @@ const (
 	UnsignedInt
 	UnsignedLong
 	UnsignedShort
+	XMLLang  // xml:lang
+	XMLSpace // xml:space
+	XMLBase  // xml:base
+	XMLId    // xml:id
 )
 
 // Name returns the canonical name of the built-in type. All
 // built-in types are in the standard XML schema namespace,
-// http://www.w3.org/2001/XMLSchema
+// http://www.w3.org/2001/XMLSchema, or the XML namespace,
+// http://www.w3.org/2009/01/xml.xsd
 func (b Builtin) Name() xml.Name {
 	name := b.String()
+	space := schemaNS
 	switch b {
 	case ENTITIES, ENTITY, ID, IDREF, IDREFS, NCName, NMTOKEN, NMTOKENS, NOTATION, QName, Name:
+	case XMLLang, XMLSpace, XMLBase, XMLId:
+		space = "http://www.w3.org/2009/01/xml.xsd"
+		fallthrough
 	default:
 		r, sz := utf8.DecodeRuneInString(name)
 		name = string(unicode.ToLower(r)) + name[sz:]
 	}
-	return xml.Name{schemaNS, name}
+	return xml.Name{space, name}
 }
 
 // ParseBuiltin looks up a Builtin by name. If qname
