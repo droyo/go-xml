@@ -35,16 +35,16 @@ const (
 	Boolean
 	Byte
 	Date
-	DateTime
+	DateTime // ISO 8601 format (similar to RFC3339)
 	Decimal
 	Double
 	Duration
 	Float
-	GDay
-	GMonth
-	GMonthDay // ISO 8601 format: --MM-DD
-	GYear
-	GYearMonth
+	GDay       // ---DD
+	GMonth     // --MM
+	GMonthDay  // --MM-DD
+	GYear      // YYYY
+	GYearMonth // YYYY-MM
 	HexBinary
 	Int
 	Integer
