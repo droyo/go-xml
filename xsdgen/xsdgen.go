@@ -3,20 +3,14 @@ package xsdgen // import "aqwari.net/xml/xsdgen"
 import (
 	"bytes"
 	"encoding/xml"
-	"errors"
-	"flag"
 	"fmt"
 	"go/ast"
-	"go/format"
 	"go/token"
 	"io"
 	"io/ioutil"
 	"net/http"
-	"regexp"
 	"sort"
 	"strings"
-
-	"golang.org/x/tools/imports"
 
 	"aqwari.net/xml/internal/gen"
 	"aqwari.net/xml/xmltree"
@@ -37,131 +31,6 @@ func (l errorList) Error() string {
 		io.WriteString(&buf, err.Error()+"\n")
 	}
 	return buf.String()
-}
-
-type replaceRule struct {
-	from *regexp.Regexp
-	to   string
-}
-
-type replaceRuleList []replaceRule
-
-func (r *replaceRuleList) String() string {
-	var buf bytes.Buffer
-	for _, item := range *r {
-		fmt.Fprintf(&buf, "%s -> %s\n", item.from, item.to)
-	}
-	return buf.String()
-}
-
-func (r *replaceRuleList) Set(s string) error {
-	parts := strings.SplitN(s, "->", 2)
-	if len(parts) != 2 {
-		return fmt.Errorf("invalid replace rule %q. must be \"regex -> replacement\"", s)
-	}
-	parts[0] = strings.TrimSpace(parts[0])
-	parts[1] = strings.TrimSpace(parts[1])
-	reg, err := regexp.Compile(parts[0])
-	if err != nil {
-		return fmt.Errorf("invalid regex %q: %v", parts[0], err)
-	}
-	*r = append(*r, replaceRule{reg, parts[1]})
-	return nil
-}
-
-type stringSlice []string
-
-func (s *stringSlice) String() string {
-	return strings.Join(*s, ",")
-}
-
-func (s *stringSlice) Set(val string) error {
-	*s = append(*s, val)
-	return nil
-}
-
-// Generate creates a file containing Go source generated from an XML
-// Schema. Main is meant to be called as part of a command, and can
-// be used to change the behavior of the xsdgen command in ways that
-// its command-line arguments do not allow.
-func (cfg *Config) Generate(arguments ...string) error {
-	var (
-		err          error
-		replaceRules replaceRuleList
-		namespaces   stringSlice
-		fs           = flag.NewFlagSet("xsdgen", flag.ExitOnError)
-		packageName  = fs.String("pkg", "", "name of the the generated package")
-		output       = fs.String("o", "xsdgen_output.go", "name of the output file")
-	)
-	fs.Var(&replaceRules, "r", "replacement rule 'regex -> repl' (can be used multiple times)")
-	fs.Var(&namespaces, "ns", "target namespace(s) to generate types for")
-
-	fs.Parse(arguments)
-	if fs.NArg() == 0 {
-		return errors.New("Usage: xsdgen [-ns xmlns] [-r rule] [-o file] [-pkg pkg] file ...")
-	}
-	for _, r := range replaceRules {
-		cfg.Option(replaceAllNamesRegex(r.from, r.to))
-	}
-	if *packageName != "" {
-		cfg.Option(PackageName(*packageName))
-	}
-	var data [][]byte
-	for _, filename := range fs.Args() {
-		b, err := ioutil.ReadFile(filename)
-		if err != nil {
-			return err
-		}
-		cfg.logf("read %s", filename)
-		data = append(data, b)
-	}
-	if len(namespaces) == 0 {
-		namespaces = lookupTargetNS(data...)
-		cfg.logf("setting namespaces to %s", namespaces)
-	}
-	data, err = cfg.resolveDependencies(data...)
-	if err != nil {
-		return err
-	}
-	deps, err := xsd.Parse(data...)
-	if err != nil {
-		return err
-	}
-	if len(deps) == 0 {
-		return errors.New("no schema elements found")
-	}
-
-	var primaries []xsd.Schema
-	for _, s := range deps {
-		for _, ns := range namespaces {
-			if s.TargetNS == ns {
-				primaries = append(primaries, s)
-				break
-			}
-		}
-	}
-	if len(primaries) == 0 {
-		return errors.New("no namespaces found")
-	}
-	var file *ast.File
-	for _, s := range primaries {
-		f, err := cfg.GenAST(s, deps...)
-		if err != nil {
-			return err
-		}
-		file = mergeASTFile(file, f)
-	}
-
-	var buf bytes.Buffer
-	fileset := token.NewFileSet()
-	if err := format.Node(&buf, fileset, file); err != nil {
-		return err
-	}
-	out, err := imports.Process("", buf.Bytes(), nil)
-	if err != nil {
-		return err
-	}
-	return ioutil.WriteFile(*output, out, 0666)
 }
 
 func lookupTargetNS(data ...[]byte) []string {
@@ -270,18 +139,9 @@ func (cfg *Config) resolveDependencies1(ref xsd.Ref, have xsdSet, depth int) ([]
 	return result, nil
 }
 
-// GenAST generates Go source code from an xsd schema with the
-// default settings. Additional schema may be necessary to resolve
-// all types, and can be passed in as extra parameters to Generate.
-// The returned *ast.File will not have proper imports, and a package
-// name of "ws"
-func GenAST(schema xsd.Schema, extra ...xsd.Schema) (*ast.File, error) {
-	return defaultConfig.GenAST(schema, extra...)
-}
-
 // The GenAST method can be used to generate Go source using
 // a non-default config.
-func (cfg *Config) GenAST(schema xsd.Schema, extra ...xsd.Schema) (*ast.File, error) {
+func (cfg *Config) genAST(schema xsd.Schema, extra ...xsd.Schema) (*ast.File, error) {
 	var errList errorList
 	decls := make(map[string]spec)
 
@@ -479,7 +339,6 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type)) xsd.Type {
 		return t
 	}
 	panic(fmt.Sprintf("unexpected %T", t))
-	return nil
 }
 
 func (cfg *Config) genTypeSpec(t xsd.Type) (result []spec, err error) {

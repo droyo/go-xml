@@ -21,18 +21,17 @@ func (t *testLogger) Printf(format string, v ...interface{}) {
 	t.Logf(format, v...)
 }
 
-func TestGen(t *testing.T) {
-	var xmlns []string
+func TestLibrarySchema(t *testing.T) {
+	testGen(t, "http://dyomedea.com/ns/library", "testdata/library.xsd")
+}
+func TestPurchasOrderSchema(t *testing.T) {
+	testGen(t, "http://www.example.com/PO1", "testdata/po1.xsd")
+}
+func TestUSTreasureSDN(t *testing.T) {
+	testGen(t, "http://tempuri.org/sdnList.xsd", "testdata/sdn.xsd")
+}
 
-	xsdFiles := glob("testdata/*.xsd")
-	for _, name := range xsdFiles {
-		if data, err := ioutil.ReadFile(name); err != nil {
-			t.Error(err)
-		} else {
-			xmlns = append(xmlns, lookupTargetNS(data)...)
-		}
-	}
-
+func testGen(t *testing.T, ns string, files ...string) {
 	file, err := ioutil.TempFile("", "xsdgen")
 	if err != nil {
 		t.Fatal(err)
@@ -42,17 +41,14 @@ func TestGen(t *testing.T) {
 	var cfg Config
 	cfg.Option(DefaultOptions...)
 
-	for _, ns := range xmlns {
-		args := []string{"-o", file.Name(), "-ns", ns}
-		err := cfg.Generate(append(args, xsdFiles...)...)
-		if err != nil {
-			t.Error(err)
-			continue
-		}
-		if data, err := ioutil.ReadFile(file.Name()); err != nil {
-			t.Error(err)
-		} else {
-			t.Logf("\n%s\n", data)
-		}
+	args := []string{"-o", file.Name(), "-ns", ns}
+	err = cfg.Generate(append(args, files...)...)
+	if err != nil {
+		t.Error(err)
+	}
+	if data, err := ioutil.ReadFile(file.Name()); err != nil {
+		t.Error(err)
+	} else {
+		t.Logf("\n%s\n", data)
 	}
 }

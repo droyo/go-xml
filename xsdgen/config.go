@@ -6,7 +6,6 @@ import (
 	"go/ast"
 	"regexp"
 	"strings"
-	"unicode"
 
 	"aqwari.net/xml/internal/gen"
 	"aqwari.net/xml/xsd"
@@ -348,24 +347,14 @@ func (cfg *Config) typeName(name xml.Name) string {
 }
 
 func (cfg *Config) public(name xml.Name) string {
-	return strings.Title(cfg.private(name))
-}
-
-func (cfg *Config) private(name xml.Name) string {
 	s := name.Local
 	if cfg.allNameTransform != nil {
 		s = cfg.allNameTransform(name)
 	}
-	r := []rune(s)
-	if len(r) == 0 {
-		if len(name.Local) > 0 {
-			cfg.logf("Name %s transformed to the empty string", name.Local)
-		}
-		return "_"
-	}
-	r[0] = unicode.ToLower(r[0])
-	return string(r)
+	return strings.Title(s)
 }
+
+//
 
 // SOAP arrays are declared as follows (unimportant fields ellided):
 //

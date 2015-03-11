@@ -79,6 +79,13 @@ func Parse(docs ...[]byte) ([]Schema, error) {
 		} else {
 			add = root.Search(schemaNS, "schema")
 		}
+
+		// We don't explicitly handle <include> declarations.
+		// however, by merging documents with the same target
+		// namespace together. This saves us some code, but
+		// to properly handle <redefine> declarations and
+		// schema without target namespaces, we would have to
+		// do it another way.
 		for _, s := range add {
 			ns := s.Attr("", "targetNamespace")
 			if v, ok := schema[ns]; !ok {
@@ -112,128 +119,10 @@ func Parse(docs ...[]byte) ([]Schema, error) {
 	return result, nil
 }
 
-// When working with an xml tree structure, we naturally have some
-// pretty deep function calls.  To save some typing, we use panic/recover
-// to bubble the errors up. These panics are not exposed to the user.
-type parseError struct {
-	message string
-	path    []*xmltree.Element
-}
-
-func (err parseError) Error() string {
-	breadcrumbs := make([]string, 0, len(err.path))
-	for i := len(err.path) - 1; i >= 0; i-- {
-		piece := err.path[i].Name.Local
-		if name := err.path[i].Attr("", "name"); name != "" {
-			piece = fmt.Sprintf("%s(%s)", piece, name)
-		}
-		breadcrumbs = append(breadcrumbs, piece)
-	}
-	return "Error at " + strings.Join(breadcrumbs, ">") + ": " + err.message
-}
-
-func stop(msg string) {
-	panic(parseError{message: msg})
-}
-
-func walk(root *xmltree.Element, fn func(*xmltree.Element)) {
-	defer func() {
-		if r := recover(); r != nil {
-			if err, ok := r.(parseError); ok {
-				err.path = append(err.path, root)
-				panic(err)
-			} else {
-				panic(r)
-			}
-		}
-	}()
-	for i := 0; i < len(root.Children); i++ {
-		// We don't care about elements outside of the
-		// XML schema namespace
-		if root.Children[i].Name.Space != schemaNS {
-			continue
-		}
-		fn(&root.Children[i])
-	}
-}
-
-// defer catchParseError(&err)
-func catchParseError(err *error) {
-	if r := recover(); r != nil {
-		*err = r.(parseError)
-	}
-}
-
-// Search predicates for the xmltree.Element.Search method
-type predicate func(el *xmltree.Element) bool
-
-func and(fns ...func(el *xmltree.Element) bool) predicate {
-	return func(el *xmltree.Element) bool {
-		for _, f := range fns {
-			if !f(el) {
-				return false
-			}
-		}
-		return true
-	}
-}
-
-func or(fns ...func(el *xmltree.Element) bool) predicate {
-	return func(el *xmltree.Element) bool {
-		for _, f := range fns {
-			if f(el) {
-				return true
-			}
-		}
-		return false
-	}
-}
-
-func hasChild(fn predicate) predicate {
-	return func(el *xmltree.Element) bool {
-		for i := range el.Children {
-			if fn(&el.Children[i]) {
-				return true
-			}
-		}
-		return false
-	}
-}
-
-func isElem(space, local string) predicate {
-	return func(el *xmltree.Element) bool {
-		if el.Name.Local != local {
-			return false
-		}
-		return space == "" || el.Name.Space == space
-	}
-}
-
-func hasAttr(space, local string) predicate {
-	return func(el *xmltree.Element) bool {
-		return el.Attr(space, local) != ""
-	}
-}
-
-func hasAttrValue(space, local, value string) predicate {
-	return func(el *xmltree.Element) bool {
-		return el.Attr(space, local) == value
-	}
-}
-
-var (
-	isType           = or(isElem(schemaNS, "complexType"), isElem(schemaNS, "simpleType"))
-	isAnonymousType  = and(isType, hasAttrValue("", "name", ""))
-	hasAnonymousType = hasChild(isAnonymousType)
-)
-
 func parseType(name xml.Name) Type {
-	if name.Space != schemaNS {
-		return linkedType(name)
-	}
 	builtin, err := ParseBuiltin(name)
 	if err != nil {
-		stop(err.Error())
+		return linkedType(name)
 	}
 	return builtin
 }
@@ -324,14 +213,12 @@ func (s *Schema) parse(root *xmltree.Element, extra map[string]*xmltree.Element)
 			}
 		}
 		if !found {
-			return fmt.Errorf("Could not dereference %s %s", el.Name.Local, el.Attr("", "ref"))
+			return fmt.Errorf("could not dereference %s %s %s", el.Name.Local,
+				el.Resolve(el.Attr("", "ref")).Space, el.Resolve(el.Attr("", "ref")).Local)
 		}
 	}
 
 	// Final pass: parse all type declarations.
-	if s.TargetNS == "" {
-		println(root.String())
-	}
 	for _, el := range root.Search(schemaNS, "complexType") {
 		t := s.parseComplexType(el)
 		s.Types[t.Name] = t
