@@ -237,6 +237,8 @@ func (s *Schema) parseComplexType(root *xmltree.Element) *ComplexType {
 	var doc annotation
 	t.Name = root.ResolveDefault(root.Attr("", "name"), s.TargetNS)
 	t.Abstract = parseBool(root.Attr("", "abstract"))
+	// We set this special attribute in a pre-processing step.
+	t.Anonymous = (root.Attr("", "_isAnonymous") == "true")
 
 	walk(root, func(el *xmltree.Element) {
 		switch el.Name.Local {
@@ -300,8 +302,6 @@ func (t *ComplexType) parseSimpleContent(ns string, root *xmltree.Element) {
 func (t *ComplexType) parseComplexContent(ns string, root *xmltree.Element) {
 	var doc annotation
 
-	// We set this special attribute in a pre-processing step.
-	t.Anonymous = (root.Attr("", "_isAnonymous") == "true")
 	walk(root, func(el *xmltree.Element) {
 		switch el.Name.Local {
 		case "extension":
