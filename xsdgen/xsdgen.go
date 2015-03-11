@@ -555,6 +555,8 @@ func (cfg *Config) genTimeSpec(t xsd.Builtin) ([]spec, error) {
 		timespec = "--01-02"
 	case xsd.GYear:
 		timespec = "2006"
+	case xsd.GYearMonth:
+		timespec = "2006-01"
 	case xsd.Time:
 		timespec = "15:04:05.999999999"
 	case xsd.Date:
