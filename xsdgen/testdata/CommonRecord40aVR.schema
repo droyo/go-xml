@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- edited with XMLSPY v5 rel. 3 U (http://www.xmlspy.com) by Max Venker (Accenture) -->
+<!-- Created with Liquid XML Studio 1.0.8.0 (http://www.liquid-technologies.com) -->
+<xsd:schema targetNamespace="http://www.ed.gov/FSA/COD/2014/v4.0a" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="http://www.ed.gov/FSA/COD/2014/v4.0a" xmlns:cod="http://www.ed.gov/FSA/COD/2014/v4.0a" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:codv="http://www.ed.gov/FSA/COD/2014/v4.0a" elementFormDefault="qualified">
+	<xsd:simpleType name="FinancialAwards">
+		<xsd:restriction base="xsd:string">
+			<xsd:enumeration value="Pell"/>
+			<xsd:enumeration value="DLSubsidized"/>
+			<xsd:enumeration value="DLUnsubsidized"/>
+			<xsd:enumeration value="DLPLUS"/>
+			<xsd:enumeration value="FFELSubsidized"/>
+			<xsd:enumeration value="FFELUnsubsidized"/>
+			<xsd:enumeration value="FFELPLUS"/>
+			<xsd:enumeration value="AlternativeLoan"/>
+			<xsd:enumeration value="FWSP"/>
+			<xsd:enumeration value="SEOG"/>
+			<xsd:enumeration value="Perkins"/>
+			<xsd:enumeration value="AcademicCompetitivenessGrant"/>
+			<xsd:enumeration value="NationalSMARTGrant"/>
+			<xsd:enumeration value="DLGraduatePLUS"/>
+			<xsd:enumeration value="TEACH"/>
+			<xsd:enumeration value="Counseling"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<xsd:element name="StudentLevelCode" nillable="true">
+		<xsd:simpleType>
+			<xsd:restriction base="xsd:string">
+				<xsd:length value="1"/>
+				<xsd:enumeration value="0"/>
+				<xsd:enumeration value="1"/>
+				<xsd:enumeration value="2"/>
+				<xsd:enumeration value="3"/>
+				<xsd:enumeration value="4"/>
+				<xsd:enumeration value="5"/>
+				<xsd:enumeration value="6"/>
+				<xsd:enumeration value="7"/>
+			</xsd:restriction>
+		</xsd:simpleType>
+	</xsd:element>
+	<xsd:element name="SchoolNoteMessage" nillable="true">
+		<xsd:simpleType>
+			<xsd:restriction base="xsd:string">
+				<xsd:maxLength value="20"/>
+			</xsd:restriction>
+		</xsd:simpleType>
+	</xsd:element>
+	<xsd:simpleType name="DefaultOverpayCodeType">
+		<xsd:restriction base="xsd:string">
+			<xsd:maxLength value="1"/>
+			<xsd:enumeration value="Y"/>
+			<xsd:enumeration value="N"/>
+			<xsd:enumeration value="Z"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<xsd:simpleType name="LargeCurrencyType">
+		<xsd:restriction base="xsd:decimal">
+			<xsd:minInclusive value="0"/>
+			<xsd:maxInclusive value="999999999999.99"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<xsd:simpleType name="SignedLargeCurrencyType">
+		<xsd:restriction base="xsd:decimal">
+			<xsd:minInclusive value="-999999999999.99"/>
+			<xsd:maxInclusive value="999999999999.99"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<xsd:simpleType name="SmallCurrencyType">
+		<xsd:restriction base="xsd:decimal">
+			<xsd:minInclusive value="0"/>
+			<xsd:maxInclusive value="999999999.99"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<xsd:simpleType name="SignedSmallCurrencyType">
+		<xsd:restriction base="xsd:decimal">
+			<xsd:minInclusive value="-999999999.99"/>
+			<xsd:maxInclusive value="999999999.99"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<xsd:simpleType name="SSNType">
+		<xsd:restriction base="xsd:string">
+			<xsd:pattern value="\d{7}"/>
+			<xsd:pattern value="\d{8}"/>
+			<xsd:pattern value="\d{9}"/>
+			<xsd:pattern value="\d{3}-\d{2}-\d{4}"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<xsd:simpleType name="TotalCountType">
+		<xsd:restriction base="xsd:integer">
+			<xsd:minInclusive value="0"/>
+			<xsd:maxInclusive value="999999999"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<xsd:simpleType name="SmallValueType">
+		<xsd:restriction base="xsd:decimal">
+			<xsd:minInclusive value="0"/>
+			<xsd:maxInclusive value="999.9"/>
+			<xsd:totalDigits value="4"/>
+			<xsd:fractionDigits value="1"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<xsd:simpleType name="SignedSmallValueType">
+		<xsd:restriction base="xsd:decimal">
+			<xsd:minInclusive value="-999.9"/>
+			<xsd:maxInclusive value="999.9"/>
+			<xsd:totalDigits value="4"/>
+			<xsd:fractionDigits value="1"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+</xsd:schema>

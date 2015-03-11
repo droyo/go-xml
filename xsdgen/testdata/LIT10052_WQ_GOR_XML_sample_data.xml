@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<tns:FileUpload xmlns:tns="http://www.environment-agency.gov.uk/XMLSchemas/GOR/WaterQualityMultiReturn/01" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.environment-agency.gov.uk/XMLSchemas/GOR/WaterQualityMultiReturn/01 C:\temp\WaterQualityMultiReturn.xsd">
+	<tns:Source>CUSTOM</tns:Source>
+	<tns:Sample>
+		<tns:Sampler>Fred</tns:Sampler>
+		<tns:SampleType>C</tns:SampleType>
+		<tns:CustomerSamplePointName>BASS</tns:CustomerSamplePointName>
+		<tns:SampleDateTime>2009-04-01T15:01:00</tns:SampleDateTime>
+		<tns:PurposeTypeName>EM</tns:PurposeTypeName>
+		<tns:MaterialName>Treated Sewage Effluent</tns:MaterialName>
+		<tns:Mechanism>Spot</tns:Mechanism>
+		<tns:CustomersLabSampleRef>A55005</tns:CustomersLabSampleRef>
+		<tns:LabName>the lab</tns:LabName>
+		<tns:AnalysisCompleteDateTime>2009-08-01T15:30:00</tns:AnalysisCompleteDateTime>
+		<tns:PurgedVolumeRecorded>
+			<tns:PurgedVolume>35</tns:PurgedVolume>
+			<tns:PurgedVolumeUnits>l</tns:PurgedVolumeUnits>
+		</tns:PurgedVolumeRecorded>
+		<tns:Measurement>
+			<tns:DeterminandName>pH</tns:DeterminandName>
+			<tns:ResultType>E</tns:ResultType>
+			<tns:ResultValue>7</tns:ResultValue>
+			<tns:ResultUnits>pH</tns:ResultUnits>
+		</tns:Measurement>
+		<tns:Measurement>
+			<tns:DeterminandName>BOD 5 Day ATU as O</tns:DeterminandName>
+			<tns:ResultType>E</tns:ResultType>
+			<tns:ResultValue>2345</tns:ResultValue>
+			<tns:ResultUnits>mg/l</tns:ResultUnits>
+		</tns:Measurement>
+		<tns:Measurement>
+			<tns:DeterminandName>Ammoniacal Nitrogen as N</tns:DeterminandName>
+			<tns:ResultType>E</tns:ResultType>
+			<tns:ResultValue>26.4</tns:ResultValue>
+			<tns:ResultUnits>ug/l</tns:ResultUnits>
+		</tns:Measurement>
+	</tns:Sample>
+	<tns:Sample>
+		<tns:SampleType>C</tns:SampleType>
+		<tns:CustomerSamplePointName>BLEL</tns:CustomerSamplePointName>
+		<tns:SampleDateTime>2009-04-02T12:53:00</tns:SampleDateTime>
+		<tns:PurposeTypeName>EM</tns:PurposeTypeName>
+		<tns:MaterialName>Trade Effluent</tns:MaterialName>
+		<tns:Mechanism>Spot</tns:Mechanism>
+		<tns:CustomersLabSampleRef>A55006</tns:CustomersLabSampleRef>
+		<tns:LabName>the lab</tns:LabName>
+		<tns:AnalysisCompleteDateTime>2009-03-01T15:30:00</tns:AnalysisCompleteDateTime>
+		<tns:Measurement>
+			<tns:DeterminandName>pH</tns:DeterminandName>
+			<tns:ResultType>E</tns:ResultType>
+			<tns:ResultValue>9.567</tns:ResultValue>
+			<tns:ResultUnits>pH</tns:ResultUnits>
+		</tns:Measurement>
+		<tns:Measurement>
+			<tns:DeterminandName>BOD 5 Day ATU as O</tns:DeterminandName>
+			<tns:ResultType>E</tns:ResultType>
+			<tns:ResultValue>26.4</tns:ResultValue>
+			<tns:ResultUnits>mg/l</tns:ResultUnits>
+		</tns:Measurement>
+		<tns:Measurement>
+			<tns:DeterminandName>Aldrin</tns:DeterminandName>
+			<tns:ResultType>E</tns:ResultType>
+			<tns:ResultValue>2345</tns:ResultValue>
+			<tns:ResultUnits>ug/l</tns:ResultUnits>
+		</tns:Measurement>
+	</tns:Sample>
+	<tns:RegulatedCustomerIdentifier>2</tns:RegulatedCustomerIdentifier>
+</tns:FileUpload>

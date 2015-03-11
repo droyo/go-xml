@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- edited with XMLSpy v2005 sp1 U (http://www.xmlspy.com) by Steria Benelux sa/nv (Steria Benelux sa/nv) -->
+<!-- edited with XML Spy v4.3 U (http://www.xmlspy.com) by Germany Helm (Bundesamt für Finanzen) -->
+<!-- 27.09.03: This is the corrected version according to amendments in the annotation proposed by Stewart Weston-Lewis -->
+<xsd:schema xmlns:stf="urn:oecd:ties:stf:v4" xmlns:xsd="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:oecd:ties:stf:v4" elementFormDefault="qualified" attributeFormDefault="unqualified" version="4.1">
+	<!-- Kind of Name -->
+	<xsd:simpleType name="OECDNameType_EnumType">
+		<xsd:annotation>
+			<xsd:documentation xml:lang="en">
+				It is possible for stf documents to contain several names for the same party. This is a qualifier to indicate the type of a particular name. Such types include nicknames ('nick'), names under which a party does business ('dba' a short name for the entity, or a name that is used for public acquaintance instead of the official business name) etc. Examples: in the United States, DaimlerChrysler is still known simply as Chrysler, Dr. William Black dba Quality Pedriatics, Inc. 'SMFAliasOrOther' should be chosen if the document is generated from a legacy SMF record, where no further distinction is possible.
+				Possible values are:
+				OECD201=SMFAliasOrOther
+				OECD202=indiv
+				OECD203=alias
+				OECD204=nick
+				OECD205=aka
+				OECD206=dba
+				OECD207=legal
+				OECD208=atbirth
+			</xsd:documentation>
+		</xsd:annotation>
+		<xsd:restriction base="xsd:string">
+			<xsd:enumeration value="OECD201"/>
+			<xsd:enumeration value="OECD202"/>
+			<xsd:enumeration value="OECD203"/>
+			<xsd:enumeration value="OECD204"/>
+			<xsd:enumeration value="OECD205"/>
+			<xsd:enumeration value="OECD206"/>
+			<xsd:enumeration value="OECD207"/>
+			<xsd:enumeration value="OECD208"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<!-- -->
+	<!-- Type of the address considered from a legal point of view -->
+	<xsd:simpleType name="OECDLegalAddressType_EnumType">
+		<xsd:annotation>
+			<xsd:documentation xml:lang="en">This is a datatype for an attribute to an address. It serves to indicate the legal character of that address (residential, business etc.)
+			Possible values are:
+			OECD301=residentialOrBusiness
+			OECD302=residential
+			OECD303=business
+			OECD304=registeredOffice
+			OECD305=unspecified	
+			</xsd:documentation>
+		</xsd:annotation>
+		<xsd:restriction base="xsd:token">
+			<xsd:enumeration value="OECD301"/>
+			<xsd:enumeration value="OECD302"/>
+			<xsd:enumeration value="OECD303"/>
+			<xsd:enumeration value="OECD304"/>
+			<xsd:enumeration value="OECD305"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<!-- -->
+</xsd:schema>

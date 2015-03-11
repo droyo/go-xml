@@ -1,0 +1,332 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 
+	Version Log:
+	$Log: 
+    - - - - - - - - - - - - - - - - - - - - - - -
+
+    ©2008 Environment Agency 
+ 
+    System : Generic Operator Returns (GOR)
+
+    - - - - - - - - - - - - - - - - - - - - - - -
+	XML Schema for submission of multiple Water Quality returns
+
+	Purpose: This schema is used to supply Water Quality Operator Self Monitoring returns to the Environment Agency.
+
+	Author:	Paul Gardiner.
+    - - - - - - - - - - - - - - - - - - - - - - -
+	-->
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:tns="http://www.environment-agency.gov.uk/XMLSchemas/GOR/WaterQualityMultiReturn/01" targetNamespace="http://www.environment-agency.gov.uk/XMLSchemas/GOR/WaterQualityMultiReturn/01" elementFormDefault="qualified" attributeFormDefault="unqualified" version="1.1" id="GOR-WQ">
+	<xsd:annotation>
+		<xsd:appinfo>
+			<Metadata xmlns="http://www.govtalk.gov.uk/CM/gms-xs">
+				<Creator>Environment Agency, CIS, BAAS, GOR Project</Creator>
+				<Date>
+					<Created>2009-02-03</Created>
+				</Date>
+				<Description>This schema is used to supply Water Quality returns to the Environment Agency</Description>
+				<Identifier>{http://www.environment-agency.gov.uk/XMLSchemas/GOR/WaterQualityMultiReturn/01}GOR-WQ</Identifier>
+				<Title>Environment Agency Water Quality Return Schema</Title>
+			</Metadata>
+		</xsd:appinfo>
+	</xsd:annotation>
+	<xsd:element name="FileUpload">
+		<xsd:complexType>
+			<xsd:sequence>
+				<xsd:element name="Source" fixed="CUSTOM">
+					<xsd:annotation>
+						<xsd:documentation>How the return was generated. "CUSTOM" Identifies the fact that a return file is a customer self-generated file as opposed to generated using the EA spreadsheet offline application.</xsd:documentation>
+					</xsd:annotation>
+					<xsd:simpleType>
+						<xsd:restriction base="xsd:string">
+							<xsd:whiteSpace value="replace"/>
+						</xsd:restriction>
+					</xsd:simpleType>
+				</xsd:element>
+				<xsd:element name="Sample" maxOccurs="unbounded">
+					<xsd:annotation>
+						<xsd:documentation>This element contains the structure of a collection of samples.</xsd:documentation>
+					</xsd:annotation>
+					<xsd:complexType>
+						<xsd:sequence>
+							<xsd:element name="Sampler" minOccurs="0">
+								<xsd:annotation>
+									<xsd:documentation>Sampler</xsd:documentation>
+								</xsd:annotation>
+								<xsd:simpleType>
+									<xsd:restriction base="xsd:string">
+										<xsd:maxLength value="8"/>
+									</xsd:restriction>
+								</xsd:simpleType>
+							</xsd:element>
+							<xsd:element name="SampleType">
+								<xsd:annotation>
+									<xsd:documentation>"U" - Update with new value or values for sample
+"D" - Delete this sample and any associated results
+"C" - Create new sample</xsd:documentation>
+								</xsd:annotation>
+								<xsd:simpleType>
+									<xsd:restriction base="tns:MandatoryStringType">
+										<xsd:enumeration value="C"/>
+										<xsd:enumeration value="D"/>
+										<xsd:enumeration value="U"/>
+									</xsd:restriction>
+								</xsd:simpleType>
+							</xsd:element>
+							<xsd:element name="CustomerSamplePointName">
+								<xsd:annotation>
+									<xsd:documentation>The customer’s name for a sample point.</xsd:documentation>
+								</xsd:annotation>
+								<xsd:simpleType>
+									<xsd:restriction base="tns:MandatoryStringType">
+										<xsd:maxLength value="100"/>
+									</xsd:restriction>
+								</xsd:simpleType>
+							</xsd:element>
+							<xsd:element name="SampleDateTime" type="xsd:dateTime">
+								<xsd:annotation>
+									<xsd:documentation>Sample date time. Must be to the nearest minute.</xsd:documentation>
+								</xsd:annotation>
+							</xsd:element>
+							<xsd:element name="PurposeTypeName">
+								<xsd:annotation>
+									<xsd:documentation>The customer's name for the purpose for which the sample was taken.</xsd:documentation>
+								</xsd:annotation>
+								<xsd:simpleType>
+									<xsd:restriction base="tns:MandatoryStringType">
+										<xsd:maxLength value="50"/>
+									</xsd:restriction>
+								</xsd:simpleType>
+							</xsd:element>
+							<xsd:element name="MaterialName">
+								<xsd:annotation>
+									<xsd:documentation>The customer's name of the material.</xsd:documentation>
+								</xsd:annotation>
+								<xsd:simpleType>
+									<xsd:restriction base="tns:MandatoryStringType">
+										<xsd:maxLength value="50"/>
+									</xsd:restriction>
+								</xsd:simpleType>
+							</xsd:element>
+							<xsd:element name="Mechanism">
+								<xsd:annotation>
+									<xsd:documentation>The customer's name for the method used to take the sample.</xsd:documentation>
+								</xsd:annotation>
+								<xsd:simpleType>
+									<xsd:restriction base="tns:MandatoryStringType">
+										<xsd:maxLength value="50"/>
+									</xsd:restriction>
+								</xsd:simpleType>
+							</xsd:element>
+							<xsd:element name="CustomersLabSampleRef">
+								<xsd:annotation>
+									<xsd:documentation>Unique within customer reference code for the sample analysis as used by the laboratory that analysed the sample.</xsd:documentation>
+								</xsd:annotation>
+								<xsd:simpleType>
+									<xsd:restriction base="tns:MandatoryStringType">
+										<xsd:maxLength value="36"/>
+									</xsd:restriction>
+								</xsd:simpleType>
+							</xsd:element>
+							<xsd:element name="CustomersLabSampleRefSecondary" minOccurs="0" maxOccurs="5">
+								<xsd:annotation>
+									<xsd:documentation>Additional customer reference codes for the sample analysis as used by the laboratory that analysed the sample.</xsd:documentation>
+								</xsd:annotation>
+								<xsd:simpleType>
+									<xsd:restriction base="xsd:string">
+										<xsd:whiteSpace value="replace"/>
+										<xsd:maxLength value="36"/>
+									</xsd:restriction>
+								</xsd:simpleType>
+							</xsd:element>
+							<xsd:element name="Comment" minOccurs="0">
+								<xsd:annotation>
+									<xsd:documentation>Comments on the sample, EA will not be routinely examining the contents of this field so anything likely to require attention should be separately communicated to the EA.</xsd:documentation>
+								</xsd:annotation>
+								<xsd:simpleType>
+									<xsd:restriction base="xsd:string">
+										<xsd:whiteSpace value="replace"/>
+										<xsd:maxLength value="255"/>
+									</xsd:restriction>
+								</xsd:simpleType>
+							</xsd:element>
+							<xsd:element name="LabName">
+								<xsd:annotation>
+									<xsd:documentation>Name of the laboratory that analysed the sample.</xsd:documentation>
+								</xsd:annotation>
+								<xsd:simpleType>
+									<xsd:restriction base="tns:MandatoryStringType">
+										<xsd:maxLength value="70"/>
+									</xsd:restriction>
+								</xsd:simpleType>
+							</xsd:element>
+							<xsd:element name="AnalysisCompleteDateTime" type="xsd:dateTime">
+								<xsd:annotation>
+									<xsd:documentation>Date sample was analysed in the lab.</xsd:documentation>
+								</xsd:annotation>
+							</xsd:element>
+							<xsd:element name="DepthValueRecorded" minOccurs="0">
+								<xsd:annotation>
+									<xsd:documentation>An optional collection of elements relating to recorded sample depth.</xsd:documentation>
+								</xsd:annotation>
+								<xsd:complexType>
+									<xsd:sequence>
+										<xsd:element name="DepthValue" type="xsd:decimal">
+											<xsd:annotation>
+												<xsd:documentation>Depth at which the sample was taken.</xsd:documentation>
+											</xsd:annotation>
+										</xsd:element>
+										<xsd:element name="DepthValueUnits">
+											<xsd:annotation>
+												<xsd:documentation>Units for the depth measurement.</xsd:documentation>
+											</xsd:annotation>
+											<xsd:simpleType>
+												<xsd:restriction base="tns:MandatoryStringType">
+													<xsd:maxLength value="40"/>
+												</xsd:restriction>
+											</xsd:simpleType>
+										</xsd:element>
+										<xsd:element name="DepthRelativeTo">
+											<xsd:annotation>
+												<xsd:documentation>What the depth is relative to e.g. surface</xsd:documentation>
+											</xsd:annotation>
+											<xsd:simpleType>
+												<xsd:restriction base="tns:MandatoryStringType">
+													<xsd:maxLength value="40"/>
+												</xsd:restriction>
+											</xsd:simpleType>
+										</xsd:element>
+									</xsd:sequence>
+								</xsd:complexType>
+							</xsd:element>
+							<xsd:element name="PurgedVolumeRecorded" minOccurs="0">
+								<xsd:annotation>
+									<xsd:documentation>An optional collection of elements relating to recorded sample volume.</xsd:documentation>
+								</xsd:annotation>
+								<xsd:complexType>
+									<xsd:sequence>
+										<xsd:element name="PurgedVolume" type="xsd:decimal">
+											<xsd:annotation>
+												<xsd:documentation>Volume removed from the borehole prior to sampling in litres.</xsd:documentation>
+											</xsd:annotation>
+										</xsd:element>
+										<xsd:element name="PurgedVolumeUnits">
+											<xsd:annotation>
+												<xsd:documentation>Units for the purged volume.</xsd:documentation>
+											</xsd:annotation>
+											<xsd:simpleType>
+												<xsd:restriction base="tns:MandatoryStringType">
+													<xsd:maxLength value="40"/>
+												</xsd:restriction>
+											</xsd:simpleType>
+										</xsd:element>
+									</xsd:sequence>
+								</xsd:complexType>
+							</xsd:element>
+							<xsd:element name="Measurement" maxOccurs="unbounded">
+								<xsd:annotation>
+									<xsd:documentation>This repeating element contains the structure of a Water Quality measurement.</xsd:documentation>
+								</xsd:annotation>
+								<xsd:complexType>
+									<xsd:sequence>
+										<xsd:element name="DeterminandName">
+											<xsd:annotation>
+												<xsd:documentation>Name for the determinand.</xsd:documentation>
+											</xsd:annotation>
+											<xsd:simpleType>
+												<xsd:restriction base="tns:MandatoryStringType">
+													<xsd:maxLength value="200"/>
+												</xsd:restriction>
+											</xsd:simpleType>
+										</xsd:element>
+										<xsd:element name="ResultType">
+											<xsd:annotation>
+												<xsd:documentation>Result type. “N” = No result
+“E” = A result.</xsd:documentation>
+											</xsd:annotation>
+											<xsd:simpleType>
+												<xsd:restriction base="tns:MandatoryStringType">
+													<xsd:enumeration value="E"/>
+													<xsd:enumeration value="N"/>
+												</xsd:restriction>
+											</xsd:simpleType>
+										</xsd:element>
+										<xsd:element name="ResultValue" type="xsd:decimal" minOccurs="0">
+											<xsd:annotation>
+												<xsd:documentation>The analysis result amount.</xsd:documentation>
+											</xsd:annotation>
+										</xsd:element>
+										<xsd:element name="ResultUnits" minOccurs="0">
+											<xsd:annotation>
+												<xsd:documentation>Units of measurement for the result.</xsd:documentation>
+											</xsd:annotation>
+											<xsd:simpleType>
+												<xsd:restriction base="tns:MandatoryStringType">
+													<xsd:maxLength value="40"/>
+												</xsd:restriction>
+											</xsd:simpleType>
+										</xsd:element>
+										<xsd:element name="Qualifier" minOccurs="0">
+											<xsd:annotation>
+												<xsd:documentation>Shows that the determinand result is over, under or equal to the result value. Valid values are "LT" or "GT"</xsd:documentation>
+											</xsd:annotation>
+											<xsd:simpleType>
+												<xsd:restriction base="tns:MandatoryStringType">
+													<xsd:enumeration value="LT"/>
+													<xsd:enumeration value="GT"/>
+												</xsd:restriction>
+											</xsd:simpleType>
+										</xsd:element>
+										<xsd:element name="Comment" minOccurs="0">
+											<xsd:annotation>
+												<xsd:documentation>Customer comment on sample result e.g. “result thought to be atypical”
+EA will not be routinely examining the contents of this field so anything likely to require attention should be separately informed to the EA.
+</xsd:documentation>
+											</xsd:annotation>
+											<xsd:simpleType>
+												<xsd:restriction base="xsd:string">
+													<xsd:whiteSpace value="replace"/>
+													<xsd:maxLength value="180"/>
+												</xsd:restriction>
+											</xsd:simpleType>
+										</xsd:element>
+									</xsd:sequence>
+								</xsd:complexType>
+							</xsd:element>
+						</xsd:sequence>
+					</xsd:complexType>
+				</xsd:element>
+				<xsd:element name="RegulatedCustomerIdentifier">
+					<xsd:annotation>
+						<xsd:documentation>Identifies the customer sending the file. This identifier is at the level of the entire customer organisation, not units within one organisation. Must match the RCID for the logged on user.</xsd:documentation>
+					</xsd:annotation>
+					<xsd:simpleType>
+						<xsd:restriction base="tns:MandatoryStringType">
+							<xsd:maxLength value="20"/>
+						</xsd:restriction>
+					</xsd:simpleType>
+				</xsd:element>
+				<xsd:element name="CustomerReference" minOccurs="0">
+					<xsd:annotation>
+						<xsd:documentation>Customer’s own reference.</xsd:documentation>
+					</xsd:annotation>
+					<xsd:simpleType>
+						<xsd:restriction base="xsd:string">
+							<xsd:whiteSpace value="replace"/>
+						</xsd:restriction>
+					</xsd:simpleType>
+				</xsd:element>
+			</xsd:sequence>
+		</xsd:complexType>
+	</xsd:element>
+	<xsd:simpleType name="MandatoryStringType">
+		<xsd:restriction base="xsd:string">
+			<xsd:pattern value=".*\S+.*"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<xsd:simpleType name="EmailFieldType">
+		<xsd:restriction base="xsd:string">
+			<xsd:pattern value="([a-zA-Z0-9_\.\-])+@((([a-zA-Z0-9\-])+\.)+([a-zA-Z0-9]{2,})+|(\[([0-2]?[0-9]{0,2}\.){3}[0-2]?[0-9]{0,2}\]))"/>
+		</xsd:restriction>
+	</xsd:simpleType>
+</xsd:schema>

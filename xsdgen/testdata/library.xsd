@@ -1,0 +1,47 @@
+<?xml version="1.0"?> 
+<xs:schema targetNamespace="http://dyomedea.com/ns/library"
+  elementFormDefault="qualified" attributeFormDefault="unqualified"
+  xmlns:lib="http://dyomedea.com/ns/library"
+  xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="library">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="book" type="lib:bookType"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="person">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="name" type="xs:string"/>
+        <xs:element name="born" type="xs:date"/>
+        <xs:element name="dead" type="xs:date" minOccurs="0"/> 
+        <xs:element name="qualification" type="xs:string"
+          minOccurs="0"/>
+      </xs:sequence>
+      <xs:attribute name="id" type="xs:ID" use="required"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:complexType name="bookType">
+    <xs:sequence>
+      <xs:element name="isbn" type="xs:NMTOKEN"/>
+      <xs:element name="title" type="xs:string"/>
+      <xs:element name="authors">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="lib:person" maxOccurs="unbounded"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="characters">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element ref="lib:person" maxOccurs="unbounded"/>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+    <xs:attribute name="id" type="xs:ID" use="required"/>
+    <xs:attribute name="available" type="xs:string" use="required"/>
+  </xs:complexType>
+</xs:schema>

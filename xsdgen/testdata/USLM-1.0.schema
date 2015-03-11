@@ -1,0 +1,4093 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<xsd:schema targetNamespace="http://xml.house.gov/schemas/uslm/1.0"
+   xmlns="http://xml.house.gov/schemas/uslm/1.0"
+   xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+   xmlns:xml="http://www.w3.org/XML/1998/namespace"
+   elementFormDefault="qualified"
+   attributeFormDefault="unqualified"
+   version="1.0">
+
+   <xsd:import namespace="http://www.w3.org/XML/1998/namespace" schemaLocation="xml.xsd"/>
+
+   <xsd:annotation>
+      <xsd:documentation>
+         <![CDATA[
+         
+         ======================================================================
+         *United States (Federal) Legislative Model (USLM)*
+         ====================================================================== 
+         
+         ** Objective ** 
+         
+         This schema provides a general schema for modeling the United States
+         Code, including all titles and appendices.  It is designed to model
+         both existing and future titles. The intent is to support XML data
+         delivery, publishing, editing, and automated processing of the titles
+         and appendices.
+         
+         The schema in intended to be extensible to model bills, resolutions,
+         statutes, amendments, and other legislative documents.
+         
+         This schema is not intended to model executive branch or judicial
+         branch documents, except as such exist in notes and appendices.
+         
+         ** Understanding this Schema ** 
+         
+         This schema is designed in several layers. The best way to learn the 
+         schema is to first understand the fundamental building blocks and then
+         to build your understanding one layer at a time. The order of 
+         declaration and definitions is generally the best order to learn it as
+         well. 
+         
+         This schema is designed following a "Venetian Blind" design pattern. 
+         This means that each element type is defined separately and a separate
+         element declaration is created. This pattern maximizes the reusability
+         of the schema. 
+         
+         ** Overriding Principles ** 
+         
+           * The general derivation hierarchy is from most abstract to most 
+             concrete.
+           * Terminology chosen for abstract elements is purposefully designed
+             to minimize conflict with existing terminology by avoiding well-
+             established terms. 
+           * Terminology chosen for concrete elements is purposefully designed 
+             to map very closely to existing terminology. 
+           * The overall tag is kept as small as possible without 
+             compromising semantic richness. 
+           * The schema is more permissive 
+             than is absolutely necessary. As this schema must support legacy
+             documents, a looser rather than tighter contract is required to be
+             enforced by the schema. In general, the abstract layer is intended
+             to support the variation extremes while the concrete layer is 
+             intended to support modern practices. 
+           * Consistency with XHTML naming conventions and practices is 
+             maximized. 
+           * Care has been taken to avoid reinventing mark-up for areas, such as
+             tables or formulas, where perfectly good mark-up has already been
+             designed. 
+           * The overall structure has been designed to create a readable 
+             document without any unnecessary redirection. 
+           * All text shown in the printed or published document is regular 
+             text, not contained within attributes or to be 
+             generated from attribute data. Rather, the resulting text is shown 
+             in the content. 
+           * Attributes are used to contain metadata or normalized forms of 
+             text content. (i.e. normalized numeric values) The general flow of
+             data is from the content to the attributes rather than the other
+             way around.
+           * The schema is designed for editing documents as well as for complete  
+             documents. This means that the "empty document" situation is handled and
+             validates as a complete and correct document. 
+           * This schema has tentatively been designed for use with relational
+             database mapping and shredding tools. 
+             
+         ** General Definitions **
+         
+         Jurisdictions:
+           * United States Federal Government - us
+           
+         Languages:
+           * English Language - eng
+         
+         ** Primitives **
+         
+         The purpose of the primitives is to provide the fundamental building
+         blocks out of which everything can be built. The primitives are a 
+         minimal set of basic type definitions along with a corresponding set
+         of element declarations. 
+         
+         At the very top of the derivation tree is the "BaseType" and two 
+         closely related derivatives "BaseBlockType" and "BaseContentType". These types 
+         are primarily to provide base types for all the attributes. They are defined as
+         abstract types and therefore cannot be instantiated. 
+         
+         All other types derive from these types, by way of either restriction
+         and/or extension. The
+         terminology chosen for the primitive layer has been selected to 
+         describe, in the most general of terms, the fundamental building
+         blocks. Care has been taken to avoid using terms which already have an
+         established meaning within U.S. legislation and to avoid implying
+         too much meaning or structure beyond the primitive nature of the 
+         elements. 
+         
+         ** Common Core ** 
+         
+         The common core defines the basic structure of a legislative document.
+         It is a very abstract and general model intended to be flexible enough
+         to handle the widest variations likely to be encountered.
+         
+         It is possible, using the common core, along with the primitives defined above 
+         and the generics defined below, to model any U.S legislation, albeit
+         abstractly. The terminology chosen has been selected to be familiar
+         without conflicting with any well-established meanings in use
+         for U.S. legislation. 
+         
+         ** Structural Building Blocks **
+         
+         The structural building blocks are assemblies of elements which are
+         used to define the common core. Rather than defining individual elements, 
+         they define groups of elements which are placed together to define
+         the content of elements in the common core. The building blocks are
+         largely responsible for taking care of the flexible notes model and
+         the underlying versioning model. 
+         
+         ** Generics ** 
+         
+         The generics provide fundamental elements necessary to model any 
+         type of document. These elements fit within the common core, but are
+         not themselves a part of it. In general, these elements model common
+         structures like paragraphs, images, columns, and line breaks
+         
+         The generics  exist to complete the common core without clouding the
+         core with basic functions that don't contribute the legislative nature
+         of the schema. The terminology chosen has been selected to be familiar
+         everyday terms for common concepts. Care has been taken to not 
+         override any well-established meaning in use for U.S. legislation. 
+         
+         ** Synonyms **
+         
+         The synonyms are used to give familiar and comfortable 
+         terms to the most commonly used elements in modern legislation.
+         These synonyms are more meaningful tags used as equivalent 
+         substitutes for the more abstract tags defined in the common core. As
+         they are defined as synonyms rather than within a rigid content 
+         model, care must be taken to avoid using them in ways beyond their
+         original intent and harming the semantic value of XML. 
+         
+         ** Naming Elements **
+         
+         There are three attributes for defining names for elements:
+         
+          * The @id attribute is an immutable identity, one that is
+            not changed once it is assigned. Therefore, it should not reflect any
+            aspect of the element that is subject to change, such as an 
+            assigned number. The preferred algorithm for generating the @id attribute 
+            value is to use a GUID (Globally Unique IDentifier) 
+            generator that guarantees uniques in all space and time. The @id 
+            should be given a simple "id" prefix. 
+            
+          * The @name attribute is assigned a simple, short name that identifies
+            a child element within the context of its parent. The @name attribute
+            is used when the element is not uniquely defined within 
+            its parent by using the element name alone. For some elements, such
+            as sections and other levels, the @name attribute value can be a function
+            of time. This is because the section or level can be renumbered and this
+            number will be reflected in the chosen @name attribute value. For these
+            cases, the @name attribute value can be parameterized and evaluated
+            whenever a document is requested for a specific point-in-time. Two
+            parameters can be specified: {num}, which is the current normalized value
+            of the element, and {index}, the 1-based index position of the element
+            within its parent.
+            
+          * The @temporalId attribute is assigned a changeable, human-meaningful,
+            identifier. Like the @name attribute, the @temporalId will vary with time.
+            For this  reason, the @temporalId is computed 
+            each time a document is extracted from the repository, based on the
+            point-in-time requested, rather than being statically stored with
+            the text in the repository. The @temporalId is specified to be nominally
+            unique within the document that the element belongs. The @temporalId is
+            composed by concatenating the @temporalId of the element's parent, if
+            existing (or the parent element's name if the @temporalId does not exist),
+            "_", and the element's <num> @value. For example, paragraph 2 of
+            subsection (a) of section 1 should have the @temporalId of "s1_a_2".
+          
+         ** Referencing Model **
+         
+         All references are modeled as relative URLs. References are made to 
+         a logical rather than a physical hierarchy that starts always from the
+         jurisdiction and reaches down to individual provisions within a bill,
+         Resolution, or other Legislation. References do not predict or
+         expect any particular document partitioning. It is the intent of the
+         URL handler to map the logical hierarchy to any specific physical 
+         hierarchy.
+         
+         The highest level of the hierarchy is always the 
+         jurisdiction code, specified using the ISO 3166-1 country code and 
+         optionally followed by a dash and a lower level jurisdiction code.
+         For the U.S. Federal Government, the jurisdiction code is "us".
+         
+         Lower levels of the hierarchy should either be a year with an
+         optional modifier, or an abbreviated prefix and an assigned numeric
+         designation, separated with the "/" in a hierarchy. For instance, 
+         Title 5 is expressed as "/us/usc/t5" while Pub. L. 111-314 is expressed
+         as "/us/pl/111/314". 
+         
+         When a URL is extended to within a document, the document hierarchy is
+         expressed in an abbreviated form as in "/us/usc/t5/s101" or 
+         "/us/pl/111/314/s1".To build this URL, append
+         the reference to the document + "/" + the element name with each
+         dashes changed to a "/". So a reference to "s3-2-1" in
+         "/us/pl/111/314" becomes "/us/pl/111/314/s3/2/1".
+         
+         A language-neutral reference does not include a language code. To 
+         create a reference to a specific language version of the document,
+         include a language identifier at the nominal document level following
+         a "!" symbol. For instance, to specify a reference to
+         section 101 the English version of title 51, the
+         reference would be "/us/usc/t51!eng/s101". 
+         
+         To make a reference to a version that is operational at a specific
+         point in time, include a date specification at the nominal document
+         level following a "@" symbol ("at" the time of). For instance, to 
+         specify a reference to section 101 of Title 51 on 1 February, 
+         2013, the reference would be "/us/t51@2013-02-01/s101". 
+         
+         When including both a language and a time specification, place
+         the language specification ahead of the time specification. For 
+         instance to combine both examples above, the result would be
+         "/us/t51!eng@2013-02-01/s101".
+      
+      ]]></xsd:documentation>
+   </xsd:annotation>
+
+   <!-- ==================================================================== -->
+   <!-- SimpleTypes                                                          -->
+   <!-- ==================================================================== -->
+
+   <xsd:simpleType name="DateSimpleType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+            The date simple type unifies both date and time formats and allows
+            a date to be specified as either a day or a time in a day. This is
+            to allow situations where the law becomes effective based on another
+            time zone.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:union memberTypes="xsd:date xsd:dateTime"/>
+   </xsd:simpleType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:simpleType name="OccurrenceSimpleType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+            The occurrence simple type specifies which occurrence is affected
+            by an action when amending. An occurence can be either a positive
+            integer or a value from the choice enumeration such as "all" for
+            all occurrences or "last" for the last occurrence.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:union memberTypes="xsd:positiveInteger ChoiceEnum"/>
+   </xsd:simpleType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:simpleType name="ShortStringSimpleType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+            A simple string with not more than 32 characters.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:restriction base="xsd:string">
+         <xsd:maxLength value="32"/>
+      </xsd:restriction>
+   </xsd:simpleType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:simpleType name="MediumStringSimpleType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+            A simple string with not more than 128 characters.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:restriction base="xsd:string">
+         <xsd:maxLength value="128"/>
+      </xsd:restriction>
+   </xsd:simpleType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:simpleType name="LongStringSimpleType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+            A simple string with not more than 1024 characters.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:restriction base="xsd:string">
+         <xsd:maxLength value="1024"/>
+      </xsd:restriction>
+   </xsd:simpleType>
+
+   <!-- ==================================================================== -->
+   <!-- Enumerations                                                         -->
+   <!-- ==================================================================== -->
+
+   <xsd:simpleType name="ChoiceEnum">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+            The choice enumeration is used to enumerate some textual values for
+            use with the occurrence simple type defined above.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:restriction base="xsd:NMTOKEN">
+         <xsd:enumeration value="all"/>
+         <xsd:enumeration value="none"/>
+         <xsd:enumeration value="first"/>
+         <xsd:enumeration value="last"/>
+      </xsd:restriction>
+   </xsd:simpleType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:simpleType name="PropertyTypeEnum">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The property  type enumeration allows a property to be given a 
+            type specification. If the @type attribute is not specified, then
+            the default type is "string".
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:restriction base="xsd:NMTOKEN">
+         <xsd:enumeration value="string"/>
+         <xsd:enumeration value="number"/>
+         <xsd:enumeration value="token"/>
+         <xsd:enumeration value="boolean"/>
+         <xsd:enumeration value="text"/>
+         <xsd:enumeration value="date"/>
+         <xsd:enumeration value="url"/>
+      </xsd:restriction>
+   </xsd:simpleType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:simpleType name="SetTypeEnum">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+            The set type enumeration is used allows a set of properties, grouped
+            using the <set> element, to be given a type specification.  If the
+            @type attribute is not specified, then the default type is "bag".
+            
+            The type values are inspired by the Resource Descriptor Framework 
+            (RDF).
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:restriction base="xsd:NMTOKEN">
+         <xsd:enumeration value="bag">
+            <xsd:annotation>
+               <xsd:documentation><![CDATA[
+                  A "bag" is an unordered but homogeneous collection of 
+                  properties or sets.
+               ]]></xsd:documentation>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="seq">
+            <xsd:annotation>
+               <xsd:documentation><![CDATA[
+                  A "seq" (sequence) is an ordered and homogeneous sequence of 
+                  properties or sets.
+               ]]></xsd:documentation>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="grp">
+            <xsd:annotation>
+               <xsd:documentation><![CDATA[
+                  A "grp" (group) is a heterogeneous collection of properties 
+                  or sets.
+               ]]></xsd:documentation>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="alt">
+            <xsd:annotation>
+               <xsd:documentation><![CDATA[
+               An "alt" (alternatives) is a homogeneous collection of
+               properties or sets of which one is selected at any one time.
+               ]]></xsd:documentation>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="res">
+            <xsd:annotation>
+               <xsd:documentation><![CDATA[
+                  A "res" is a resource, such as a person, place, or thing and 
+                  the properties enclosed within the set describe it.
+               ]]></xsd:documentation>
+            </xsd:annotation>
+         </xsd:enumeration>
+      </xsd:restriction>
+   </xsd:simpleType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:simpleType name="StatusEnum">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+            The status enumeration is used to specify the state of a provision 
+            during the period of time defined by the @startPeriod and the
+            @endPeriod attributes attached to the same element or hierarchically
+            defined above.
+
+            Typically, the status enumeration is applied to the <section> level
+            or lower, but the model is general enough that it can be applied
+            anywhere in the level hierarchy. A <section> will progress through a
+            series of statuses, starting out as "proposed" in a bill, becoming 
+            "pending" when the bill is enacted, "operational" on
+            the commencement date, and then later possibly "repealed".
+
+            It is quite possible that stages in this sequence
+            might be skipped. For instance, a section might be repealed before
+            it ever becomes operational or it might never be repealed.
+            If the status is not specified, then a section is assumed to be
+            "operational".
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:restriction base="xsd:NMTOKEN">
+         <xsd:enumeration value="proposed"/>
+         <xsd:enumeration value="withdrawn"/>
+         <xsd:enumeration value="cancelled"/>
+         <xsd:enumeration value="pending"/>
+         <xsd:enumeration value="operational"/>
+         <xsd:enumeration value="suspended"/>
+         <xsd:enumeration value="renumbered"/>
+         <xsd:enumeration value="repealed"/>
+         <xsd:enumeration value="expired"/>
+         <xsd:enumeration value="terminated"/>
+         <xsd:enumeration value="hadItsEffect"/>
+         <xsd:enumeration value="omitted"/>
+         <xsd:enumeration value="notAdopted"/>
+         <xsd:enumeration value="transferred"/>
+         <xsd:enumeration value="redesignated"/>
+         <xsd:enumeration value="reserved"/>
+         <xsd:enumeration value="vacant"/>
+         <xsd:enumeration value="crossReference"/>
+         <xsd:enumeration value="unknown">
+            <xsd:annotation>
+               <xsd:documentation><![CDATA[
+               A "unknown" status indicates that the status is not known.
+               ]]></xsd:documentation>
+            </xsd:annotation>
+         </xsd:enumeration>
+
+      </xsd:restriction>
+   </xsd:simpleType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:simpleType name="ActionTypeEnum">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+            The action enumeration is used to specify the action being 
+            undertaken by an amendment, or, in the case of multiple actions,
+            the actions as well as the order in which they are to be performed.
+
+            There are two basic sets of actions: those for law and those for
+            proposed law. Pre-enactment stage amendments will use the "insert"
+            and the "delete" actions when amending rather than the other
+            actions intended for modifying enacted law.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:restriction base="xsd:NMTOKEN">
+         <xsd:enumeration value="enact">
+            <xsd:annotation>
+               <xsd:documentation><![CDATA[
+               The "enact" action enacts a law.
+               ]]></xsd:documentation>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="add">
+            <xsd:annotation>
+               <xsd:documentation><![CDATA[
+               The "add" action adds a provision to existing law.
+               ]]></xsd:documentation>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="amend">
+            <xsd:annotation>
+               <xsd:documentation><![CDATA[
+               The "amend" action modifies an existing provision in the law.   
+               ]]></xsd:documentation>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="substitute">
+            <xsd:annotation>
+               <xsd:documentation><![CDATA[
+               The "substitute" action replaces an existing provision in the law.
+               ]]></xsd:documentation>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="renumber">
+            <xsd:annotation>
+               <xsd:documentation><![CDATA[
+               The "renumber" action changes the number of an existing provision
+               in the law.
+               ]]></xsd:documentation>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="repeal">
+            <xsd:annotation>
+               <xsd:documentation><![CDATA[
+               The "repeal" action repeals an existing provision in the law.
+               ]]></xsd:documentation>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="insert">
+            <xsd:annotation>
+               <xsd:documentation><![CDATA[
+               The "insert" action adds text to a proposed provision to the law.
+               ]]></xsd:documentation>
+            </xsd:annotation>
+         </xsd:enumeration>
+         <xsd:enumeration value="delete">
+            <xsd:annotation>
+               <xsd:documentation><![CDATA[
+                  The "delete" action removes text from a proposed provision to
+                  the law.
+               ]]></xsd:documentation>
+            </xsd:annotation>
+         </xsd:enumeration>
+      </xsd:restriction>
+   </xsd:simpleType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:simpleType name="PositionEnum">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+            The position enumeration is used with references found within 
+            amendments when it is necessary to specify a position relative to an
+            item rather than when referencing the item itself.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:restriction base="xsd:NMTOKEN">
+         <xsd:enumeration value="start"/>
+         <xsd:enumeration value="before"/>
+         <xsd:enumeration value="inside"/>
+         <xsd:enumeration value="after"/>
+         <xsd:enumeration value="end"/>
+      </xsd:restriction>
+   </xsd:simpleType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:simpleType name="OrientationEnum">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The orientation enumeration is used specify how an item should be
+            oriented in the printed form. The orientation can be specified
+            for any content item or for any appendix item, including a 
+            schedule.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:restriction base="xsd:NMTOKEN">
+         <xsd:enumeration value="portrait"/>
+         <xsd:enumeration value="landscape"/>
+      </xsd:restriction>
+   </xsd:simpleType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:simpleType name="NoteTypeEnum">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            Notes can be placed inline, as footnotes at the end of the page,
+            as end notes as the end of document, or U.S. Code notes. By default,
+            notes are inline
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:restriction base="xsd:NMTOKEN">
+         <xsd:enumeration value="inline"/>
+         <xsd:enumeration value="footnote"/>
+         <xsd:enumeration value="endnote"/>
+         <xsd:enumeration value="uscNote"/>
+      </xsd:restriction>
+   </xsd:simpleType>
+
+   <!-- ==================================================================== -->
+   <!-- Attribute Groups                                                     -->
+   <!-- ==================================================================== -->
+
+   <xsd:attributeGroup name="IdentificationGroup">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The identification group of attributes is used add an identify to
+            an element. All elements use the identification group, and all 
+            attributes are optional. In general
+            
+            - An @id is an immutable GUID assigned to an item at its birth.
+            - A @name is a time variant local name, scoped to its parent.
+            - An @temporalId is a time variant name, scoped to the document.
+            - An @identifier is a item variant URL, scoped globally.
+            
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:attribute name="id" type="xsd:ID" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+               The @id attribute should always be assigned an immutable 
+               (non-changing) value. If the item is subject to renaming or 
+               renumbering, then the @id attribute should not reflect any part 
+               of the changeable part. This is to allow the @id to be long 
+               lasting without causing confusion should the item be renamed or 
+               renumbered. 
+               
+               The @id should be prefixed with "id" and followed by a GUID that
+               is guaranteed to be globally unique across both time and space.
+               
+               As an "xsd:ID", the identity must be ensured to be unique in the
+               document - and it is a good idea that it be guaranteed globally 
+               unique. As the @id is immutable, it is a good identity with which
+               to associate external information to the item.
+               
+               If an item is deleted and later a similarly named item is 
+               created, then the new item should be assigned a newly generated 
+               identity as it is not related to the earlier item.
+               
+               The @id attribute is optional, but recommended for all elements
+               which will contain any other identity attributes.
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="name" type="MediumStringSimpleType" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+               The @name attribute is a local name that is intended to reflect
+               the current identity of the element in a human-readable way. This
+               means that the @name may need to be recomputed based on the
+               temporal state of a document or according to the temporal
+               specification in a requesting URL.
+               
+               To support temporal parameterization, the @name can be specified
+               as a formula with parameters in the name which are intended to be
+               resolved by the temporal engine at request time. Two parameters
+               are supported:
+               
+               - {num} - use the current @value of the associated <num>.
+               - {index} - use the index position (1-based) of the element 
+                 calculated against other elements of the same type at the same 
+                 level.
+                 
+               The @name should be stored as a formula and returned as resolved 
+               for specific point-in-time return results.
+                 
+               The @name is used to compose the @temporalId attribute (if
+               desired) and is used when resolving references.
+               
+               When an element does not have a @name attribute, it is
+               identified by the element name. When an element does have a
+               @name attribute, then the @name takes precedence over the element
+               name.
+               
+               Some examples of @name attribute values:
+               
+                * "subject" - a property named "subject".
+                * "s{num}" - a numbered section. Use the @value of the child 
+                  <num> corresponding to the temporal specification to evaluate
+                  the formula.
+                * "proviso{index}" - Use the 1-based index number of the 
+                  proviso, calculated against other <proviso> elements within 
+                  the parent element. For example, "the second proviso" 
+                  corresponds to "proviso2".
+               
+               The @name attribute is optional.               
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="temporalId" type="MediumStringSimpleType"
+         use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+               The @temporalId attribute is a name, scoped to the document,
+               that is intended to reflect the current identify of the element 
+               in a human-readable way. This means that the @temporalId may need 
+               to be recomputed based on the temporal state of a document or 
+               according to the temporal specification in a requesting URL.
+               
+               A @temporalId is intended to be scoped to the document as a whole
+               while the @name is scoped to its immediate parent. The 
+               @temporalId is built as an "_" separated hierarchy of @name
+               or, in the absence of an @name, element names. However, in a 
+               couple cases, the levels of the hierarchy are suppressed. First
+               of all, the <main> level is suppressed when calculating any
+               @temporalId contained within. Secondly, when dealing with 
+               sections which are numbered as a sequence without regard to
+               the upper levels, then the upper levels are suppressed from the
+               computation of the @temporalId.
+               
+               Some examples:
+               
+                * "s2" - section to in the main part of the document
+                * "schedule_s2" - section 2 in the schedule
+                * "s2_1_proviso_a" - paragraph a of the proviso in subsection 1
+                   of section 2.
+                * "P2_D1" - division 1 of part 2 in the main part of the 
+                  document
+               
+               The @temporalId attribute is optional.
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="identifier" type="LongStringSimpleType" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+               Use the @identifier attribute to specify the URL context of the
+               element. Typically, the @identifier will be established on the
+               root element or on any element, such as a <quotedStructure> or
+               <quotedText> element, that changes the context.        
+               
+               The @identifier attribute is optional.
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+   </xsd:attributeGroup>
+
+   <!-- ==================================================================== -->
+
+   <xsd:attributeGroup name="ClassificationGroup">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+            The classification group is used to further refine the element 
+            type and to specify any exception cases for styling the element 
+            when presented in the printed form. The @role attribute is inspired
+            by the new @role attribute defined in support of WAI-ARIA for use
+            in XHTML. Both the @class and the @style attributes are inspired by
+            the identically named HTML attributes and their behavior is the 
+            same. All elements use the classification group.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:attribute name="role" type="ShortStringSimpleType" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+               Use the @role attribute to provide further refinement to an
+               element's type. This is particularly useful when defining a
+               refinement of an element from the abstract set. Another possible 
+               use is to use the customary local name for an element whenever
+               the element name is not a complete match. For example, if the 
+               customary name for an "explanation" is "summary", then the 
+               element can be expressed as <explanation role="summary">.
+               
+               There can be thought of as rough equivalence between an element
+               of a base class with a @role attribute and a derived class in the
+               schema, although this equivalence is not explicit. For example 
+               <level role="division"> is roughly equal to <division>.
+               
+               When transforming XML to HTML, the @role attribute should be 
+               appended to the element name using an "_" underscore and used
+               as the first value in the HTML @class attribute. If desired,
+               the proposed XHTML @role attribute can be computed as either the
+               XML @role attribute or, in the absence of the XML @role 
+               attribute, the XML element name. For example:
+               
+               <level role="division">
+                  => <div role="division" class="level_division"> 
+               
+               <division> 
+                  => <div role="division" class="division">
+                  
+               This approach is easily reversible.               
+             ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="class" type="MediumStringSimpleType" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+               The @class attribute corresponds to the @class attribute in 
+               HTML. It can be used to specify presentation characteristics
+               of an element that are not specified by the element name and
+               the @role attribute. For example, the @class attribute can be
+               used to specify the presence or absence of the ending separator.
+               
+               Like the HTML @class attribute, multiple class values can be 
+               specified in a space separate list.
+               
+               Whenever HTML XML is transformed into HTML, the first class name
+               should always correspond to the element name + the @role
+               attribute. Subsequent values should be taken as the value of the
+               @class attribute. It is possible that additional @class values
+               may be necessary in the HTML rendition, to support editing 
+               operations. These should be filtered by the transform that
+               creates the HKLM XML.               
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+   <xsd:attribute name="style" type="LongStringSimpleType" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+               The @style attribute is used to specify CSS attributes that 
+               override the default styles defined for an element or an element 
+               class. The current loose-leaf publication standards should be
+               specified using an external style sheet and the use of the @style
+               attribute should be reserved for exception cases where the 
+               default presentation must be overridden.    
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+   </xsd:attributeGroup>
+
+   <!-- ==================================================================== -->
+
+   <xsd:attributeGroup name="AnnotationGroup">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The annotations group is used to specify annotations with elements
+            that are outside of the published content. As attributes, only
+            limited text values should be associated using this mechanism. This
+            mechanism should never be used for notes to be published. All 
+            elements use the annotation group.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:attribute name="note" type="LongStringSimpleType" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[            
+               The @note attribute should be the primary mechanism for recording
+               simple text notes to be associated with elements.
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="alt" type="MediumStringSimpleType" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[            
+            The @alt attribute should be used to provide an alternative
+            description of the element. For use with WCAG 2.0 and other 
+            accessibility initiatives.
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="meta" type="LongStringSimpleType" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+            The @meta attribute should be used to associate metadata
+            information with the element for search and other used. How this
+            attribute is used is not prescribed by the schema.
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="misc" type="LongStringSimpleType" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+            The @misc attribute is provided for future use.
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="draftingTip" type="LongStringSimpleType" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+               The @draftingTip is for internal use.
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="codificationTip" type="LongStringSimpleType" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+               The @codificationTip is for internal use by the OLRC.
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+   </xsd:attributeGroup>
+
+   <!-- ==================================================================== -->
+
+   <xsd:attributeGroup name="DescriptionGroup">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The description group is used to record information that will be 
+            used to describe an element, primarily for use in a table of 
+            contents or an index. The description group can be used for
+            statements, the preamble, levels, and appendices including
+            schedules. In addition, the description group is an integral
+            part of a TOC item. All attributes are optional.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:attribute name="title" type="MediumStringSimpleType" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+            The @title attribute is used to specify the text describing the
+            element in a table of contents or index. It must be a simple text
+            string and should consist of fewer than 40 or so characters - 
+            although this is not enforced.               
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="brief" type="LongStringSimpleType" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+               The @brief attribute is an alternate method for providing a 
+               a longer description of an element, limited to 1024 characters.
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="sortOrder" type="xsd:integer" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+               The @sortOrder attribute is used to specify a sorting order for 
+               a list of items, when that sort order is not the document 
+               sequence. The @sortOrder value must be specified as a positive 
+               integer. This attribute should rarely be used.               
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+   </xsd:attributeGroup>
+
+   <!-- ==================================================================== -->
+
+   <xsd:attributeGroup name="ReferenceGroup">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The reference group is used to create references to other items. 
+            These items can be items within the document, items in other documents,
+            or entire other document. See the reference specification for how
+            reference URL references are constructed. <property> and
+            <reference> elements can use the reference group. 
+            
+            All attributes are optional.        
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:attribute name="href" type="xsd:anyURI" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[            
+            The @href attribute is used to specify references to external
+            documents or items in documents. The value must always be 
+            specified as a relative URL conforming to the reference
+            specification.          
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="idref" type="xsd:IDREF" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+               The @idref attribute is used to specify references to internal
+               elements within the same document. The @idref is specified as
+               the value of the @id attribute of the element being referenced.
+               As in HTML, there is an equivalence between an @href specified
+               as href="#{id}" and idref="{id}". However, the @idref attribute
+               is preferred for internal references.
+               
+               If the @idref points to a <ref> element, then the referencing
+               element builds on top of that reference, acquiring its attributes
+               as default values (which may be overridden by local values). This
+               is a recursive structure; an element may, through the @idref 
+               attribute, point to an <ref> element which itself builds on 
+               another <ref> element, and so on. This is to support the complex
+               referencing sometimes found in legislation.
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="portion" type="MediumStringSimpleType" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+               The @portion attribute is used, in conjunction with the @idref
+               attribute, when only a portion of the referenced item is being
+               affected. The value of @portion is an additional part to append
+               to the URL, with a "/" separator to identify the item affected. 
+               Do not include a leading "/" in the @portion value.
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      </xsd:attributeGroup>
+
+   <!-- ==================================================================== -->
+
+   <xsd:attributeGroup name="AmendingGroup">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The amending group is used to point to items being amended. See the
+            reference specification for how reference URL references are
+            constructed. The amending group should only be used on references
+            or actions within amending instructions.
+            
+            All attributes are optional.        
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:attribute name="pos" type="PositionEnum" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+               The @pos attribute is used to specify a location relative
+               to the item being referenced. The @pos is intended primarily
+               for used with amending instructions.    
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="posText" type="MediumStringSimpleType" 
+         use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+               The @posText attribute is used to specify text to be used as the
+               context for the @pos attribute.
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="posCount" type="xsd:positiveInteger" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+               The @posCount attribute is used to specify the number of 
+               occurrences of the @posText to seek out when establishing the 
+               context.
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+   </xsd:attributeGroup>
+   
+   <!-- ==================================================================== -->
+
+   <xsd:attributeGroup name="LinkGroup">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The link group is used to reference external documents to be 
+            embedded in a document. The link group can be used for either
+            appendices or for images. The @src attribute is optional, but 
+            should always be used for images.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:attribute name="src" type="xsd:anyURI" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+               The @src attribute is a URL that points to an item to be included
+               in the published document. Unlike an @href attribute, a @src 
+               attribute can be any normal URL and can be relative or absolute.
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+   </xsd:attributeGroup>
+
+   <!-- ==================================================================== -->
+
+   <xsd:attributeGroup name="ValueGroup">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The value group is used to keep a normalized value. In some cases 
+            the value is recorded as text content and the normalized form is
+            stored in the @value attribute. The @type attribute is usually used
+            to type the value. The value group can be used for <property> and 
+            <num> elements.      
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:attribute name="value" type="MediumStringSimpleType" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+            The @value attribute is used when there is a single value.
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="startValue" type="MediumStringSimpleType" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+            The @startValue attribute is used for the lower end of a value
+            range.
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="endValue" type="MediumStringSimpleType" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+            The @endValue attribute is used for the upper end of a value
+            range.               
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+   </xsd:attributeGroup>
+
+   <!-- ==================================================================== -->
+   
+   <xsd:attributeGroup name="NoteGroup">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The note group is used to place and categorize notes, either
+            singularly or as groups. The @type attribute is used for placement
+            while the @topic attribute is used for categorization. 
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:attribute name="type" type="NoteTypeEnum" use="optional" default="footnote">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[ 
+               Set the @type attribute to "footnote" to indicate that
+               the notes contained should be shown in the footnotes at
+               the end of the page or to "endnote" to indicate the
+               notes contained should be shown at the end of the
+               document. If not specified, "footnote" is assumed.
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>     
+      <xsd:attribute name="topic" type="MediumStringSimpleType" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[ 
+                     Set the @topic attribute to a string value in order
+                     to categorize the note or group of notes. An open,
+                     but enumerated, list of string values should be used.
+                     Using a fixed list of values will better aid in 
+                     categorization of notes later.
+                  ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>    
+   </xsd:attributeGroup>
+   
+   <!-- ==================================================================== -->
+
+   <xsd:attributeGroup name="DateGroup">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+            The date group is used to keep a normalized date. Both normal dates
+            and date + times can be stored. The format for all dates is either
+            the xsd:date or xsd:datetime formats which are ISO 8601 based. The 
+            date group can be used with <property>, <date>, and <note> elements. 
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:attribute name="date" type="DateSimpleType" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+            The @date attribute is used for a single date value.
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="startDate" type="DateSimpleType" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+            The @startDate attribute is used for the starting date of a date 
+            range.
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="endDate" type="DateSimpleType" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+               The @endDate attribute is used for the ending date of a date 
+               range.
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+   </xsd:attributeGroup>
+
+   <!-- ==================================================================== -->
+
+   <xsd:attributeGroup name="VersioningGroup">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The versioning group is used to record dates and statuses of 
+            different versions of various elements. These attributes define
+            the versioning model for HKLM. In general, when an item is 
+            versioned, different versions of an element will exist alongside
+            one another with different time periods and statuses defined.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:attribute name="startPeriod" type="DateSimpleType" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+               The @startPeriod attribute is the earliest date that a particular 
+               version applies to. The @startPeriod is not necessarily the
+               effective date. It's merely the earliest date that the particular
+               version of the text should be returned in point-in-time
+               calculations.
+               
+               The @startPeriod works with the @endPeriod which defines that
+               last date that a specific version applies to. Together, the
+               @startPeriod and the @endPeriod define a period of time that the
+               version applies to. This version may be in states such as
+               pending, operational, partially commenced, suspended, or even 
+               repealed.
+               
+               If the @startPeriod is not specified, then all past time is
+               assumed.
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="endPeriod" type="DateSimpleType" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+               The @endPeriod attribute is the last date that a specific version
+               of the text should be returned in point-in-time calculations. 
+               
+               If the @endPeriod is not specified, then all future time is 
+               assumed.
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="status" type="StatusEnum" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+               The @status attribute is used to show the status of a version
+               of provision. This attribute works with the @startPeriod and the
+               @endPeriod and applies to the period of time defined by these
+               attributes.
+           ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="partial" type="xsd:boolean" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+               The @partial attribute is used, in conjunction with the 
+               @status attribute to indicate that the status is not fully
+               applied.
+           ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      </xsd:attributeGroup>
+
+   <!-- ==================================================================== -->
+
+   <xsd:attributeGroup name="ActionGroup">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The action group is used to describe amending actions found within
+            amending formulas. A single amending formula may consist of
+            a sequence of actions.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:attribute name="type" type="ActionTypeEnum" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+            The @type attribute describes the type of action being taken. 
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="occurrence" type="OccurrenceSimpleType" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+               The @occurrence attribute describes which occurrence of item in
+               question should the action take effect on.
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="commencementDate" type="DateSimpleType" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+               The @commencementDate attribute specifies the date upon which the
+               action is to be applied.
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+   </xsd:attributeGroup>
+
+   <!-- ==================================================================== -->
+
+   <xsd:attributeGroup name="CellGroup">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The cell group is used to describe a cell in a tabular structure
+            found within legislation. 
+            
+            The @colspan and @rowspan attributes are inspired by the HTML 
+            attributes of the same name. Consequently, the names are specified
+            as all lower-case which is a minor inconsistency to the naming 
+            convention used for all other attributes.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:attribute name="colspan" type="xsd:integer" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+            The @colspan attribute, like the corresponding HTML attribute, 
+            defines the number of columns a column tag must span. 
+            If this attribute is not set, then the column span is one.
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="rowspan" type="xsd:integer" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+            The @rowspan attribute, like the corresponding HTML attribute,
+            defines the number of rows a specific column tag must span.
+            If this attribute is not set, then the row span is one.
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+      <xsd:attribute name="leaders" type="ShortStringSimpleType" use="optional">
+         <xsd:annotation>
+            <xsd:documentation><![CDATA[
+            The @leaders attribute specifies whether leaders should be 
+            shown either trailing or following the text content. The character
+            included as the value is the character used to render the leaders.
+            
+            Use the CSS text-align character to position the text. If you 
+            align the text to the left, then the leaders will show to the 
+            right and if you align the text to the right, then the leaders
+            will show to the left.
+            ]]></xsd:documentation>
+         </xsd:annotation>
+      </xsd:attribute>
+   </xsd:attributeGroup>
+
+   <!-- ==================================================================== -->
+   <!-- Primitive Definitions                                                -->
+   <!-- ==================================================================== -->
+
+   <xsd:annotation>
+      <xsd:documentation>
+         <![CDATA[         
+
+         ** Primitive Definitions **
+         
+         There are five basic primitive types. All elements are defined to be
+         one of these five basic types. In addition to types derived from these
+         five basic types, there are also five abstract element declared 
+         directly from these types. These elements can be used, in some cases, 
+         for when the more specific cases do not apply. In those cases, the 
+         primitive types can be used along with the @role attribute to create 
+         new informal types.
+         
+         *** Basic Rules ***
+         
+           * A marker contains nothing within it.   
+           * An inline contains text, or any inline structure including 
+             inline, ref, or marker.
+           * A block contains any block structure including block, content, 
+             or property.
+           * A content (block) contains text or any block or other content.
+           
+      ]]></xsd:documentation>
+
+   </xsd:annotation>
+
+   <!-- ==================================================================== -->
+
+   <xsd:complexType name="BaseType" abstract="true">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The base type defines the most general element, specifying the 
+            attributes which can be found on all elements - specifically
+            attributes belonging to the identification, classification, and 
+            annotation groups.
+            
+            The base type is defined as an abstract type and elements cannot
+            be declared based on it.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:simpleContent>
+         <xsd:extension base="xsd:string">
+            <xsd:attributeGroup ref="IdentificationGroup"/>
+            <xsd:attributeGroup ref="ClassificationGroup"/>
+            <xsd:attributeGroup ref="AnnotationGroup"/>
+            <xsd:attributeGroup ref="VersioningGroup"/>            
+            <xsd:attributeGroup ref="xml:specialAttrs"/>
+         </xsd:extension>
+      </xsd:simpleContent>
+   </xsd:complexType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:complexType name="BaseBlockType" abstract="true">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+            The base block type is a variant of the base type, but having a
+            content structure to support block level children - elements
+            but no text. 
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:attributeGroup ref="IdentificationGroup"/>
+      <xsd:attributeGroup ref="ClassificationGroup"/>
+      <xsd:attributeGroup ref="AnnotationGroup"/>
+      <xsd:attributeGroup ref="VersioningGroup"/>
+      <xsd:attributeGroup ref="xml:specialAttrs"/>
+   </xsd:complexType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:complexType name="BaseContentType" abstract="true" mixed="true">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The base content type is a variant of the base type, but having
+            a very open content model including text.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:attributeGroup ref="IdentificationGroup"/>
+      <xsd:attributeGroup ref="ClassificationGroup"/>
+      <xsd:attributeGroup ref="AnnotationGroup"/>
+      <xsd:attributeGroup ref="VersioningGroup"/>      
+      <xsd:attributeGroup ref="xml:specialAttrs"/>
+   </xsd:complexType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:complexType name="MarkerType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The marker type is a restriction of the base type to an element 
+            without content.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <!-- No content -->
+      <xsd:simpleContent>
+         <xsd:restriction base="BaseType">
+            <xsd:simpleType>
+               <xsd:restriction base="xsd:string">
+                  <xsd:length value="0"/>
+               </xsd:restriction>
+            </xsd:simpleType>
+         </xsd:restriction>
+      </xsd:simpleContent>
+   </xsd:complexType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:complexType name="InlineType" mixed="true">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The inline type is a extension of the base type to text content or
+            other inline elements.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="BaseContentType">
+            <xsd:choice minOccurs="0" maxOccurs="unbounded">
+               <xsd:element ref="marker"/>
+               <xsd:element ref="inline"/>
+            </xsd:choice>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:complexType name="BlockType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The block type is a extension of the base type to content
+            consisting of only elements.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="BaseBlockType">
+            <xsd:sequence>
+               <xsd:any minOccurs="0" maxOccurs="unbounded" namespace="##targetNamespace"/>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:complexType name="TextType" mixed="true">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The text type is a broad base type allowing any content.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="BaseContentType">
+            <xsd:sequence>
+               <xsd:any minOccurs="0" maxOccurs="unbounded" namespace="##any" processContents="lax"
+               />
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:complexType name="ContentType" mixed="true">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The content type is a broad base type allowing any content.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="BaseContentType">
+            <xsd:sequence>
+               <xsd:any minOccurs="0" maxOccurs="unbounded" namespace="##any" processContents="lax"
+               />
+            </xsd:sequence>
+            <xsd:attribute name="orientation" type="OrientationEnum" use="optional"
+               default="portrait">
+               <xsd:annotation>
+                  <xsd:documentation><![CDATA[
+                  The @orientation attribute is used to specify a "landscape" 
+                  orientation for the published form. This is primarily used
+                  for schedules or for tables.                  
+                  ]]></xsd:documentation>
+               </xsd:annotation>
+            </xsd:attribute>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <!-- ==================================================================== -->
+   <!-- Primitive Declarations                                               -->
+   <!-- ==================================================================== -->
+
+   <xsd:element name="marker" type="MarkerType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+            The <marker> element is a primitive element to be used to mark or
+            denote a spot in the text. I can be used in the <content> areas or
+            anywhere else where an <inline> element is expected. The <marker>
+            element contains no text.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="inline" type="InlineType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+            The <inline> element is a primitive element to be used within
+            <content> areas or within any other areas which can accept 
+            inline content.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="block" type="BlockType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The <block> element is a primitive element to be used anywhere 
+            where <block> elements are permitted including within <content> 
+            elements or anywhere where <block> elements have been explicitly 
+            permitted.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="content" type="ContentType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The <content> element is a primitive element to be used anywhere 
+            where a very general content model is desired, including within
+            other <content> elements.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+
+   <!-- ==================================================================== -->
+   <!-- Core Definitions                                                     -->
+   <!-- ==================================================================== -->
+
+   <xsd:annotation>
+      <xsd:documentation><![CDATA[ 
+         
+         Key: 
+         
+         *  <tag> ... </tag> is the enclosing tag
+         *  <child> is a required child
+         *  [<child>] is an optional child
+         *  [<child>]? is a sequence of zero or one child
+         *  [<child>]* is a sequence of zero or more children
+         *  <child1>|<child2> is either child1 or child2
+         *  [<child1>|<child2>] is either child1 or child2 or neither
+         *  [<child1>|</child2>]* is a sequence of zero or more child1s or 
+            child2s in no particular pattern
+           
+         Basic Model:
+         
+         * <doc>[<meta>][<main>][<appendix>]*</doc>
+         * <meta>[<set>|<property>]*</meta>
+         * <toc>[<heading>][<subheading>][<layout>|<tocItem>]*</toc>
+         * <tocItem>[<heading>][<subheading>][<layout>]*</tocItem>
+         * <main>[<property>|<toc>|<preamble>|<statement>|<note>|
+           <enactingFormula>|<level>|<crossHeading>]*<main>
+         * <statement>[{text}|<content>|<inline>|<ref>|<marker>|<p>|
+           <notes>]*</statement>
+         * <level><num>?<heading>?<subheading>?<notes>?[<instruction><notes>?|
+           <content><notes>?|<toc>?[<text>|<level>|
+           <crossheading>|note]*]]</level>
+         * <num>{text}</num>
+         * <heading> can contain text, inline, ref, marker
+         * <appendix> can contain content
+         * <notes> can contain text, note, inline, marker
+         * <note> can contain text, inline, ref, marker
+         * <instruction> can contain text, action, quotedText, 
+           quotedStructure (<instruction> is abstract)
+         * <action> can contain text, ref
+         * <quotedContent> can contain text, statement, main, level, num, 
+           heading, ref, date, attachments, attachment, notes, note
+         * <ref>[{test}|<inline>|<marker>]*</ref>
+         * <date>[{text}|<inline>|<ref>|<marker>]*</date>
+
+      ]]></xsd:documentation>
+   </xsd:annotation>
+
+   <xsd:complexType name="LawDocType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The law doc type is the core root element type for all document that
+            contain law - either proposed or enacted.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="BaseBlockType">
+            <xsd:sequence>
+               <xsd:element ref="meta">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                     All documents start with a meta area containing properties about
+                     the document. The information contained within this area is not
+                     official text in the document and should not be published other
+                     than as editorial notes.                        
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:element ref="main" minOccurs="0">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                     The primary part of the document is the main area. This contains
+                     the bulk of the document including any hierarchical levels, 
+                     sections, table of contents, etc.                        
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:choice minOccurs="0" maxOccurs="unbounded">
+                  <xsd:element ref="block">
+                     <xsd:annotation>
+                        <xsd:documentation><![CDATA[
+                           A block container, usually for signatures and signing dates.
+                        ]]></xsd:documentation>
+                     </xsd:annotation>
+                  </xsd:element>
+                  <xsd:element ref="appendix">
+                     <xsd:annotation>
+                        <xsd:documentation><![CDATA[
+                        In addition to the main part of the document, a document
+                        may have one or more appendices such as schedules or 
+                        explanatory memorandums/notes. These appendices can 
+                        either be inline documents or the can be external 
+                        referenced documents.                        
+                     ]]></xsd:documentation>
+                     </xsd:annotation>
+                  </xsd:element>
+               </xsd:choice>
+               </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:complexType name="GenericDocType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The generic doc type is the core type for generic loosely structured
+            documents.
+            
+            Documents using legislative structures and subject to amending,
+            either locally or by an external jurisdiction, should not use this
+            format.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="BaseBlockType">
+            <xsd:sequence>
+               <xsd:element ref="meta">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                        All documents start with a meta area containing properties about
+                        the document. The information contained within this area is not
+                        official text in the document and should not be published other
+                        than as editorial notes.                        
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:element ref="content">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                        The primary part of the document is the content area. This
+                        can contain a basic generic document structure.
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:element ref="appendix" minOccurs="0" maxOccurs="unbounded">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                        In addition to the content part of the document, a document
+                        may have one or more appendices.                        
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:element>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+   
+   <!-- ==================================================================== -->
+
+   <xsd:complexType name="MetaType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The meta type is a core level container for metadata relating to the
+            document. The metadata is not part of the official text of the
+            document and should not be displayed in the printed text, other
+            than in editorial comments.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="BaseBlockType">
+            <xsd:choice minOccurs="0" maxOccurs="unbounded">
+               <xsd:any namespace="http://purl.org/dc/elements/1.1/" processContents="lax">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                        Core elements defined by the Dublin Core may be used.
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:any>
+               <xsd:any namespace="http://purl.org/dc/terms/" processContents="lax">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                        Terms defined by the Dublin Core may be used.
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:any>
+               <xsd:element ref="property">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                        Properties are added to the metadata to record varying
+                        aspects of the document. In addition to generic 
+                        properties, there are defined derivatives of the 
+                        property type that can also be used, for things like
+                        the document type and document number.
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:element ref="set">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                        Properties can be grouped into sets. These set can 
+                        be used to represent something like a series of events,
+                        a person, or another other object related to the 
+                        document.
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:element>
+            </xsd:choice>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:complexType name="PropertyType" mixed="true">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The property core type is used to record metadata about a document.
+            Properties usually are found in the meta area and are not an official
+            part of the document. However, properties can also be found in the
+            official text when they are defined there. In that case, the text
+            content of the property is the official text in the document and
+            a normalized date, value, or reference attribute might also be defined.
+            
+            In some cases, specific elements are derived from the property type
+            with more descriptive names. In that case, the descriptive name is
+            the equivalent of the @name attribute on a core property element.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="InlineType">
+            <xsd:attributeGroup ref="DateGroup">
+               <xsd:annotation>
+                  <xsd:documentation><![CDATA[
+                  A property can represent a date or a date range.
+                  ]]></xsd:documentation>
+               </xsd:annotation>
+            </xsd:attributeGroup>
+            <xsd:attributeGroup ref="ValueGroup">
+               <xsd:annotation>
+                  <xsd:documentation><![CDATA[
+                  A property can represent a value or a value range.
+                  ]]></xsd:documentation>
+               </xsd:annotation>
+            </xsd:attributeGroup>
+            <xsd:attributeGroup ref="ReferenceGroup">
+               <xsd:annotation>
+                  <xsd:documentation><![CDATA[
+                  A property can represent a pointer to either an external 
+                  document or an element within the document.
+                  
+                  You can use a ref to create a pointer to an endnote or a 
+                  footnote. In that case, the ref text will be the endnote or 
+                  footnote indicator as seen in "<ref idref="fn000001">†</ref>"
+                  where the dagger is the indicator. An endnote or footnote 
+                  reference should always use the @idref attribute to point to 
+                  an endnote or a footnote within the document.
+                  ]]></xsd:documentation>
+               </xsd:annotation>
+            </xsd:attributeGroup>
+            <xsd:attribute name="type" type="PropertyTypeEnum" use="optional" default="string">
+               <xsd:annotation>
+                  <xsd:documentation><![CDATA[
+                  By default, a property is a string. The @type attribute is
+                  used to define an alternate property type. The attributes of
+                  the Reference Group are used when the @type is set to "url".
+                  The attributes of the Value Group are used when the @type is
+                  set to "string", "number", "token", or "boolean" or the @type
+                  is not set. The attributes of the Date Group are used when the
+                  @type is set to "date".
+                  ]]></xsd:documentation>
+               </xsd:annotation>
+            </xsd:attribute>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:complexType name="SetType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The set type is the core type for a group of properties. Property
+            sets are found within the meta area only. Sets can contain other
+            sets as well as properties. 
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="BaseBlockType">
+            <xsd:choice minOccurs="0" maxOccurs="unbounded">
+               <xsd:any namespace="http://purl.org/dc/elements/1.1/" processContents="lax">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                        Properties defined by the Dublin Core may be used.
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:any>               
+               <xsd:element ref="property">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                     A set can contain 0 or more properties.
+                  ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:element ref="set">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                     A set can contain 0 or more sets.
+                  ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:element>
+            </xsd:choice>       
+            <xsd:attribute name="type" type="SetTypeEnum" use="optional" default="bag">
+               <xsd:annotation>
+                  <xsd:documentation><![CDATA[
+                  By default, the properties in a set are a simple "bag" of 
+                  properties, known as an unordered set. However, a set of 
+                  properties can also be typed using the @type attribute, 
+                  choosing values from the set type enumeration. 
+                  ]]></xsd:documentation>
+               </xsd:annotation>
+            </xsd:attribute>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:complexType name="TocType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The TOC core type is used to define a table of contents.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="BaseBlockType">
+            <xsd:sequence>
+               <xsd:group ref="HeadingStructure" minOccurs="0">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                        A table of contents may have a heading.
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:group>
+               <xsd:choice minOccurs="0" maxOccurs="unbounded">
+                  <xsd:element ref="tocItem">
+                     <xsd:annotation>
+                        <xsd:documentation><![CDATA[
+                        A table of contents can have 0 or more items.
+                        ]]></xsd:documentation>
+                     </xsd:annotation>
+                  </xsd:element>
+                  <xsd:element ref="layout">
+                     <xsd:annotation>
+                        <xsd:documentation><![CDATA[
+                        The items in a table of contents can be arranged in
+                        a tabular fashion by surrounding the items in a layout.
+                        When a layout is specified, use <column> elements
+                        within each <tocItem> to indicate specific columns.
+                        ]]></xsd:documentation>
+                     </xsd:annotation>
+                  </xsd:element>
+               </xsd:choice>
+            </xsd:sequence>
+         <xsd:attribute name="generate" type="xsd:boolean" use="optional">
+               <xsd:annotation>
+                  <xsd:documentation><![CDATA[
+                     The @generate attribute is used to denote table of contents
+                     that are to be auto-generated. The TOC generator should 
+                     generate any TOC for which a stub TOC exists (an empty 
+                     <toc> element) or generate/regenerate any TOC with a 
+                     @generate attribute with a value of "true". 
+                     
+                     Any TOC generated by a TOC generator and stuffed into the
+                     <toc> element should include the @generate attribute with
+                     a value of "true".
+                  ]]></xsd:documentation>
+               </xsd:annotation>
+            </xsd:attribute>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:complexType name="TocItemType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The TOC item core type is an item in a table of contents. Items
+            can be nested to create a hierarchy.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="BaseBlockType">
+            <xsd:choice>
+               <xsd:sequence>
+                  <xsd:group ref="HeadingStructure" minOccurs="0">
+                     <xsd:annotation>
+                        <xsd:documentation><![CDATA[
+                           An item in a table of contents may have a heading.
+                        ]]></xsd:documentation>
+                     </xsd:annotation>
+                  </xsd:group>
+                  <xsd:element ref="tocItem" minOccurs="0" 
+                     maxOccurs="unbounded">
+                     <xsd:annotation>
+                        <xsd:documentation><![CDATA[
+                        An item in a table of contents can have child items when
+                        it is a level in the hierarchy.
+                        ]]></xsd:documentation>
+                     </xsd:annotation>
+                  </xsd:element>
+                  </xsd:sequence>
+               <!-- MaxOccurs is set to 3 to allow three columns in the TOC -->
+               <xsd:element ref="content" maxOccurs="3">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                     When an item is the lowest level in the hierarchy, you use the 
+                     <content> element to describe the text to show. If the text
+                     is arranged in columns, use <column> elements to denote each 
+                     column. 
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:element>
+            </xsd:choice>
+            <xsd:attributeGroup ref="DescriptionGroup">
+               <xsd:annotation>
+                  <xsd:documentation><![CDATA[
+                  Use the description group to record the number and title in the
+                  table of contents as metadata.
+                  ]]></xsd:documentation>
+               </xsd:annotation>
+            </xsd:attributeGroup>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:complexType name="MainType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The main core type is the container for the main part of the
+            document. The content model defines the various aspects in a very
+            flexible model allowing arbitrary ordering. This is due to a 
+            limitation in XML schemas. The general model allows for properties,
+            table of contents, and statements to be at the top of the document,
+            the preamble or enacting formula in the middle, the levels and 
+            cross-heading below that, and notes interspersed anywhere.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:restriction base="BlockType">
+            <xsd:sequence>
+               <xsd:choice minOccurs="0" maxOccurs="unbounded">
+                  <xsd:element ref="property">
+                     <xsd:annotation>
+                        <xsd:documentation><![CDATA[
+                           In addition to placing properties in the <meta> area,
+                           properties can also be found in the main container.
+                           Elements derived from the core <property> and defined
+                           within the property substitution group can also be
+                           used.
+                        ]]></xsd:documentation>
+                     </xsd:annotation>
+                  </xsd:element>
+               <xsd:element ref="block">
+                     <xsd:annotation>
+                        <xsd:documentation><![CDATA[
+                           Blocks derived from the core <block> property and 
+                           included in the block substitution group, such as 
+                           approval signatures, can be placed in the main 
+                           container.
+                        ]]></xsd:documentation>
+                     </xsd:annotation>
+                  </xsd:element>
+                  <xsd:element ref="statement">
+                     <xsd:annotation>
+                        <xsd:documentation><![CDATA[
+                           Statements or elements derived from the core 
+                           <statement> property and included in the statement 
+                           substitution group can be placed in the main 
+                           container.
+                        ]]></xsd:documentation>
+                     </xsd:annotation>
+                  </xsd:element>
+                  <xsd:element ref="toc">
+                     <xsd:annotation>
+                        <xsd:documentation><![CDATA[
+                           The <main> body of the document may have a table of
+                           contents. Typically this will be generated. The
+                           model permits multiple <toc> elements, but this is
+                           only due to limitations with XML schemas (XSD 1.0).
+                        ]]></xsd:documentation>
+                     </xsd:annotation>
+                  </xsd:element>
+                  <xsd:group ref="NoteStructure"/>
+               </xsd:choice>
+               <xsd:group ref="PreambleStructure" minOccurs="0">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                        The preamble structure, which includes the simple
+                        enacting formula, is optional to allow for its removal in
+                        enacted law.
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:group>
+               <xsd:group ref="LevelStructure" minOccurs="0">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                        The document is permitted to be empty to allow for the
+                        case when the document is newly created and still in a
+                        drafting state.
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+                  </xsd:group>
+               </xsd:sequence>
+         </xsd:restriction>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:complexType name="StatementType" mixed="true">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The statement core type is used for most of the provisions that
+            begin a Bill, or other Legislation. Preambles,
+            enactment formulas, and other starting provisions are all 
+            derivations of statements.            
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="BaseContentType">
+            <xsd:choice minOccurs="0" maxOccurs="unbounded">
+               <xsd:element ref="marker">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                     A statement can contain markers.
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:element ref="inline">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                     A statement can contain inline elements.
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:element ref="block">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                     A statement can contain blocks.
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:element ref="text">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[ 
+                        Interspersed between levels in a hierarchical level you 
+                        can place content such as an opening <chapeau>, 
+                        closing <continuation>, or a <proviso>. It is also 
+                        possible to have interstitial content modeled as 
+                        <containment>, although the need should be very rare.
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:element ref="content">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                     A statement can contain content elements.
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:element ref="level">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                     A statement can be composed of hierarchy.
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:element>
+            </xsd:choice>
+            <xsd:attributeGroup ref="DescriptionGroup">
+               <xsd:annotation>
+                  <xsd:documentation><![CDATA[
+                  The attributes of the description group can be used to 
+                  record a number and title for a statement for use when
+                  generating a table of contents.
+                  ]]></xsd:documentation>
+               </xsd:annotation>
+            </xsd:attributeGroup>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:complexType name="PreambleType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The preamble core type is the optional container for recitals and
+            the enacting formula. In most modern Bills, the preamble is omitted
+            and a single standalone enacting formula is used instead.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="BaseBlockType">
+            <xsd:sequence>
+               <xsd:group ref="HeadingStructure" minOccurs="0">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                        A <preamble> can, in some cases, begin with a heading.
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:group>
+               <xsd:group ref="RecitalStructure" maxOccurs="unbounded">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                        A <preamble> is made up of a series of recitals. 
+                        Recitals typically begin "Whereas,".
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+                  </xsd:group>
+               <xsd:element ref="enactingFormula" minOccurs="0">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                        When the <preamble> is present, the enacting formula 
+                        will end the preamble in a Bill. The enacting formula is 
+                        usually removed from the ordinance and replaced with a 
+                        note.
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:element>
+            </xsd:sequence>
+            <xsd:attributeGroup ref="DescriptionGroup">
+               <xsd:annotation>
+                  <xsd:documentation><![CDATA[
+                     Attributes from the description group may be used to 
+                     attach information to the preamble for use in generating
+                     a table of contents.
+                  ]]></xsd:documentation>
+               </xsd:annotation>
+            </xsd:attributeGroup>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <!-- ==================================================================== -->
+   
+   <xsd:complexType name="LevelType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The level core type is the basic element in the primary document
+            hierarchy. Levels are used to represent items ranging from Title,
+            Subtitle, etc, down to subsubclauses. Typically, a derived synonym 
+            which more closely describes the level type will be used rather 
+            than the abstract.
+            
+            There are some level types found in U.S. Code which
+            do not have a defined name or number.  For example, see the
+            undesignated heading levels in Title 12, Chapter 7. 
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="BaseBlockType">
+            <xsd:sequence>
+               <xsd:group ref="NumStructure" minOccurs="0">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                        A <level> is usually numbered. However, in a few cases,
+                        typically preliminary sections or with item lists, this 
+                        may not be the case.
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:group>
+               <xsd:group ref="HeadingStructure" minOccurs="0">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                        A <level> generally has a heading, but this is not 
+                        required.
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:group>
+               <xsd:group ref="TocStructure" minOccurs="0" maxOccurs="unbounded">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                        It is uncommon, but possible, that a table of contents
+                        may be found within the level hierarchy. Typically, this
+                        <toc> will be manually defined rather than generated. 
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:group>
+               <xsd:group ref="LevelStructure" minOccurs="0">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                        The primary part of a <level>. This may not exist in 
+                        cases where the level has been repealed, omitted, spent,
+                        or otherwise removed and a simple note has been left 
+                        behind.
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:group>
+
+               </xsd:sequence>
+            <xsd:attributeGroup ref="DescriptionGroup">
+               <xsd:annotation>
+                  <xsd:documentation><![CDATA[ 
+                     Use the description group to record information in the
+                     attributes to be used when generating the table of contents.
+                  ]]></xsd:documentation>
+               </xsd:annotation>
+            </xsd:attributeGroup>            
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:complexType name="NumType" mixed="true">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The numType is used to surround the numeric designation given
+            to a hierarchical level and other items in a document. The
+            <num> element should surround the complete text of the number
+            including any preceding prefix and any decoration and punctuation.
+            This is to allow the complete text to be property displayed in
+            the published form.
+            
+            Numbers can be used for either single values or for number ranges.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="InlineType">
+            <xsd:attributeGroup ref="ValueGroup">
+               <xsd:annotation>
+                  <xsd:documentation><![CDATA[
+                     Use the @value attribute to record a normalized value of
+                     the <num> content. When the text content represents a 
+                     range of values, use the @beginValue and @endValue 
+                     attributes to record the range.
+                  ]]></xsd:documentation>
+               </xsd:annotation>
+            </xsd:attributeGroup>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:complexType name="HeadingType" mixed="true">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The heading type is used to define heading and subheadings for
+            levels and other structured items. Often a heading will follow 
+            a number.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="ContentType"> </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:complexType name="InstructionType" mixed="true">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The instruction type is used to describe an amendment or a 
+            modification. It contains a sequence of one or more actions which 
+            may have quoted text or quoted structures associated. When multiple 
+            actions are present, they are executed in the order in which they 
+            appear when the amendment or modification is applied.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="BaseContentType">
+            <xsd:sequence>
+               <xsd:element ref="ref">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                        Specify at least one item to be amended or modified.
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:choice minOccurs="0" maxOccurs="unbounded">
+                  <xsd:element ref="inline">
+                     <xsd:annotation>
+                        <xsd:documentation><![CDATA[ 
+                           Various inline elements can be used.
+                        ]]></xsd:documentation>
+                     </xsd:annotation>
+                  </xsd:element>
+                  <xsd:element ref="marker">
+                     <xsd:annotation>
+                        <xsd:documentation><![CDATA[ 
+                        Various markers can be used. This includes line breaks
+                        that can be included for formatting purposes.
+                     ]]></xsd:documentation>
+                     </xsd:annotation>
+                  </xsd:element>
+               </xsd:choice>
+               <xsd:sequence maxOccurs="4">
+                  <xsd:element ref="action" maxOccurs="4">
+                     <xsd:annotation>
+                        <xsd:documentation><![CDATA[ 
+                           The action describes an atomic operation within the
+                           amendment.
+                        ]]></xsd:documentation>
+                     </xsd:annotation>
+                  </xsd:element>
+                  <xsd:choice minOccurs="0">
+                     <xsd:element ref="level" minOccurs="1" maxOccurs="unbounded">
+                        <xsd:annotation>
+                           <xsd:documentation><![CDATA[
+                              A list of amendments may be enumerated, typically
+                              as items.
+                           ]]></xsd:documentation>
+                        </xsd:annotation>
+                     </xsd:element>
+                     <xsd:element ref="quotedText">
+                        <xsd:annotation>
+                           <xsd:documentation><![CDATA[ 
+                           A quoted text string may be associated with an
+                           action (by position) as part of the processing 
+                           action.
+                        ]]></xsd:documentation>
+                        </xsd:annotation>
+                     </xsd:element>
+                     <xsd:element ref="quotedContent">
+                        <xsd:annotation>
+                           <xsd:documentation><![CDATA[ 
+                           A quoted structure may be associated with an
+                           action (by position) as part of the processing 
+                           action.
+                        ]]></xsd:documentation>
+                        </xsd:annotation>
+                     </xsd:element>
+                  </xsd:choice>
+               </xsd:sequence>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:complexType name="ActionType" mixed="true">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            An action type is used to describe an amendment action in terms that
+            a computer program can explain. It surrounds the human readable text
+            of the amendment action and adds @href, @pos, and @action attributes
+            to describe the same information for programmatic evaluation.
+            
+            When an amendment contains multiple actions, they are to be executed
+            sequentially in the order in which they appear.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="InlineType">
+            <xsd:attributeGroup ref="ReferenceGroup">
+               <xsd:annotation>
+                  <xsd:documentation><![CDATA[
+                     Use the @href and @idref attributes along with the 
+                     Amending Group attributes to describe what is being
+                     affected.
+                  ]]></xsd:documentation>
+               </xsd:annotation>
+            </xsd:attributeGroup>
+            <xsd:attributeGroup ref="AmendingGroup">
+               <xsd:annotation>
+                  <xsd:documentation><![CDATA[
+                     Use the @pos and other attributes to describe what is being
+                     affected.
+                     
+                     The attributes in the amending group should only be used
+                     for references or actions within an amending instruction.
+                  ]]></xsd:documentation>
+               </xsd:annotation>
+            </xsd:attributeGroup>             
+            <xsd:attributeGroup ref="ActionGroup">
+               <xsd:annotation>
+                  <xsd:documentation><![CDATA[ 
+                     Use the @action attribute to describe the action being taken.
+                  ]]></xsd:documentation>
+               </xsd:annotation>
+            </xsd:attributeGroup>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:complexType name="NotesType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            Notes are a collection of notes in a list.  
+            
+            If the @type attribute is set to "footnotes", then the footnotes 
+            are intended to be shown at the bottom of the page in which they
+            are referenced.
+            
+            If the @type attribute is set to "endnotes", then the endnotes
+            are intended to be shown at the end of the document.
+
+            If the @type attribute is not used or is set to "inline", then
+            the notes should be shown inline.
+
+            If the @type attribute is set to "uscNotes", then the notes
+            are intended to be shown associated with section or level of the 
+            U.S. Code.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="BaseBlockType">
+            <xsd:choice>
+               <xsd:sequence>
+                  <xsd:element ref="heading" minOccurs="0"/>
+                  <xsd:element ref="subheading" minOccurs="0" 
+                     maxOccurs="unbounded"/>
+                  <xsd:element ref="note" maxOccurs="unbounded">
+                     <xsd:annotation>
+                        <xsd:documentation><![CDATA[ 
+                        A <notes> element is a collection of note elements. 
+                        Typically, rather than using the abstract <note>
+                        element, the notes will be either <statutoryNote>
+                        elements or <editorialNote> elements.
+                     ]]></xsd:documentation>
+                     </xsd:annotation>
+                  </xsd:element>
+               </xsd:sequence>
+               <xsd:element ref="layout"/>
+            </xsd:choice>
+            <xsd:attributeGroup ref="NoteGroup">
+               <xsd:annotation>
+                  <xsd:documentation><![CDATA[ 
+                     You can use the @type attribute to position the notes
+                     and the @topic attribute to categorize the notes.
+                  ]]></xsd:documentation>
+               </xsd:annotation>
+            </xsd:attributeGroup>        
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <!-- ==================================================================== -->
+   
+   <xsd:complexType name="NoteType" mixed="true">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A note is an annotation recording important information about the
+            legislation. There are three basic types of notes:
+            
+            - Statutory notes are considered part of the law.
+            - Editorial notes are added to the legislation to convey information
+              that is not statutory in nature.
+            - Source notes are a type of editorial note that records historical
+              references to documents which modified the base legislation.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="ContentType">
+            <xsd:attributeGroup ref="NoteGroup">
+               <xsd:annotation>
+                  <xsd:documentation><![CDATA[ 
+                     You can use the @type attribute to position the note
+                     and the @topic attribute to categorize the note.
+                  ]]></xsd:documentation>
+               </xsd:annotation>
+            </xsd:attributeGroup>     
+            <xsd:attributeGroup ref="DateGroup">
+               <xsd:annotation>
+                  <xsd:documentation><![CDATA[ 
+                     You can use the @date to associate dates to your notes. 
+                     This can be used to generate alerts.
+                  ]]></xsd:documentation>
+               </xsd:annotation>
+            </xsd:attributeGroup>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:complexType name="AppendixType" mixed="true">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The appendix type is used attach associated documents to the main
+            document. Typically, appendices are schedules or explanations.
+            
+            Appendices can be either inline (as is usually the case) or they
+            can be referenced via a URL.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="BaseBlockType">
+            <xsd:sequence>
+               <xsd:group ref="NumStructure" minOccurs="0">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                        An <appendix> may or may not be numbered.   
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:group>
+               <xsd:group ref="HeadingStructure" minOccurs="0">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                        An <appendix> may or may not have a heading.
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:group>
+               <xsd:group ref="TocStructure" minOccurs="0">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                        An <appendix> may or may not have a table of contents.
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:group>
+               <xsd:choice minOccurs="0">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                        This content model is broader than necessary. It should 
+                        consist of a single block or content or a series of 
+                        items. The level structure is more open than that.
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+                  <xsd:element ref="block"/>
+                  <xsd:group ref="LevelStructure"/>
+                  </xsd:choice>
+               </xsd:sequence>
+            <xsd:attributeGroup ref="DescriptionGroup">
+               <xsd:annotation>
+                  <xsd:documentation><![CDATA[ 
+                     Attributes from the description group can be used to
+                     store information necessary to create a table of contents.
+                  ]]></xsd:documentation>
+               </xsd:annotation>
+            </xsd:attributeGroup>
+            <xsd:attributeGroup ref="LinkGroup">
+               <xsd:annotation>
+                  <xsd:documentation><![CDATA[ 
+                     If an <appendix> is to be included by reference, use the
+                     @src attribute with a normal URL to point to the document
+                     to be included.
+                  ]]></xsd:documentation>
+               </xsd:annotation>
+            </xsd:attributeGroup>
+            <xsd:attribute name="orientation" type="OrientationEnum" use="optional"
+               default="portrait">
+               <xsd:annotation>
+                  <xsd:documentation><![CDATA[ 
+                     Use the @orientation attribute to specify a "landscape" 
+                     orientation for the entire schedule. You can also define
+                     the orientation of individual elements within the schedule.
+                  ]]></xsd:documentation>
+               </xsd:annotation>
+            </xsd:attribute>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <!-- ==================================================================== -->
+   
+   <xsd:complexType name="SignaturesType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+            Defines a block for a collection of signatures. An opening paragraph
+            is permitted as well as an ending date. In some cases, the date may
+            appear within the opening paragraph.
+            
+            The signatures may either be specified serially in a grid-like
+            layout.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:restriction base="BlockType">
+            <xsd:sequence>
+               <xsd:element ref="p" minOccurs="0"/>
+               <xsd:choice>
+                  <xsd:element ref="signature" maxOccurs="unbounded"/>   
+                  <xsd:element ref="layout"/>
+               </xsd:choice>
+            <xsd:element ref="date" minOccurs="0"/>  
+            </xsd:sequence>            
+         </xsd:restriction>
+      </xsd:complexContent>
+   </xsd:complexType>
+   
+   <xsd:complexType name="SignatureType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            Defines a basic signature element comprising a name and optionally 
+            the person's role, their affiliation, and a date. All fields can be
+            defined to include either an @href or an @idref to point to an 
+            identifying resource that describes the person, their role, and
+            their affiliation.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:restriction base="BlockType">
+            <xsd:sequence>
+               <xsd:element name="name">
+                  <xsd:complexType>
+                     <xsd:complexContent mixed="true">
+                        <xsd:restriction base="PropertyType"/>
+                     </xsd:complexContent>
+                  </xsd:complexType>
+               </xsd:element>
+               <xsd:element name="role" minOccurs="0">
+                  <xsd:complexType>
+                     <xsd:complexContent mixed="true">
+                        <xsd:restriction base="PropertyType"/>
+                     </xsd:complexContent>
+                  </xsd:complexType>
+               </xsd:element>
+               <xsd:element name="affiliation" minOccurs="0">
+                  <xsd:complexType>
+                     <xsd:complexContent mixed="true">
+                        <xsd:restriction base="PropertyType"/>
+                     </xsd:complexContent>
+                  </xsd:complexType>
+               </xsd:element>
+            <xsd:element ref="date" minOccurs="0">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                        A date can be associated with a group of signatures,
+                        or using this element with a single signature.
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:element>
+            </xsd:sequence>          
+         </xsd:restriction>
+      </xsd:complexContent>
+   </xsd:complexType>
+   
+   <!-- ==================================================================== -->
+
+   <xsd:complexType name="RefType" mixed="true">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The ref type is used to denote references within the text of a
+            document. The text of the element is the human-friendly 
+            representation while the text in the @href of @idref attribute
+            is the computer-friendly representation built in accordance with
+            the referencing model described above.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="PropertyType">
+         <xsd:attributeGroup ref="AmendingGroup">
+               <xsd:annotation>
+                  <xsd:documentation><![CDATA[
+                     Use the @pos and other attributes to describe
+                     what or where is being affected.
+                     
+                     The attributes in the amending group should only be used
+                     for references or actions within an amending instruction.
+                  ]]></xsd:documentation>
+               </xsd:annotation>
+            </xsd:attributeGroup>            
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:complexType name="DateType" mixed="true">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The date type is used to denote dates within the text of a
+            document. The text of the element is the human-friendly 
+            representation while the text in the @date attribute is the
+            computer-friendly normalized representation. 
+            
+            Dates can be specified as either dates or as date times when the 
+            document might not coincide with the local time zone.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:restriction base="PropertyType">
+            <xsd:attributeGroup ref="DateGroup">
+               <xsd:annotation>
+                  <xsd:documentation><![CDATA[ 
+                     Use the @date attribute to record a normalized value of the
+                     date according to ISO 8601.
+                  ]]></xsd:documentation>
+               </xsd:annotation>
+            </xsd:attributeGroup>
+            </xsd:restriction>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:complexType name="QuotedTextType" mixed="true">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A quoted text type is an extraction of simple text from another 
+            source or origin. If the quoted text is to have literal quotes 
+            surrounding it, then those characters must be included in the text
+            surrounding the quoted text and not within it.
+            
+            Quoted text is seen in amendments or modifications.
+            
+            Use the @identifier attribute to establish the referencing context
+            of the quoted text.            
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="InlineType">
+            <xsd:attribute name="origin" type="xsd:anyURI" use="optional">
+               <xsd:annotation>
+                  <xsd:documentation><![CDATA[            
+                     The @origin attribute is used to refer to the origin of
+                     quoted text. The value must always be specified as a 
+                     relative URL conforming to the reference specification.
+                     
+                     The @origin attribute is optional.
+                  ]]></xsd:documentation>
+               </xsd:annotation>
+            </xsd:attribute>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <!-- ==================================================================== -->
+
+   <xsd:complexType name="QuotedContentType" mixed="true">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A quotedContentType is used for an extraction of potentially structured
+            text (text with XML elements) from another source or origin.
+            
+            Quoted content is seen in USC Notes, amendments, and modifications. 
+
+            Use the @identifier attribute to establish the referencing context
+            of the quoted structure
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="ContentType">
+            <xsd:attribute name="origin" type="xsd:anyURI" use="optional">
+               <xsd:annotation>
+                  <xsd:documentation><![CDATA[            
+                     The @origin attribute is used to refer to the origin of
+                     quoted text. The value must always be specified as a 
+                     relative URL conforming to the reference specification.
+                     
+                     The @origin attribute is optional.
+                  ]]></xsd:documentation>
+               </xsd:annotation>
+            </xsd:attribute>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <!-- ==================================================================== -->
+   <!-- Structural Building Blocks                                           -->
+   <!-- ==================================================================== -->
+   
+   <xsd:group name="NoteStructure">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+            Notes can be defined in a variety of ways and tend to occur in many
+            different places throughout legislation.
+            
+            This structure allows for either individual notes or groups of 
+            notes.
+            
+            The number of times the notes might appear should be specified with
+            each use of this group.            
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:choice>
+         <xsd:element ref="note"/>
+         <xsd:element ref="notes"/>
+      </xsd:choice>
+   </xsd:group>
+   
+   <!-- ==================================================================== -->
+   
+   <xsd:group name="NumStructure">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The num structure allows for an unlimited number of occurrences in
+            a simple sequence. This is to allow an item to be renumbered without
+            creating a whole new parent item, typically a level or appendix structure.
+            Each <num> element should apply to a different temporal period.
+            
+            Notes will typically only follow a <num> when found in a repealed,
+            omitted, spent, or otherwise removed section or level that is being
+            noted.
+         ]]></xsd:documentation>
+      </xsd:annotation>      
+      <xsd:sequence>
+         <xsd:element ref="num" maxOccurs="unbounded"/>
+         <xsd:group ref="NoteStructure" minOccurs="0" maxOccurs="unbounded"/>          
+      </xsd:sequence>
+   </xsd:group>
+   
+   <!-- ==================================================================== -->
+   
+   <xsd:group name="HeadingStructure">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+            The primary structure of headings.
+            
+            A <heading> should exist only once for a single temporal period.
+            Multiple headings are permitted to support versioning without having
+            to create a whole new parent level or appendix. This is
+            important in hierarchical upper levels where it is not desirable to
+            generate a whole new level should part of the heading change.
+            
+            Use the optional <subheadings> in cases where there is one or more
+            subheadings to the parent item. Like the <heading> element, you can
+            define different <subheading> elements to apply to different 
+            temporal periods. 
+            
+            Notes may follow the heading. Often this is a source note.
+         ]]></xsd:documentation>
+      </xsd:annotation>      
+      <xsd:sequence>
+         <xsd:element ref="heading" maxOccurs="unbounded"/>     
+         <xsd:element ref="subheading" minOccurs="0" maxOccurs="unbounded"/>
+         <xsd:group ref="NoteStructure" minOccurs="0" maxOccurs="unbounded"/>     
+      </xsd:sequence>
+   </xsd:group>
+   
+   <!-- ==================================================================== -->
+   
+   <xsd:group name="TocStructure">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+            The table of contents structure defines the simple case of a <toc>
+            followed by optional notes.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:sequence>
+         <xsd:element ref="toc"/>         
+         <xsd:group ref="NoteStructure" minOccurs="0" maxOccurs="unbounded"/>
+      </xsd:sequence>      
+   </xsd:group>
+   
+   <!-- ==================================================================== -->
+   
+   <xsd:group name="StatementStructure">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+            The statement structure defines the simple case of a <statement>
+            (such as a <docTitle> or <longTitle>) followed by optional notes.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:sequence>   
+         <xsd:element ref="statement"/>
+         <xsd:group ref="NoteStructure" minOccurs="0" maxOccurs="unbounded"/>
+      </xsd:sequence>      
+   </xsd:group>
+   
+   <!-- ==================================================================== -->
+   
+   <xsd:group name="RecitalStructure">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+            The recital structure defines the simple case, found in a preamble,
+            of a recital followed by optional notes. Recitals usually start with
+            "Whereas,".
+         ]]></xsd:documentation>
+      </xsd:annotation>      
+      <xsd:sequence>
+         <xsd:element ref="recital"/>
+         <xsd:group ref="NoteStructure" minOccurs="0" maxOccurs="unbounded"/>                     
+      </xsd:sequence>
+   </xsd:group>
+   
+   <!-- ==================================================================== -->
+   
+   <xsd:group name="PreambleStructure">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+            The preamble structure defines the case where either a <preamble> or 
+            an <enactingFormula> can exist within the <main> part of a <lawDoc>.
+            When a <preamble> is used, the <enactingFormula> is found within 
+            the <preamble>, at the bottom.
+            
+            Notes may be defined after the <preamble> or <enactingFormula>.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:sequence>
+         <xsd:choice >
+            <xsd:element ref="preamble"/>           
+            <xsd:element ref="enactingFormula"/>
+         </xsd:choice>    
+         <xsd:group ref="NoteStructure" minOccurs="0" maxOccurs="unbounded"/>           
+      </xsd:sequence>         
+   </xsd:group>
+   
+   <!-- ==================================================================== -->
+   
+   <xsd:group name="LevelStructure">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+            The level structure is the primary structure of hierarchy. A level
+            is structured either as an instruction, loosely structured content, 
+            or as hierarchy.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:choice>
+         <xsd:sequence maxOccurs="unbounded">
+            <xsd:annotation>
+               <xsd:documentation><![CDATA[
+                  Multiple <instruction> elements should only be used for cases
+                  where the instruction has been versioned and it is not desirable
+                  to create a whole new version of the parent level. This use
+                  case should be very rare.
+               ]]></xsd:documentation>
+            </xsd:annotation>
+            <xsd:element ref="instruction" maxOccurs="unbounded"/>
+            <xsd:group ref="NoteStructure" minOccurs="0" maxOccurs="unbounded"/>
+         </xsd:sequence>            
+         <xsd:sequence>
+            <xsd:annotation>
+               <xsd:documentation><![CDATA[
+                  Multiple <content> elements should only be used for cases
+                  where the content has been versioned and it is not desirable
+                  to create a whole new version of the parent level. This use
+                  case should be very rare.
+               ]]></xsd:documentation>
+            </xsd:annotation>
+            <xsd:element ref="content" maxOccurs="unbounded"/>
+            <xsd:group ref="NoteStructure" minOccurs="0" maxOccurs="unbounded"/>
+         </xsd:sequence>            
+         <xsd:sequence maxOccurs="unbounded">
+            <xsd:choice>
+               <xsd:element ref="text">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[ 
+                     Used for content interspersed between levels in a hierarchical 
+                     structure, such as an opening <chapeau>, an
+                     interstitial or closing <continuation>, or a <proviso>. 
+                  ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:element ref="level">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                        When a <level> is not the lowest level of a hierarchy, it
+                        will primarily be made up of child levels.
+                        
+                        It is generally desirable to push all versioning down to
+                        lower elements to avoid replicating large portions of 
+                        the document to support version changes. This means that
+                        the <num>, <heading>, and <subheading> elements should
+                        be defined across different temporal periods rather than
+                        defining <level> elements across temporal periods. 
+                        However, <level> elements can be defined with the
+                        temporal attributes and this applies to the lower levels,
+                        such as the <section> level, where practical 
+                        considerations necessitate versioning at the <level>
+                        element.
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:element>
+               <xsd:element ref="crossHeading">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                        A cross heading is an interstitial heading appearing
+                        between level items, but is not part of the hierarchy.
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:element>
+            </xsd:choice>
+            <xsd:group ref="NoteStructure" minOccurs="0" maxOccurs="unbounded"/>          
+         </xsd:sequence>
+      </xsd:choice>
+   </xsd:group>
+
+
+   <!-- ==================================================================== -->
+   <!-- Core Declarations                                                    -->
+   <!-- ==================================================================== -->
+
+   <xsd:element name="lawDoc" type="LawDocType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <lawDoc> is a base level element representing all types of 
+            legislative documents. 
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="document" type="GenericDocType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <document> is a base level element for loosely structured
+            documents. 
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="meta" type="MetaType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <meta> block contains properties and sets of properties recording
+            metadata about the document. The information contained within the
+            meta block is not part of the official law and should not be printed
+            as such. Ordinarily, all text content in a document is intended for
+            publication in textual representations of the document. However,
+            this is not the case for textual content in the <meta> block. If, 
+            for instance, a property in the meta block has text content, it
+            does not automatically become text to be included in a published 
+            form. However, in some case this may be desirable and can be done.
+            However, the meaning is not implicit.
+            
+            The <meta> block may contain elements from the Dublin Core.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="property" type="PropertyType" substitutionGroup="inline">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <property> is simple value recorded with the document. Typically
+            properties are stored in the <meta> block of the document. However, 
+            this is not necessarily the case. It is possible to also define
+            properties within any content area in the document. A case where
+            this occurs is the definition of the short title. The short title
+            is treated as a property (the <docTitle> element is a derivation
+            from the <property> element). 
+            
+            If a property in the <meta> block has textual content, then this 
+            text is not implicitly intended for publication. However, if a 
+            property outside the <meta> block has textual content, then this 
+            text is implicitly intended for publication.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="set" type="SetType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <set> is a grouping of properties in the <meta> block. Sets 
+            themselves can contain other sets. Sets can be typed using the 
+            @type attribute with the SetTypeEnum enumeration. By default, sets
+            are simply unordered bags of properties.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="toc" type="TocType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <toc> is a table of contents. A table of contents can appear in a 
+            number of locations in document. A table of contents can appear in
+            three different locations:
+            
+            - It can appear anywhere within the top of the <main> element, 
+              before the levels.
+            - It can appear in any level following the <heading>, <subheading>,
+              and any notes.
+            - It can appear in an <appendix>.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="tocItem" type="TocItemType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <tocItem> is an entry in a table of contents. In addition to being
+            found within a <toc> element, a <tocItem> can contain other <tocItem>
+            elements in a hierarchy.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="main" type="MainType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <main> is the primary container for the body of a legislative
+            document.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="statement" type="StatementType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <statement> is the general container for the provisions at the
+            beginning of legislation.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="preamble" type="PreambleType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The <preamble> is a container for the "Whereas" clauses and the 
+            enacting formula. Modern practice is to not use the preamble, 
+            but to use a standalone enacting formula. However, for the rare
+            cases where a preamble is desired, the tags are made available.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="recital" type="StatementType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <recital> is a preliminary statement in a bill stating the reasons
+            for the Bill. Modern legislation seldom uses a recital although it
+            can still occur.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="enactingFormula" type="StatementType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The <enactingFormula> is specified just before the main provisions of
+            a bill. The <enactingFormula> can appear as either the last statement
+            in a preamble or, when a preamble is not present, standalone within
+            the main element just prior to the main provisions. 
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="level" type="LevelType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <level> is the general container for the main provisions of
+            legislation, often organized as a hierarchy. 
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="num" type="NumType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The <num> surrounds the numeric designation assigned to a level
+            in legislation. Numbering is not always present. The number should
+            always include the surrounding decoration including descriptive 
+            text and parenthesis and grammar. This number should never be 
+            auto-generated. A normalized value based on the text content of the 
+            <num> element should be stored in the @value attribute.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="text" type="TextType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+            The <text> element is a base class for <chapeau>, <continuation>, 
+            <proviso>, <def> and any other type of text that can be interspersed 
+            in the hierarchy of a document. It is similar to the <content> tag, 
+            but has more limited applicability. In general, use the <content>
+            tag when a hierarchical level is made up largely of general content 
+            and use the one of its derivatives of the text tag when limited text 
+            is found interstitially between levels or other tags. 
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="heading" type="HeadingType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The <heading> is an optional part of a level element and various other
+            elements. The heading is based on the content primitive and can contain
+            various elements including definitions.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="subheading" type="HeadingType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The <subheading> is an optional part of a level element and various
+            other elements. Like the heading, the subheading is based on the 
+            content primitive and can contain various elements including 
+            definitions. A subheading should only be created if a heading 
+            already exists.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="crossHeading" type="HeadingType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <crossHeading> is a non-hierarchical heading construct which can
+            be placed within and amongst heading levels. A <crossHeading> acts
+            as a divider, separating items within a level. 
+            
+            Cross headings are typically shown as center-aligned headings 
+            without any level identification or level numbering.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="instruction" type="InstructionType" abstract="true">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            An <instruction> is a container having formalized text describing an
+            amendment or a modification. An <instruction> contains the <action>s 
+            and <quotedText>/<quotedContent> necessary to describe an
+            amendment.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="action" type="ActionType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            An <action> is an atomic-level change defined within an amending
+            formula. The action contains the text related to that action and,
+            through attributes, identifies the item affected and the type of
+            action to be performed.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="notes" type="NotesType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The <notes> is a container for collections of individual notes.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="note" type="NoteType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <note> is a generic element for notes associated with items in the
+            document. Typically, a derived note type should be used to 
+            differentiate between official statutory notes and unofficial 
+            editorial notes. 
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="appendix" type="AppendixType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            An <appendix> is a generic element appended to the main part of a
+            document. Appendices can either be inline or included via a @src
+            reference. Typically the appendix tag is not used. Rather, the
+            derived tags such as <schedule> and <explanation> are used instead.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="signatures" type="SignaturesType" substitutionGroup="block">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+            Some documents, may conclude with one or
+            more signatures indicating sponsorship or approval. These 
+            signatures are placed within this container.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="signature" type="SignatureType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+            A <signature> consists of a name and, optionally, role, affiliation, 
+            and/or date. Both the name and the role may be hyperlinked to something
+            which identifies the person or role.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+
+   <!-- Substitution groups allow the elements below to appear in 
+        numerous places. -->
+
+   <xsd:element name="ref" type="RefType" substitutionGroup="property">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <ref> element is a reference or link to another document, a 
+            location within another document, or a location with the same
+            document.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="date" type="DateType" substitutionGroup="property">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <date> element is a wrapper around dates. A normalized value
+            of the date text can be stored in the @date attribute or in the
+            @startDate and @endDate attributes in the case of a date range.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="quotedText" type="QuotedTextType" substitutionGroup="inline">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <quotedText> element is used for an extraction of simple text from 
+            another source or origin. If the quoted text is to have literal 
+            quotes surrounding it, then those characters must be included in the
+            text surrounding the quoted text and not within it.
+            
+            Quoted text is seen in amendments or modifications.            
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="quotedContent" type="QuotedContentType" substitutionGroup="content">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <quotedContent> element is used for an extraction of potentially structured
+            text (text with XML elements) from another source or origin.
+            
+            Quoted content is used in USC Notes, amendments, and modifications.            
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+
+   <!-- ==================================================================== -->
+   <!-- Generic Definitions                                                  -->
+   <!-- ==================================================================== -->
+
+   <xsd:complexType name="LayoutType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A layout type is used to denote an area of text intended to
+            be displayed in a column-oriented layout similar to a table. Use
+            the <header>, <row>, and <column> elements to denote the rows and
+            columns of the structure. A <layout> can be either row oriented or
+            column oriented.
+            
+            Use layout types when describing legislative structure in a column
+            oriented fashion. For regular tables as shown in forms, use HTML
+            tables.            
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="BaseBlockType">
+            <xsd:choice minOccurs="0" maxOccurs="unbounded">
+               <xsd:annotation>
+                  <xsd:documentation><![CDATA[
+                     A <layout> type can contain various types of elements
+                     as rows including headers, rows, TOC items, blocks,
+                     and contents. All elements, aside from <column> elements,
+                     are treated as rows when found directly within a layout 
+                     structure.
+                  ]]></xsd:documentation>
+               </xsd:annotation>
+               <xsd:element ref="header"/>
+               <xsd:element ref="row"/>
+               <xsd:element ref="tocItem"/>
+               <xsd:element ref="block"/>
+               <xsd:element ref="content"/>
+               <xsd:group ref="NoteStructure"/>
+            </xsd:choice>
+            <xsd:attribute name="orientation" type="OrientationEnum" use="optional" default="portrait">
+               <xsd:annotation>
+                  <xsd:documentation><![CDATA[
+                     The @orientation attribute is used to specify a landscape 
+                     orientation for the published form. This is primarily used
+                     for schedules or tables.                            
+                  ]]></xsd:documentation>
+               </xsd:annotation>
+            </xsd:attribute>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="RowType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A row type denotes a row entry within a layout structure. In 
+            addition to the formal <row> element, any child element directly in
+            a <layout> element, aside from a <column> element, is regarded as a
+            row.            
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="BaseBlockType">
+            <xsd:sequence>
+               <xsd:element ref="column" minOccurs="1" maxOccurs="unbounded">
+                  <xsd:annotation>
+                     <xsd:documentation><![CDATA[
+                        A row contains one or more column cells.
+                     ]]></xsd:documentation>
+                  </xsd:annotation>
+               </xsd:element>
+            </xsd:sequence>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="ColumnType" mixed="true">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A column type is a cell in a layout structure. As a <content>
+            element, it can contain a wide range of text and elements.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent mixed="true">
+         <xsd:extension base="ContentType">
+            <xsd:attributeGroup ref="CellGroup">
+               <xsd:annotation>
+                  <xsd:documentation><![CDATA[
+                     Use the elements of the cell group to specify
+                     the row and column spans.
+                  ]]></xsd:documentation>
+               </xsd:annotation>
+            </xsd:attributeGroup>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="PType" mixed="true">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A "P" type is a simple unnumbered paragraph. As a <content>
+            element, it can contain a wide range of text and elements.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="ContentType"/>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="BrType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A break type is simple marker element denoting a line break.            
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="MarkerType"> </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <xsd:complexType name="ImgType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            An image type is a simple marker element denoting where a graphic
+            image is to be inserted.            
+         ]]></xsd:documentation>
+      </xsd:annotation>
+      <xsd:complexContent>
+         <xsd:extension base="MarkerType">
+            <xsd:attribute name="orientation" type="OrientationEnum" use="optional" default="portrait">
+               <xsd:annotation>
+                  <xsd:documentation><![CDATA[
+                     The @orientation attribute is used to specify a landscape
+                     orientation for the published form. If the @orientation attribute
+                     is not set, the default orientation for all elements is portrait.                  
+                  ]]></xsd:documentation>
+               </xsd:annotation>
+            </xsd:attribute>          
+            <xsd:attributeGroup ref="LinkGroup">
+               <xsd:annotation>
+                  <xsd:documentation><![CDATA[
+                     Use the @src attribute to point to the image with a normal URL. 
+                  ]]></xsd:documentation>
+               </xsd:annotation>
+            </xsd:attributeGroup>
+         </xsd:extension>
+      </xsd:complexContent>
+   </xsd:complexType>
+
+   <!-- ==================================================================== -->
+   <!-- Generic Declarations                                                 -->
+   <!-- ==================================================================== -->
+
+   <xsd:element name="layout" type="LayoutType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <layout> element is used to denote an area of text intended to
+            be displayed in a columns-oriented format similar to table. Use
+            the <header>, <row>, and <column> elements to denote the rows and
+            columns of the structure.
+            
+            Use <layout> when describing legislative structure in a column-
+            oriented fashion. For regular tables as shown for forms, use HTML
+            tables.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="header" type="RowType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <header> denotes a header row within a column-based structure.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="row" type="RowType">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <row> denotes a row entry within a column-based structure.
+            In addition to the formal <row> element, any child element
+            in a <layout> element, aside from a <column> element, is regarded as 
+            a row. There should always be a <layout> element as an 
+            ancestor of a <row>. Both column and row spans may be defined for
+            <row> entries.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="column" type="ColumnType" substitutionGroup="content">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+            A <column> denotes a column when specified directly under a <layout>
+            or a cell when specified within a <row> (or equivalent) in a 
+            <layout> structure. There should always be a <layout> element as an 
+            ancestor of a <column>. Both column and row spans may be defined for
+            <column> entries.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="p" type="PType" substitutionGroup="content">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <p> is a simple paragraph. This is different from the
+            more complex numbered <paragraph> element used for
+            the formal paragraph level of legislative documents.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="br" type="BrType" substitutionGroup="marker">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <br> is simple marker element denoting a line break.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="img" type="ImgType" substitutionGroup="marker">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            An <img> is a simple marker element denoting where a graphic
+            image is to be inserted. Use the @src attribute to point to the
+            image with a normal URL.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="center" type="ContentType" substitutionGroup="content">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <center> is content text to be centered on the page.
+          ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="fillIn" type="ContentType" substitutionGroup="content">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <fillIn> is an inline spacer which denotes an area to be filled 
+            in a printed form. Usually, a <fillIn> is rendered as dotted lines
+            with the text content within the <fillIn> tags shown just below. If
+            parenthesis are to surround the text shown below the line, then 
+            those parenthesis should be included in the text content. 
+          ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="checkBox" type="ContentType" substitutionGroup="content">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <checkBox> is an inline tick box which denotes a box to be filled 
+            in on an form.  
+          ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="b" type="InlineType" substitutionGroup="inline">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+         A <b> is a simple inline text to be shown in bold text.
+        ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="i" type="InlineType" substitutionGroup="inline">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+         An <i> is a simple inline text to be shown in italic text.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="sub" type="InlineType" substitutionGroup="inline">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+         A <sub> is a simple inline text to be shown in subscript text.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="sup" type="InlineType" substitutionGroup="inline">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+         A <sup> is a simple inline text to be shown in superscript text.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="del" type="InlineType" substitutionGroup="inline">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <del> is a simple inline text to be shown in deleted text
+            within a modification.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>   
+   <xsd:element name="ins" type="InlineType" substitutionGroup="inline">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            An <ins> is a simple inline tag to be used to show inserted text
+            within a modification.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   
+   <!-- ==================================================================== -->
+   <!-- Synonyms                                                             -->
+   <!-- ==================================================================== -->
+
+   <xsd:element name="bill" type="LawDocType" substitutionGroup="lawDoc">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <bill> is a document containing proposed law. When enacted, a
+            <bill> becomes an <statute>.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="statute" type="LawDocType" substitutionGroup="lawDoc">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            An <statute> is a document containing an enacted bill.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="resolution" type="LawDocType" substitutionGroup="lawDoc">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <resolution> is a simple resolution, joint resolution, or concurrent
+            resolution, as those terms are defined by the U.S. Congress.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+
+   <xsd:element name="amendment" type="LawDocType" substitutionGroup="lawDoc">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            An <amendment> is a document containing a pre-enactment stage amendment.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+
+   <xsd:element name="uscDoc" type="LawDocType" substitutionGroup="lawDoc">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <uscDoc> is a document containing a title or appendix of the
+            U.S. Code.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+  
+   <!-- PropertyType -->
+
+   <xsd:element name="docNumber" type="PropertyType" substitutionGroup="property">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The <docNumber> is a property that contains a numeric designation
+            assigned to this document. The document number should not contain
+            any document prefix. Use the <docType> for the prefix.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="docPublicationName" type="PropertyType" substitutionGroup="property">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The <docPublicationName> is a property used to record the name of 
+            the publication that this document is part of. The values of the
+            <docPublicationName> are not defined.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="docReleasePoint" type="PropertyType" substitutionGroup="property">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The <docReleasePoint> is a property used to record the point the document
+            was released. The values of the doc status are not defined.  For a USC title,
+            this may be the Public Law number that the title is updated through.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   
+   <!-- StatementType -->
+
+   <xsd:element name="docTitle" type="StatementType" substitutionGroup="statement">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <docTitle> is a statement that precedes the long title in legislation. The short title is declared in the 
+            first clause of a bill and is tagged in that location using the 
+            <shortTitle> tag. 
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="longTitle" type="StatementType" substitutionGroup="statement">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <longTitle> is a statement that sets out the purposes of the bill
+            in general terms.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+
+   <!-- InlineType -->
+
+   <xsd:element name="shortTitle" type="InlineType" substitutionGroup="inline">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            The <shortTitle> element is used to surround the short title when it
+            is first defined, usually in the first clause of the bill. Note
+            that the <shortTitle> element is to be used in this case rather than
+            the <docTitle> element.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="term" type="InlineType" substitutionGroup="inline">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <term> is always defined within a definition. The <term> element
+            surrounds the words for the term being defined. It is quite possible 
+            for multiple <term> elements to be specified within a definition. 
+            When a <term> is the words, in the alternate language, then the
+            xml:lang attribute must be used. <term> elements can also be used
+            for synonyms or near-synonyms which are also specified within the
+            definition. 
+            
+            There are two ways in which defined terms are presented. The modern
+            form is to present the term in bold and/or italic. The older form 
+            is to present the terms bounded by open and close double quotes. In
+            all cases, the term (excluding the quotation marks) should be bound
+            with the <term> element. The presentation should be determined based
+            on the use of the @class and the @style attributes (TBD). It is
+            important that the semantics be captured in the tags and that the
+            presentation be separated and isolated to the styling attributes.
+            
+            Notes: 
+            
+            (1) In some cases, a term from the opposite language may be defined 
+            without a term in the primary language and the term will be used as 
+            such in the legislation despite being in the opposite language.
+            
+            (2) It is possible that a <term> appear multiple times within a
+            definition and be identified as a <term> (along with the 
+            corresponding interpretation) each time the term appears. 
+            
+            (3) In some rare cases, a term may be defined to include the open
+            and close quotes. In newer presentation forms, the term with the
+            quotation marks will be found within the bold and/or italics while
+            in older presentation forms, the term will show as a pair of open
+            and a pair of close quotation marks. In that case, the inner 
+            quotation marks should be treated as part of the term itself.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+
+   <!-- LevelType -->
+
+   <xsd:element name="preliminary" type="LevelType" substitutionGroup="level">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <preliminary> level is used to create a hierarchical region
+            of the main document consisting of preliminary clauses that
+            are outside of the main document hierarchy.
+            
+            When naming a preliminary level, the case-sensitive prefix "prelim".
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+
+   <!-- Levels above the Section -->
+   
+   <xsd:element name="title" type="LevelType" substitutionGroup="level">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <title> is the top hierarchical level of a legislative document.
+            
+            When naming a title, use the case-sensitive prefix "t".
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="subtitle" type="LevelType" substitutionGroup="level">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <subtitle> is a hierarchical level of a legislative document.
+            
+            When naming a subtitle, use the case-sensitive prefix "st".
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="part" type="LevelType" substitutionGroup="level">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <part> is a hierarchical level of a legislative document.
+            
+            When naming a part, use the case-sensitive prefix "p".
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="subpart" type="LevelType" substitutionGroup="level">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <subpart> is a hierarchical level of a legislative document.
+            
+            When naming a subpart, use the case-sensitive prefix "sp".
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="division" type="LevelType" substitutionGroup="level">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <division> is a hierarchical level of a legislative document.
+            
+            When naming a Division, use the case-sensitive prefix "d".
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="subdivision" type="LevelType" substitutionGroup="level">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <subdivision> is a hierarchical level of a legislative document. 
+            
+            When naming a subdivision, use the case-sensitive prefix "sd".
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="chapter" type="LevelType" substitutionGroup="level">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <chapter> is a hierarchical of a legislative document. 
+            
+            When naming a chapter, use the case-sensitive prefix "c".         ]]>
+         </xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="subchapter" type="LevelType" substitutionGroup="level">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <subchapter> is a hierarchical level of a legislative document. 
+            
+            When naming a subchapter, use the case-sensitive prefix "sc".         ]]>
+         </xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="article" type="LevelType" substitutionGroup="level">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            An <article> is a used in bills. 
+            
+            When naming an article, use the case-sensitive prefix "a".         ]]>
+         </xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="subarticle" type="LevelType" substitutionGroup="level">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <subarticle> is used in bills. 
+            
+            When naming a subarticle, use the case-sensitive prefix "sa".         ]]>
+         </xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   
+   <!-- Section Level -->
+   
+   <xsd:element name="section" type="LevelType" substitutionGroup="level">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <section> is the primary hierarchical level in a USC Title or a bill.
+            
+            When naming a section, use the case-sensitive prefix "s".
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+
+   <!-- Levels below the Section -->
+
+   <xsd:element name="subsection" type="LevelType" substitutionGroup="level">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <subsection> is an optional hierarchical level below a section.
+            Subsections are usually numbered with lower-case letters.
+            
+            When naming a subsection, use the case-sensitive prefix "ss".
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="paragraph" type="LevelType" substitutionGroup="level">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <paragraph> is a numbered level usually found below a
+            subsection in the document hierarchy. Paragraphs are
+            usually numbered with Arabic numbers.
+            
+            When naming a paragraph, use the case-sensitive prefix "p".
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="subparagraph" type="LevelType" substitutionGroup="level">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <subparagraph> is a level below a paragraph in the document
+            hierarchy. Subparagraphs are usually numbered with upper-case
+            letters.
+            
+            When naming a subparagraph, use the case-sensitive prefix "sp".
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="clause" type="LevelType" substitutionGroup="level">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+            A <clause> is an optional below-section hierarchical level.
+            Clauses are usually numbered with lower-case Roman numerals.
+            
+            When naming a subclause, use the case-sensitive prefix "sc".
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="subclause" type="LevelType" substitutionGroup="level">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <subclause> is an optional hierarchical level below a clause.
+            Subclauses are usually numbered with upper-case Roman numerals.
+            
+            When naming a subclause, use the case-sensitive prefix "sc".
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="item" type="LevelType" substitutionGroup="level">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            An <item> is a level usually below a subclause in the document
+            hierarchy. Items are usually numbered with double lower-case
+            letters.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="subitem" type="LevelType" substitutionGroup="level">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+            A <subitem> is a level below an item in the document
+            hierarchy. Subitems are usually numbered with double upper-case
+            letters.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="subsubitem" type="LevelType" substitutionGroup="level">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <subsubitem> is a level below a subitem in the document
+            hierarchy. Subsubitems are usually numbered with triple lower-case
+            letters.           
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+
+   <!-- TextType -->
+
+   <xsd:element name="def" type="TextType" substitutionGroup="text">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+            A <def> defines a term. It contains one or more <term> elements
+            identifying the term being defined as well as the text describing 
+            the term. It is customary for the <term> to be identified in both 
+            languages. In the case where the term is for the opposite language,
+            then the xml:lang attribute should be set for the term expressed in 
+            the opposite language. In some cases, closely related other terms 
+            might also be identified within the text of the definition and will 
+            also be identified with the <term> element..
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="chapeau" type="TextType" substitutionGroup="text">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+            Use a <chapeau> whenever there is introductory text that comes
+            before lower levels in a level hierarchy and the text alone is not
+            permitted by the content model. 
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="continuation" type="TextType" substitutionGroup="text">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+            Use a <continuation> for interstitial text or whenever there is
+            final text that comes after lower levels in a level hierarchy and
+            the text alone is not permitted by the content model. 
+            
+            Be careful not to confuse continuation text with a proviso, which has
+            a separate tag.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="proviso" type="TextType" substitutionGroup="text">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <proviso> is a paragraph that states conditions relating to the 
+            law it is related to. A proviso generally begins with "Provided that" 
+            or just "Provided". Proviso can contain their own
+            complex structure including sandwich structures. When referencing
+            into numbered parts of a proviso, a "proviso" level is added to
+            the reference. If there are multiple provisos within a single
+            parent, then those provisos should be named.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+
+   <!-- Formula Type -->
+
+   <xsd:element name="amendingFormula" type="InstructionType" substitutionGroup="instruction">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            An <amendingFormula> element is an instruction used when defining an amendment
+            to legislation or proposed legislation.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+
+   <!-- Note Type -->
+
+   <xsd:element name="sourceCredit" type="NoteType" substitutionGroup="note">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <sourceCredit> is a note included to indicate the source of a
+            provision. It usually will contain a reference to the source of the
+            provision and the Statute(s) that have affected it. Source credits are 
+            usually set out in parenthesis. The surrounding
+            parenthesis are shown in the text - they must 
+            not be automatically added.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="statutoryNote" type="NoteType" substitutionGroup="note">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            An <statutoryNote> is a note that becomes part of the law.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="editorialNote" type="NoteType" substitutionGroup="note">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            An <editorialNote> is a note included for editorial purposes only. While
+            present in the text of the document as printed, it is not a part of 
+            the law. Editorial notes are often used to record where provisions
+            have been omitted or other changes have been made.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="changeNote" type="NoteType" substitutionGroup="note">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <changeNote> is a note that records a non-substantive change that
+            has been made to the document. Usually
+            change notes are set out in square brackets and these must be set out in
+            the text and must not be automatically added.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   
+   <!-- SignatureType -->
+   
+   <xsd:element name="made" type="SignaturesType" substitutionGroup="signatures">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+             The signatures of the people making the legislation.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   <xsd:element name="approved" type="SignaturesType" substitutionGroup="signatures">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[
+             The signature of the people approving the document.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+   
+   <!-- AppendixType -->
+
+   <xsd:element name="schedule" type="AppendixType" substitutionGroup="appendix">
+      <xsd:annotation>
+         <xsd:documentation><![CDATA[ 
+            A <schedule> is an appendix to a bill or other document.
+            It contains a wide variety of content and the containment model is 
+            consequently quite loose. A <schedule> is often a list of numbered items,
+            sometimes arranged in columns. Sometimes a schedule is a list of 
+            consequential amendments. Schedules can also be tables or documents
+            defined externally such as extradition treaties or trade agreements.
+            Schedules are sometimes printed in a landscape rather that portrait
+            orientation.
+            
+            In order to support the wide variety of content types, it is possible 
+            to embed arbitrary HTML content in a <content> element within a 
+            schedule.
+         ]]></xsd:documentation>
+      </xsd:annotation>
+   </xsd:element>
+
+   <!-- ==================================================================== -->
+
+</xsd:schema>

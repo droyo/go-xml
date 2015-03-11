@@ -1,0 +1,285 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xsd:schema xmlns:ftc="urn:oecd:ties:fatca:v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:sfa="urn:oecd:ties:stffatcatypes:v1" xmlns:iso="urn:oecd:ties:isofatcatypes:v1" targetNamespace="urn:oecd:ties:fatca:v1" elementFormDefault="qualified" attributeFormDefault="unqualified" version="1.1">
+	<xsd:import namespace="urn:oecd:ties:isofatcatypes:v1" schemaLocation="isofatcatypes_v1.0.xsd"/>
+	<xsd:import namespace="urn:oecd:ties:stffatcatypes:v1" schemaLocation="stffatcatypes_v1.1.xsd"/>
+	<!-- Document type indicators types -->
+	<xsd:simpleType name="FatcaDocTypeIndic_EnumType">
+		<xsd:annotation>
+			<xsd:documentation xml:lang="en">The element applies only to the document part in which it is included. In the case of repeated or corrected data elements CorrMessageRefId and CorrDocRefId must contain the identifiers MessageRefId and DocRefId respectively for the data referred to. In the case of a correction the unchanged elements shall be transmitted again - except for the element DocRefId.
+			</xsd:documentation>
+		</xsd:annotation>
+		<xsd:restriction base="xsd:string">
+			<xsd:enumeration value="FATCA1">
+				<xsd:annotation>
+					<xsd:documentation>New Data</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="FATCA2">
+				<xsd:annotation>
+					<xsd:documentation>Corrected Data</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="FATCA3">
+				<xsd:annotation>
+					<xsd:documentation>Void Data</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="FATCA4">
+				<xsd:annotation>
+					<xsd:documentation>Amended Data</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="FATCA11">
+				<xsd:annotation>
+					<xsd:documentation>New Test Data</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="FATCA12">
+				<xsd:annotation>
+					<xsd:documentation>Corrected Test Data</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="FATCA13">
+				<xsd:annotation>
+					<xsd:documentation>Void Test Data</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="FATCA14">
+				<xsd:annotation>
+					<xsd:documentation>Amended Test Data</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<!--  -->
+	<!-- Account Holder Type - 1 -->
+	<xsd:simpleType name="FatcaAcctHolderType_EnumType">
+		<xsd:annotation>
+			<xsd:documentation xml:lang="en">Account Holder Type</xsd:documentation>
+		</xsd:annotation>
+		<xsd:restriction base="xsd:string">
+			<xsd:enumeration value="FATCA101">
+				<xsd:annotation>
+					<xsd:documentation>Owner-Documented FI with specified US owner(s)</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="FATCA102">
+				<xsd:annotation>
+					<xsd:documentation>Passive Non-Financial Entity with substantial US owner(s)</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="FATCA103">
+				<xsd:annotation>
+					<xsd:documentation>Non-Participating FI</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="FATCA104">
+				<xsd:annotation>
+					<xsd:documentation>Specified US Person</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="FATCA105">
+				<xsd:annotation>
+					<xsd:documentation>Direct Reporting NFFE</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<!-- Pool Reporting for Recalcitrant and Dormant Accounts Type - 2 -->
+	<xsd:simpleType name="FatcaAcctPoolReportType_EnumType">
+		<xsd:annotation>
+			<xsd:documentation xml:lang="en">Account Pool Reporting Type</xsd:documentation>
+		</xsd:annotation>
+		<xsd:restriction base="xsd:string">
+			<xsd:enumeration value="FATCA201">
+				<xsd:annotation>
+					<xsd:documentation>Recalcitrant account holders with US Indicia</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="FATCA202">
+				<xsd:annotation>
+					<xsd:documentation>Recalcitrant account holders without US Indicia</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="FATCA203">
+				<xsd:annotation>
+					<xsd:documentation>Dormant accounts</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="FATCA204">
+				<xsd:annotation>
+					<xsd:documentation>Non-participating foreign financial institutions</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="FATCA205">
+				<xsd:annotation>
+					<xsd:documentation>Recalcitrant account holders that are US persons</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="FATCA206">
+				<xsd:annotation>
+					<xsd:documentation>Recalcitrant account holders that are passive NFFEs</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<!-- FATCA Payment Type - 5 -->
+	<xsd:simpleType name="FatcaPaymentType_EnumType">
+		<xsd:annotation>
+			<xsd:documentation xml:lang="en">The code describing the nature of the payments used in FATCA
+			</xsd:documentation>
+		</xsd:annotation>
+		<xsd:restriction base="xsd:string">
+			<xsd:enumeration value="FATCA501">
+				<xsd:annotation>
+					<xsd:documentation>Dividends</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="FATCA502">
+				<xsd:annotation>
+					<xsd:documentation>Interest</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="FATCA503">
+				<xsd:annotation>
+					<xsd:documentation>Gross Proceeds/Redemptions</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+			<xsd:enumeration value="FATCA504">
+				<xsd:annotation>
+					<xsd:documentation>Other - FATCA</xsd:documentation>
+				</xsd:annotation>
+			</xsd:enumeration>
+		</xsd:restriction>
+	</xsd:simpleType>
+	<!-- Document specification: Data identifying and describing the document -->
+	<xsd:complexType name="DocSpec_Type">
+		<xsd:annotation>
+			<xsd:documentation xml:lang="en">Document specification: Data identifying and describing the document, where
+'document' here means the part of a message that is to transmit the data about a single block of FATCA information. </xsd:documentation>
+		</xsd:annotation>
+		<xsd:sequence>
+			<xsd:element name="DocTypeIndic" type="ftc:FatcaDocTypeIndic_EnumType"/>
+			<xsd:element name="DocRefId" type="xsd:string">
+				<xsd:annotation>
+					<xsd:documentation xml:lang="en">Sender's unique identifier of this document </xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="CorrMessageRefId" type="xsd:string" minOccurs="0">
+				<xsd:annotation>
+					<xsd:documentation xml:lang="en">Reference id of the message of the document referred to if this is a correction</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="CorrDocRefId" type="xsd:string" minOccurs="0">
+				<xsd:annotation>
+					<xsd:documentation xml:lang="en">Reference id of the document referred to if this is correction</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+		</xsd:sequence>
+	</xsd:complexType>
+	<!-- -->
+	<!-- Financial Institution Account Number  -->
+	<xsd:simpleType name="FIAccountNumber_Type">
+		<xsd:annotation>
+			<xsd:documentation xml:lang="en">Account number definition </xsd:documentation>
+		</xsd:annotation>
+		<xsd:restriction base="xsd:string"/>
+	</xsd:simpleType>
+	<!-- Payment   -->
+	<xsd:complexType name="Payment_Type">
+		<xsd:sequence>
+			<xsd:element name="Type" type="ftc:FatcaPaymentType_EnumType">
+				<xsd:annotation>
+					<xsd:documentation xml:lang="en">Type of payment (interest, dividend,...)</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="PaymentAmnt" type="sfa:MonAmnt_Type">
+				<xsd:annotation>
+					<xsd:documentation xml:lang="en">The amount of payment</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+		</xsd:sequence>
+	</xsd:complexType>
+	<!-- Account Holder Type -->
+	<xsd:complexType name="AccountHolder_Type">
+		<xsd:sequence>
+			<xsd:choice>
+				<xsd:element name="Individual" type="sfa:PersonParty_Type"/>
+				<xsd:sequence>
+					<xsd:element name="Organisation" type="sfa:OrganisationParty_Type"/>
+					<xsd:element name="AcctHolderType" type="ftc:FatcaAcctHolderType_EnumType"/>
+				</xsd:sequence>
+			</xsd:choice>
+		</xsd:sequence>
+	</xsd:complexType>
+	<!-- Correctable Organisation-->
+	<xsd:complexType name="CorrectableOrganisationParty_Type">
+		<xsd:complexContent>
+			<xsd:extension base="sfa:OrganisationParty_Type">
+				<xsd:sequence>
+					<xsd:element name="DocSpec" type="ftc:DocSpec_Type"/>
+				</xsd:sequence>
+			</xsd:extension>
+		</xsd:complexContent>
+	</xsd:complexType>
+	<!-- Correctable Pool Report -->
+	<xsd:complexType name="CorrectablePoolReport_Type">
+		<xsd:sequence>
+			<xsd:element name="DocSpec" type="ftc:DocSpec_Type"/>
+			<xsd:element name="AccountCount" type="xsd:integer"/>
+			<xsd:element name="AccountPoolReportType" type="ftc:FatcaAcctPoolReportType_EnumType"/>
+			<xsd:element name="PoolBalance" type="sfa:MonAmnt_Type"/>
+		</xsd:sequence>
+	</xsd:complexType>
+	<!-- Correctable Account Report -->
+	<xsd:complexType name="CorrectableAccountReport_Type">
+		<xsd:sequence>
+			<xsd:element name="DocSpec" type="ftc:DocSpec_Type"/>
+			<xsd:element name="AccountNumber" type="ftc:FIAccountNumber_Type"/>
+			<xsd:element name="AccountHolder" type="ftc:AccountHolder_Type"/>
+			<xsd:element name="SubstantialOwner" type="sfa:PersonParty_Type" minOccurs="0" maxOccurs="unbounded"/>
+			<xsd:element name="AccountBalance" type="sfa:MonAmnt_Type"/>
+			<xsd:element name="Payment" type="ftc:Payment_Type" minOccurs="0" maxOccurs="unbounded"/>
+		</xsd:sequence>
+	</xsd:complexType>
+	<!-- FATCA Type - FATCA Report  -->
+	<xsd:complexType name="Fatca_Type">
+		<xsd:sequence>
+			<xsd:element name="ReportingFI" type="ftc:CorrectableOrganisationParty_Type">
+				<xsd:annotation>
+					<xsd:documentation xml:lang="en">Reporting financial institution</xsd:documentation>
+				</xsd:annotation>
+			</xsd:element>
+			<xsd:element name="ReportingGroup" maxOccurs="unbounded">
+				<xsd:annotation>
+					<xsd:documentation xml:lang="en">Group that wraps the details for a financial institution FATCA report</xsd:documentation>
+				</xsd:annotation>
+				<xsd:complexType>
+					<xsd:sequence>
+						<xsd:element name="Sponsor" type="ftc:CorrectableOrganisationParty_Type" minOccurs="0"/>
+						<xsd:element name="Intermediary" type="ftc:CorrectableOrganisationParty_Type" minOccurs="0"/>
+						<xsd:element name="AccountReport" type="ftc:CorrectableAccountReport_Type" minOccurs="0" maxOccurs="unbounded"/>
+						<xsd:element name="PoolReport" type="ftc:CorrectablePoolReport_Type" minOccurs="0" maxOccurs="unbounded"/>
+					</xsd:sequence>
+				</xsd:complexType>
+			</xsd:element>
+		</xsd:sequence>
+	</xsd:complexType>
+	<!-- -->
+	<!-- FATCA Message structure  -->
+	<xsd:element name="FATCA_OECD">
+		<xsd:complexType>
+			<xsd:sequence>
+				<!-- renamed for FATCA from TraceMessageSpec_Type to MessageSpec_Type  -->
+				<xsd:element name="MessageSpec" type="sfa:MessageSpec_Type"/>
+				<xsd:element name="FATCA" type="ftc:Fatca_Type" maxOccurs="unbounded"/>
+			</xsd:sequence>
+			<xsd:attribute name="version" type="xsd:string">
+				<xsd:annotation>
+					<xsd:documentation xml:lang="en">FATCA Version </xsd:documentation>
+				</xsd:annotation>
+			</xsd:attribute>
+		</xsd:complexType>
+	</xsd:element>
+	<!-- -->
+</xsd:schema>

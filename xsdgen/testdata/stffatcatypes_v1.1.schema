@@ -1,0 +1,329 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!-- edited with XMLSpy v2011 rel. 3 (http://www.altova.com) by IRS (Internal Revenue Service) -->
+<xsd:schema xmlns:sfa="urn:oecd:ties:stffatcatypes:v1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:stf="urn:oecd:ties:stf:v4" xmlns:iso="urn:oecd:ties:isofatcatypes:v1" targetNamespace="urn:oecd:ties:stffatcatypes:v1" elementFormDefault="qualified" attributeFormDefault="unqualified" version="1.1">
+  <xsd:import namespace="urn:oecd:ties:isofatcatypes:v1" schemaLocation="isofatcatypes_v1.0.xsd" />
+  <xsd:import namespace="urn:oecd:ties:stf:v4" schemaLocation="oecdtypes_v4.1.xsd" />
+  <!--+++++++++++++++++++++++  Reusable Simple types ++++++++++++++++++++++++++++++++++++++ -->
+  <!-- -->
+  <!-- String with minimum length 1 - data type for TIN_Type -->
+  <xsd:simpleType name="String1MinLength_Type">
+    <xsd:annotation>
+      <xsd:documentation xml:lang="en">Introduce a min length</xsd:documentation>
+    </xsd:annotation>
+    <xsd:restriction base="xsd:string">
+      <xsd:minLength value="1" />
+    </xsd:restriction>
+  </xsd:simpleType>
+  <!-- -->
+  <!-- Data type for any kind of numeric data with two decimal fraction digits, especially monetary amounts -->
+  <xsd:simpleType name="TwoDigFract_Type">
+    <xsd:annotation>
+      <xsd:documentation xml:lang="en">
+				Data type for any kind of numeric data with two decimal fraction digits, especially monetary amounts.
+			</xsd:documentation>
+    </xsd:annotation>
+    <xsd:restriction base="xsd:decimal">
+      <xsd:fractionDigits value="2" />
+    </xsd:restriction>
+  </xsd:simpleType>
+  <!-- -->
+  <!--++++++++++++++++++ Reusable Complex types +++++++++++++++++++++++++++++++++++++ -->
+  <xsd:complexType name="AddressFix_Type">
+    <xsd:annotation>
+      <xsd:documentation xml:lang="en">
+			Structure of the address for a party broken down into its logical parts, recommended for easy matching. The 'City' element is the only required subelement. All of the subelements are simple text - data type 'string'.
+			</xsd:documentation>
+    </xsd:annotation>
+    <xsd:sequence>
+      <xsd:element name="Street" type="xsd:string" minOccurs="0" />
+      <xsd:element name="BuildingIdentifier" type="xsd:string" minOccurs="0" />
+      <xsd:element name="SuiteIdentifier" type="xsd:string" minOccurs="0" />
+      <xsd:element name="FloorIdentifier" type="xsd:string" minOccurs="0" />
+      <xsd:element name="DistrictName" type="xsd:string" minOccurs="0" />
+      <xsd:element name="POB" type="xsd:string" minOccurs="0" />
+      <xsd:element name="PostCode" type="xsd:string" minOccurs="0" />
+      <xsd:element name="City" type="xsd:string" />
+      <xsd:element name="CountrySubentity" type="xsd:string" minOccurs="0" />
+    </xsd:sequence>
+  </xsd:complexType>
+  <!--  -->
+  <!--  The Address of a Party, given in fixed or free Form, possibly in both Forms -->
+  <xsd:complexType name="Address_Type">
+    <xsd:annotation>
+      <xsd:documentation xml:lang="en">
+			The user has the option to enter the data about the address of a party either as one long field or to spread the data over up to eight  elements or even to use both formats. If the user chooses the option to enter the data required in separate elements, the container element for this will be 'AddressFix'. If the user chooses the option to enter the data required in a less structured way in 'AddressFree' all available address details shall be presented as one string of bytes, blank or "/" (slash) or carriage return- line feed used as a delimiter between parts of the address. PLEASE NOTE that the address country code is outside  both of these elements. The use of the fixed form is recommended as a rule to allow easy matching. However, the use of the free form is recommended if the sending state cannot reliably identify and distinguish the different parts of the address. The user may want to use both formats e.g. if besides separating the logical parts of the address he also wants to indicate a suitable breakdown into print-lines by delimiters in the free text form. In this case 'AddressFix' has to precede 'AddressFree'.
+			</xsd:documentation>
+    </xsd:annotation>
+    <xsd:sequence>
+      <xsd:element name="CountryCode" type="iso:CountryCode_Type" />
+      <xsd:choice>
+        <xsd:element name="AddressFree" type="xsd:string" />
+        <xsd:sequence>
+          <xsd:element name="AddressFix" type="sfa:AddressFix_Type" />
+          <xsd:element name="AddressFree" type="xsd:string" minOccurs="0" />
+        </xsd:sequence>
+      </xsd:choice>
+    </xsd:sequence>
+    <xsd:attribute name="legalAddressType" type="stf:OECDLegalAddressType_EnumType" use="optional" />
+  </xsd:complexType>
+  <!--  -->
+  <!-- General Type for Monetary Amounts -->
+  <xsd:complexType name="MonAmnt_Type">
+    <xsd:annotation>
+      <xsd:documentation xml:lang="en">
+This data type is to be used whenever monetary amounts are to be communicated. Such amounts shall be given
+including two fractional digits of the main currency unit. The code for the currency in which the value is expressed has to be
+taken from the ISO codelist 4217 and added in attribute currCode.
+</xsd:documentation>
+    </xsd:annotation>
+    <xsd:simpleContent>
+      <xsd:extension base="sfa:TwoDigFract_Type">
+        <xsd:attribute name="currCode" type="iso:currCode_Type" use="required" />
+      </xsd:extension>
+    </xsd:simpleContent>
+  </xsd:complexType>
+  <!--  -->
+  <!-- Organisation name -->
+  <xsd:complexType name="NameOrganisation_Type">
+    <xsd:annotation>
+      <xsd:documentation xml:lang="en">Name of organisation</xsd:documentation>
+    </xsd:annotation>
+    <xsd:simpleContent>
+      <xsd:extension base="xsd:string">
+        <xsd:attribute name="nameType" type="stf:OECDNameType_EnumType" use="optional" />
+      </xsd:extension>
+    </xsd:simpleContent>
+  </xsd:complexType>
+  <!-- -->
+  <!-- The Name of a Party, given in fixed Form-->
+  <xsd:complexType name="NamePerson_Type">
+    <xsd:annotation>
+      <xsd:documentation xml:lang="en">The user must spread the data about the name of a party over up to six elements. The container element for this will be 'NameFix'. </xsd:documentation>
+    </xsd:annotation>
+    <xsd:sequence>
+      <xsd:element name="PrecedingTitle" type="xsd:string" minOccurs="0">
+        <xsd:annotation>
+          <xsd:documentation xml:lang="en">His Excellency,Estate of the Late ...</xsd:documentation>
+        </xsd:annotation>
+      </xsd:element>
+      <xsd:element name="Title" type="xsd:string" minOccurs="0" maxOccurs="unbounded">
+        <xsd:annotation>
+          <xsd:documentation xml:lang="en">Greeting title. Example: Mr, Dr, Ms, Herr, etc. Can have multiple titles.</xsd:documentation>
+        </xsd:annotation>
+      </xsd:element>
+      <xsd:element name="FirstName">
+        <xsd:annotation>
+          <xsd:documentation xml:lang="en">FirstName of the person</xsd:documentation>
+        </xsd:annotation>
+        <xsd:complexType>
+          <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+              <xsd:attribute name="xnlNameType">
+                <xsd:annotation>
+                  <xsd:documentation xml:lang="en">Defines the name type of FirstName. Example: Given Name, Forename, Christian Name, Father's Name, etc. In some countries, FirstName could be a Family Name or a SurName. Use this attribute to define the type for this name.
+									</xsd:documentation>
+                </xsd:annotation>
+              </xsd:attribute>
+            </xsd:extension>
+          </xsd:simpleContent>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="MiddleName" minOccurs="0" maxOccurs="unbounded">
+        <xsd:annotation>
+          <xsd:documentation xml:lang="en">Middle name (essential part of the name for many nationalities). Example: Sakthi in "Nivetha Sakthi Shantha". Can have multiple middle names.</xsd:documentation>
+        </xsd:annotation>
+        <xsd:complexType>
+          <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+              <xsd:attribute name="xnlNameType">
+                <xsd:annotation>
+                  <xsd:documentation xml:lang="en">Defines the name type of Middle Name. Example: First name, middle name, maiden name, father's name, given name, etc.
+									</xsd:documentation>
+                </xsd:annotation>
+              </xsd:attribute>
+            </xsd:extension>
+          </xsd:simpleContent>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="NamePrefix" minOccurs="0">
+        <xsd:annotation>
+          <xsd:documentation xml:lang="en">de, van, van de, von, etc. Example: Derick de Clarke</xsd:documentation>
+        </xsd:annotation>
+        <xsd:complexType>
+          <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+              <xsd:attribute name="xnlNameType">
+                <xsd:annotation>
+                  <xsd:documentation xml:lang="en">Defines the type of name associated with the NamePrefix. For example the type of name is LastName and this prefix is the prefix for this last name.
+							</xsd:documentation>
+                </xsd:annotation>
+              </xsd:attribute>
+            </xsd:extension>
+          </xsd:simpleContent>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="LastName">
+        <xsd:annotation>
+          <xsd:documentation xml:lang="en">Represents the position of the name in a name string. Can be Given Name, Forename, Christian Name, Surname, Family Name, etc. Use the attribute "NameType" to define what type this name is.
+In case of a company, this field can be used for the company name.</xsd:documentation>
+        </xsd:annotation>
+        <xsd:complexType>
+          <xsd:simpleContent>
+            <xsd:extension base="xsd:string">
+              <xsd:attribute name="xnlNameType">
+                <xsd:annotation>
+                  <xsd:documentation xml:lang="en">Defines the name type of LastName. Example: Father's name, Family name, Sur Name, Mother's Name, etc. In some countries, LastName could be the given name or first name.
+									</xsd:documentation>
+                </xsd:annotation>
+              </xsd:attribute>
+            </xsd:extension>
+          </xsd:simpleContent>
+        </xsd:complexType>
+      </xsd:element>
+      <xsd:element name="GenerationIdentifier" type="xsd:string" minOccurs="0" maxOccurs="unbounded">
+        <xsd:annotation>
+          <xsd:documentation xml:lang="en">Jnr, Thr Third, III</xsd:documentation>
+        </xsd:annotation>
+      </xsd:element>
+      <xsd:element name="Suffix" type="xsd:string" minOccurs="0" maxOccurs="unbounded">
+        <xsd:annotation>
+          <xsd:documentation xml:lang="en">Could be compressed initials - PhD, VC, QC</xsd:documentation>
+        </xsd:annotation>
+      </xsd:element>
+      <xsd:element name="GeneralSuffix" type="xsd:string" minOccurs="0">
+        <xsd:annotation>
+          <xsd:documentation xml:lang="en">Deceased, Retired ...</xsd:documentation>
+        </xsd:annotation>
+      </xsd:element>
+    </xsd:sequence>
+    <xsd:attribute name="nameType" type="stf:OECDNameType_EnumType" use="optional" />
+  </xsd:complexType>
+  <!-- -->
+  <!-- Identifier for a Party -->
+  <xsd:complexType name="TIN_Type">
+    <xsd:annotation>
+      <xsd:documentation xml:lang="en">This is the identification number/identification code for the party in question. As the identifier may be not strictly numeric, it is just defined as a string of characters. Attribute 'issuedBy' is required to designate the issuer of the identifier. </xsd:documentation>
+    </xsd:annotation>
+    <xsd:simpleContent>
+      <xsd:extension base="sfa:String1MinLength_Type">
+        <xsd:attribute name="issuedBy" type="iso:CountryCode_Type" use="optional">
+          <xsd:annotation>
+            <xsd:documentation xml:lang="en">Country code of issuing country, indicating country of Residence (to taxes and other)</xsd:documentation>
+          </xsd:annotation>
+        </xsd:attribute>
+      </xsd:extension>
+    </xsd:simpleContent>
+  </xsd:complexType>
+  <!-- -->
+  <!-- Collection of all Data describing an organisationy  as party-->
+  <xsd:complexType name="OrganisationParty_Type">
+    <xsd:annotation>
+      <xsd:documentation xml:lang="en">
+This container brings together all data about an organisation as a party. Name and address are required components and each can
+be present more than once to enable as complete a description as possible. Whenever possible one or more identifiers (TIN
+etc) should be added as well as a residence country code. Additional data that describes and identifies the party can be
+given . The code for the legal type according to the OECD codelist must be added. The structures of
+all of the subelements are defined elsewhere in this schema.</xsd:documentation>
+    </xsd:annotation>
+    <xsd:sequence>
+      <xsd:element name="ResCountryCode" type="iso:CountryCode_Type" minOccurs="0" maxOccurs="unbounded" />
+      <xsd:element name="TIN" type="sfa:TIN_Type" minOccurs="0" maxOccurs="unbounded">
+        <xsd:annotation>
+          <xsd:documentation xml:lang="en">Tax Identification number</xsd:documentation>
+        </xsd:annotation>
+      </xsd:element>
+      <xsd:element name="Name" type="sfa:NameOrganisation_Type" maxOccurs="unbounded" />
+      <xsd:element name="Address" type="sfa:Address_Type" maxOccurs="unbounded" />
+    </xsd:sequence>
+  </xsd:complexType>
+  <!-- Collection of all Data describing a person as a  Party -->
+  <xsd:complexType name="PersonParty_Type">
+    <xsd:annotation>
+      <xsd:documentation xml:lang="en">
+This container brings together all data about a person as a party. Name and address are required components and each can
+be present more than once to enable as complete a description as possible. Whenever possible one or more identifiers (TIN
+etc) should be added as well as a residence country code. Additional data that describes and identifies the party can be
+given. The code for the legal type according to the OECD codelist must be added. The structures of
+all of the subelements are defined elsewhere in this schema.</xsd:documentation>
+    </xsd:annotation>
+    <xsd:sequence>
+      <xsd:element name="ResCountryCode" type="iso:CountryCode_Type" minOccurs="0" maxOccurs="unbounded" />
+      <xsd:element name="TIN" type="sfa:TIN_Type" minOccurs="0" maxOccurs="unbounded" />
+      <xsd:element name="Name" type="sfa:NamePerson_Type" maxOccurs="unbounded" />
+      <xsd:element name="Address" type="sfa:Address_Type" maxOccurs="unbounded" />
+      <xsd:element name="Nationality" type="iso:CountryCode_Type" minOccurs="0" maxOccurs="unbounded" />
+      <xsd:element name="BirthInfo" minOccurs="0">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="BirthDate" type="xsd:date" minOccurs="0" />
+            <xsd:element name="City" type="xsd:string" minOccurs="0" />
+            <xsd:element name="CitySubentity" type="xsd:string" minOccurs="0" />
+            <xsd:element name="CountryInfo" minOccurs="0">
+              <xsd:complexType>
+                <xsd:choice>
+                  <xsd:element name="CountryCode" type="iso:CountryCode_Type" />
+                  <xsd:element name="FormerCountryName" type="xsd:string" />
+                </xsd:choice>
+              </xsd:complexType>
+            </xsd:element>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+    </xsd:sequence>
+  </xsd:complexType>
+  <!-- -->
+  <!-- Message type definitions -->
+  <xsd:simpleType name="MessageType_EnumType">
+    <xsd:annotation>
+      <xsd:documentation xml:lang="en">Message type defines the type of reporting </xsd:documentation>
+    </xsd:annotation>
+    <xsd:restriction base="xsd:string">
+      <xsd:enumeration value="FATCA" />
+    </xsd:restriction>
+  </xsd:simpleType>
+  <!-- -->
+  <!-- Message specification: Data identifying and describing the message as a whole -->
+  <xsd:complexType name="MessageSpec_Type">
+    <xsd:annotation>
+      <xsd:documentation xml:lang="en">Information in the message header identifies the Financial Institution (FI) or Tax Administration that is sending the message.  It specifies when the message was created, what calendar year the report is for, and the nature of the report (original, corrected, supplemental, etc).</xsd:documentation>
+    </xsd:annotation>
+    <xsd:sequence>
+      <xsd:element name="SendingCompanyIN" type="xsd:string" minOccurs="0" />
+      <xsd:element name="TransmittingCountry" type="iso:CountryCode_Type" />
+      <xsd:element name="ReceivingCountry" type="iso:CountryCode_Type" />
+      <xsd:element name="MessageType" type="sfa:MessageType_EnumType" />
+      <xsd:element name="Warning" type="xsd:string" minOccurs="0">
+        <xsd:annotation>
+          <xsd:documentation xml:lang="en">Free text expressing the restrictions for use of the information this
+message contains and the legal framework under which it is given</xsd:documentation>
+        </xsd:annotation>
+      </xsd:element>
+      <xsd:element name="Contact" type="xsd:string" minOccurs="0">
+        <xsd:annotation>
+          <xsd:documentation xml:lang="en">All necessary contact information about persons responsible for and
+involved in the processing of the data transmitted in this message, both legally and technically. Free text as this is not
+intended for automatic processing. </xsd:documentation>
+        </xsd:annotation>
+        <!-- changed to optional -->
+      </xsd:element>
+      <xsd:element name="MessageRefId" type="xsd:string">
+        <xsd:annotation>
+          <xsd:documentation xml:lang="en">Sender's unique identifier for this message</xsd:documentation>
+        </xsd:annotation>
+      </xsd:element>
+      <xsd:element name="CorrMessageRefId" type="xsd:string" minOccurs="0" maxOccurs="unbounded">
+        <xsd:annotation>
+          <xsd:documentation xml:lang="en">Sender's unique identifier that has to be corrected.  Must point to 1 or more previous message</xsd:documentation>
+        </xsd:annotation>
+      </xsd:element>
+      <xsd:element name="ReportingPeriod" type="xsd:date">
+        <xsd:annotation>
+          <xsd:documentation xml:lang="en">The reporting year for which information is transmitted in documents of
+the current message.</xsd:documentation>
+        </xsd:annotation>
+      </xsd:element>
+      <xsd:element name="Timestamp" type="xsd:dateTime" />
+    </xsd:sequence>
+  </xsd:complexType>
+  <!-- -->
+</xsd:schema>
