@@ -60,6 +60,7 @@ func Imports(data []byte) ([]Ref, error) {
 // <import> or <include> statements; use the Imports function to
 // find any additional schema documents required for a schema.
 func Parse(docs ...[]byte) ([]Schema, error) {
+	docs = append(docs, StandardSchema...)
 	var (
 		result = make([]Schema, 0, len(docs))
 		schema = make(map[string]*xmltree.Element, len(docs))

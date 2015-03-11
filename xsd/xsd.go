@@ -308,3 +308,12 @@ func Base(t Type) Type {
 	}
 	panic(fmt.Sprintf("xsd: unexpected xsd.Type %[1]T %[1]v passed to Base", t))
 }
+
+// The xsd package bundles a number of well-known schemas.
+// These schemas are always added to the list of available schema
+// when parsing an XML schema using the Parse function.
+var StandardSchema = [][]byte{
+	soapenc11xsd, // http://schemas.xmlsoap.org/soap/encoding/
+	xmlnsxsd,     // http://www.w3.org/XML/1998/namespace
+	wsdl2003xsd,  // http://schemas.xmlsoap.org/wsdl/
+}
