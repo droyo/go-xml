@@ -103,12 +103,33 @@ func (cfg *Config) GenAST(files ...string) (*ast.File, error) {
 	return file, nil
 }
 
-// Generate creates a file containing Go source generated from an XML
+// The GenSource method converts the AST returned by GenAST to formatted
+// Go source code.
+func (cfg *Config) GenSource(files ...string) ([]byte, error) {
+	var buf bytes.Buffer
+
+	file, err := cfg.GenAST(files...)
+	if err != nil {
+		return nil, err
+	}
+
+	fileset := token.NewFileSet()
+	if err := format.Node(&buf, fileset, file); err != nil {
+		return nil, err
+	}
+	out, err := imports.Process("", buf.Bytes(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("%v in %s", err, buf.String())
+	}
+	return out, nil
+}
+
+// GenCLI creates a file containing Go source generated from an XML
 // Schema. Main is meant to be called as part of a command, and can
 // be used to change the behavior of the xsdgen command in ways that
 // its command-line arguments do not allow. The arguments are the
 // same as those passed to the xsdgen command.
-func (cfg *Config) Generate(arguments ...string) error {
+func (cfg *Config) GenCLI(arguments ...string) error {
 	var (
 		err          error
 		replaceRules replaceRuleList

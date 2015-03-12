@@ -42,7 +42,7 @@ func testGen(t *testing.T, ns string, files ...string) {
 	cfg.Option(DefaultOptions...)
 
 	args := []string{"-o", file.Name(), "-ns", ns}
-	err = cfg.Generate(append(args, files...)...)
+	err = cfg.GenCLI(append(args, files...)...)
 	if err != nil {
 		t.Error(err)
 	}

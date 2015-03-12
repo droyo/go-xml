@@ -139,12 +139,11 @@ func (cfg *Config) resolveDependencies1(ref xsd.Ref, have xsdSet, depth int) ([]
 	return result, nil
 }
 
-// The GenAST method can be used to generate Go source using
-// a non-default config.
 func (cfg *Config) genAST(schema xsd.Schema, extra ...xsd.Schema) (*ast.File, error) {
 	var errList errorList
 	decls := make(map[string]spec)
 
+	cfg.addStandardHelpers()
 	collect := make(map[xml.Name]xsd.Type)
 	for k, v := range schema.Types {
 		collect[k] = v
@@ -209,6 +208,9 @@ func (cfg *Config) genAST(schema xsd.Schema, extra ...xsd.Schema) (*ast.File, er
 			result = append(result, f)
 		}
 	}
+	if cfg.pkgname == "" {
+		cfg.pkgname = "ws"
+	}
 	file := &ast.File{
 		Decls: result,
 		Name:  ast.NewIdent(cfg.pkgname),
@@ -242,18 +244,17 @@ func (cfg *Config) flatten(types map[xml.Name]xsd.Type) []xsd.Type {
 		}
 	}
 	// Remove duplicates
-	seen := make(map[xml.Name]struct{})
-	for i := 0; i < len(result); i++ {
-		t := result[i]
-		name := xsd.XMLName(t)
+	seen := make(map[xml.Name]bool)
+	var a []xsd.Type
+	for _, v := range result {
+		name := xsd.XMLName(v)
 		if _, ok := seen[name]; !ok {
-			seen[name] = struct{}{}
-			continue
+			seen[name] = true
+			a = append(a, v)
 		}
-		result = append(result[:i], result[i+1:]...)
 	}
-	cfg.debugf("discovered %d types", len(result))
-	return result
+	cfg.debugf("discovered %d types", len(a))
+	return a
 }
 
 // To reduce the size of the Go source generated, all intermediate types
@@ -569,14 +570,8 @@ func (cfg *Config) genTimeSpec(t xsd.Builtin) ([]spec, error) {
 		Args("text []byte").
 		Returns("error").
 		Body(`
-			s := string(bytes.TrimSpace(text))
-			x, err := time.Parse(%q, s)
-			if _, ok := err.(*time.ParseError); ok {
-				x, err = time.Parse(%q, s)
-			}
-			*t = %s(x)
-			return err
-		`, timespec, timespec+"Z07:00", s.name).Decl()
+			return _unmarshalTime(text, (*time.Time)(t), %q)
+		`, timespec).Decl()
 	if err != nil {
 		return nil, fmt.Errorf("could not generate unmarshal function for %s: %v", s.name, err)
 	}
@@ -589,8 +584,11 @@ func (cfg *Config) genTimeSpec(t xsd.Builtin) ([]spec, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not generate marshal function for %s: %v", s.name, err)
 	}
-	s.methods = append(s.methods, unmarshal)
-	s.methods = append(s.methods, marshal)
+	s.methods = append(s.methods, unmarshal, marshal)
+	if helper := cfg.helper("_unmarshalTime"); helper != nil {
+		//panic(fmt.Sprint("adding ", helper.Name.Name, " to functions for ", s.name))
+		s.methods = append(s.methods, helper)
+	}
 	return []spec{s}, nil
 }
 
@@ -640,8 +638,7 @@ func (cfg *Config) genBinarySpec(t xsd.Builtin) ([]spec, error) {
 	if err != nil {
 		return nil, fmt.Errorf("UnmarshalText %s: %v", s.name, err)
 	}
-	s.methods = append(s.methods, unmarshalFn)
-	s.methods = append(s.methods, marshalFn)
+	s.methods = append(s.methods, unmarshalFn, marshalFn)
 	return []spec{s}, nil
 }
 
@@ -678,8 +675,7 @@ func (cfg *Config) genTokenListSpec(t xsd.Builtin) ([]spec, error) {
 		return nil, fmt.Errorf("UnmarshalText %s: %v", s.name, err)
 	}
 
-	s.methods = append(s.methods, marshal)
-	s.methods = append(s.methods, unmarshal)
+	s.methods = append(s.methods, marshal, unmarshal)
 	return []spec{s}, nil
 }
 
@@ -719,8 +715,7 @@ func (cfg *Config) genSimpleListSpec(t *xsd.SimpleType) ([]spec, error) {
 		return nil, fmt.Errorf("UnmarshalText %s: %v", s.name, err)
 	}
 
-	s.methods = append(s.methods, marshal)
-	s.methods = append(s.methods, unmarshal)
+	s.methods = append(s.methods, marshal, unmarshal)
 	return []spec{s}, nil
 }
 

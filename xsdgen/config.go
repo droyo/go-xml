@@ -20,6 +20,8 @@ type Config struct {
 	pkgname         string
 	preprocessType  typeTransform
 	postprocessType specTransform
+	// Helper functions
+	helpers []*ast.FuncDecl
 	// Attributes for which this returns true won't be a part
 	// of any complex types.
 	filterAttributes propertyFilter
@@ -34,6 +36,17 @@ type Config struct {
 	elemNameTransform nameTransform
 	attrNameTransform nameTransform
 	allNameTransform  nameTransform
+}
+
+func (cfg *Config) helper(name string) *ast.FuncDecl {
+	for i, v := range cfg.helpers {
+		if v.Name.Name == name {
+			cfg.helpers[i] = cfg.helpers[len(cfg.helpers)-1]
+			cfg.helpers = cfg.helpers[:len(cfg.helpers)-1]
+			return v
+		}
+	}
+	return nil
 }
 
 type nameTransform func(xml.Name) string
@@ -66,7 +79,7 @@ type Option func(*Config) Option
 // function of the xsdgen package uses these options.
 var DefaultOptions = []Option{
 	IgnoreAttributes("id", "href", "ref", "offset"),
-	ReplaceAllNames(`[._ \s-]`, ""),
+	Replace(`[._ \s-]`, ""),
 	PackageName("ws"),
 	HandleSOAPArrayType(),
 	SOAPArrayAsSlice(),
@@ -217,11 +230,11 @@ func PackageName(name string) Option {
 	}
 }
 
-// ReplaceAllNames allows for substitution rules for all identifiers to
+// Replace allows for substitution rules for all identifiers to
 // be specified. If an invalid regular expression is called, no action
-// is taken. The ReplaceAllNames option is additive; subsitutions will be
+// is taken. The Replace option is additive; subsitutions will be
 // applied in the order that each option was applied in.
-func ReplaceAllNames(pat, repl string) Option {
+func Replace(pat, repl string) Option {
 	reg, err := regexp.Compile(pat)
 
 	return func(cfg *Config) Option {
@@ -233,7 +246,7 @@ func ReplaceAllNames(pat, repl string) Option {
 					s = prev(name)
 				}
 				if err != nil {
-					cfg.logf("Invalid regex %q passed to ReplaceAllNames", pat)
+					cfg.logf("Invalid regex %q passed to Replace", pat)
 					return s
 				}
 				return reg.ReplaceAllString(s, repl)
@@ -256,32 +269,7 @@ func replaceAllNamesRegex(reg *regexp.Regexp, repl string) Option {
 }
 
 // The UseFieldNames Option names anonymous types based on the name
-// of the element or attribute they describe. For instance, the xsd
-// schema
-//
-// 	<complexType="library">
-// 	  <sequence>
-// 	    <element name="book" maxOccurs="unbounded">
-// 	      <complexType>
-// 	        <sequence>
-// 	          <element name="title" type="xs:string" />
-// 	          <element name="author" type="xs:string" />
-// 	        </sequence>
-// 	      </complexType>
-// 	    </element>
-// 	  </sequence>
-// 	</complexType>
-//
-// Will generate the following Go source
-//
-// 	type Library struct {
-// 		Book []Book
-// 	}
-//
-// 	type Book struct {
-// 		Title string
-// 		Author string
-// 	}
+// of the element or attribute they describe.
 func UseFieldNames() Option {
 	return ProcessTypes(useFieldNames)
 }
@@ -358,7 +346,7 @@ func HandleSOAPArrayType() Option {
 // SOAP 1.1 defines an Array as
 //
 // 	<xs:complexType name="Array">
-// 	  <xs:any namespace="##any" maxOccurs="unbounded" />
+// 	  <xs:any maxOccurs="unbounded" />
 // 	  <xs:attribute name="arrayType" type="xs:string" />
 // 	  <!-- common attributes ellided -->
 // 	</xs:complexType>
@@ -371,16 +359,14 @@ func HandleSOAPArrayType() Option {
 // 		ArrayType string `xml:"http://schemas.xmlsoap.org/soap/encoding/ arrayType"`
 // 	}
 //
-// While the encoding/xml package can easily marshal and unmarshal
-// from and to such a Go type, it is not ideal to use. When using the
+// While the encoding/xml package can easily marshal and unmarshal to
+// and from such a Go type, it is not ideal to use. When using the
 // SOAPArrayAsSlice option, if there is only one field in the Go type
-// expression, and that field is plural, it is "unpacked", so that the
-// above declaration becomes
-//
-// 	type Array []int
-//
-// In addition, MarshalXML/UnmarshalXML methods are generated so
-// that values can be decoded into this type.
+// expression, and that field is plural, it is "unpacked". In addition,
+// MarshalXML/UnmarshalXML methods are generated so that values can
+// be decoded into this type. This option requires that the additional
+// attributes ("id", "href", "offset") are either ignored or fixed
+// by the schema.
 func SOAPArrayAsSlice() Option {
 	return func(cfg *Config) Option {
 		prev := cfg.postprocessType
@@ -534,6 +520,31 @@ Loop:
 	return t
 }
 
+func (cfg *Config) addStandardHelpers() {
+	fns := []*gen.Function{
+		gen.Func("_unmarshalTime").
+			Args("text []byte", "t *time.Time", "format string").
+			Returns("err error").
+			Body(`
+				s := string(bytes.TrimSpace(text))
+				*t, err = time.Parse(format, s)
+				if _, ok := err.(*time.ParseError); ok {
+					x, err = time.Parse(format + "Z07:00", s)
+				}
+				return err
+			`),
+	}
+	for _, fn := range fns {
+		x, err := fn.Decl()
+		if err != nil {
+			// These functions are all bundled with the program, and
+			// should never fail to parse
+			panic("failed to create helper function: " + err.Error())
+		}
+		cfg.helpers = append(cfg.helpers, x)
+	}
+}
+
 // SOAP arrays (and other similar types) are complex types with a single
 // plural element. We add a post-processing step to flatten it out and provide
 // marshal/unmarshal methods.
@@ -618,5 +629,8 @@ func (cfg *Config) soapArrayToSlice(s spec) spec {
 	s.expr = slice
 	s.methods = append(s.methods, marshal)
 	s.methods = append(s.methods, unmarshal)
+	if helper := cfg.helper("_unmarshalArray"); helper != nil {
+		s.methods = append(s.methods, helper)
+	}
 	return s
 }
