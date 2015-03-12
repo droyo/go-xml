@@ -295,7 +295,7 @@ func ExampleUseFieldNames() {
 	// 	s := string(bytes.TrimSpace(text))
 	// 	*t, err = time.Parse(format, s)
 	// 	if _, ok := err.(*time.ParseError); ok {
-	// 		x, err = time.Parse(format+"Z07:00", s)
+	// 		*t, err = time.Parse(format+"Z07:00", s)
 	// 	}
 	// 	return err
 	// }

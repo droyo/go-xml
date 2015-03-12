@@ -13,7 +13,7 @@ func main() {
 	cfg.Option(xsdgen.DefaultOptions...)
 	cfg.Option(xsdgen.ErrorLog(log.New(os.Stderr, "", 0), 1))
 
-	if err := cfg.Generate(os.Args[1:]...); err != nil {
+	if err := cfg.GenCLI(os.Args[1:]...); err != nil {
 		log.Fatal(err)
 	}
 }
