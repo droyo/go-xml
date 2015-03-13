@@ -36,6 +36,6 @@ All identifiers are passed through the defined substitution rules.
 The xsdgen command may be used with the go generate command. Simply
 embed a comment in your go source like so:
 
-	//go:generate xsdgen -ns "http://example.net/ws/" ws.xsd soap11.xsd
+	//go:generate xsdgen -ns "http://example.net/ws/" schemafile.xml
 */
 package main

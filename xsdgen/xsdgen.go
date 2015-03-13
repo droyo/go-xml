@@ -157,8 +157,10 @@ func (cfg *Config) genAST(schema xsd.Schema, extra ...xsd.Schema) (*ast.File, er
 	schema.Types = collect
 	if cfg.preprocessType != nil {
 		cfg.debugf("running user-defined pre-processing functions")
-		for name, t := range schema.Types {
-			schema.Types[name] = cfg.preprocessType(schema, t)
+		for name, t := range prev {
+			if t := cfg.preprocessType(schema, t); t != nil {
+				prev[name] = t
+			}
 		}
 	}
 	schema.Types = prev
@@ -433,14 +435,9 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 	attributes, elements := cfg.filterFields(t)
 	cfg.debugf("complexType %s: generating struct fields for %d elements and %d attributes",
 		xsd.XMLName(t).Local, len(elements), len(attributes))
-	hasFixed := false
 	hasDefault := false
 	for _, attr := range attributes {
 		hasDefault = hasDefault || (attr.Default != "")
-		if attr.Fixed != "" {
-			hasFixed = true
-			continue
-		}
 		tag := fmt.Sprintf(`xml:"%s,attr"`, attr.Name.Local)
 		base, err := cfg.expr(attr.Type)
 		if err != nil {
@@ -450,10 +447,6 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 	}
 	for _, el := range elements {
 		hasDefault = hasDefault || (el.Default != "")
-		if el.Fixed != "" {
-			hasFixed = true
-			continue
-		}
 		tag := fmt.Sprintf(`xml:"%s %s"`, el.Name.Space, el.Name.Local)
 		base, err := cfg.expr(el.Type)
 		if err != nil {
@@ -483,7 +476,7 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 		expr:    expr,
 		xsdType: t,
 	}
-	if hasFixed || hasDefault {
+	if hasDefault {
 		unmarshal, marshal, err := cfg.genMarshalComplexType(t)
 		if err != nil {
 			//NOTE(droyo) may want to log this instead of stopping the generator

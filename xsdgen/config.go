@@ -453,8 +453,10 @@ func (cfg *Config) parseSOAPArrayType(s xsd.Schema, t xsd.Type) xsd.Type {
 	if !ok {
 		return t
 	}
-	for i, v := range c.Attributes {
+	var attr []xsd.Attribute
+	for _, v := range c.Attributes {
 		if v.Name.Local != "arrayType" {
+			attr = append(attr, v)
 			continue
 		}
 		for _, a := range v.Attr {
@@ -462,7 +464,6 @@ func (cfg *Config) parseSOAPArrayType(s xsd.Schema, t xsd.Type) xsd.Type {
 				continue
 			}
 			itemType = v.Resolve(a.Value)
-			c.Attributes[i].Fixed = a.Value
 			break
 		}
 		break
@@ -478,6 +479,23 @@ func (cfg *Config) parseSOAPArrayType(s xsd.Schema, t xsd.Type) xsd.Type {
 		cfg.logf("could not lookup item type %q in namespace %q",
 			itemType.Local, itemType.Space)
 	}
+
+	// Have to remove arrayType from the "base" type, without affecting
+	// others inheriting from this type.
+	basep, ok := c.Base.(*xsd.ComplexType)
+	if !ok {
+		cfg.logf("type %s derives from non-complexType %s", c.Name.Local, xsd.XMLName(c.Base).Local)
+		return c
+	}
+	base := *basep
+	base.Attributes = make([]xsd.Attribute, 0, len(basep.Attributes)-1)
+	for _, v := range basep.Attributes {
+		if v.Name.Local != "arrayType" {
+			base.Attributes = append(base.Attributes, v)
+		}
+	}
+	c.Base = &base
+	c.Attributes = attr
 	return c
 }
 

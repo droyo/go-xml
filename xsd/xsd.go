@@ -61,9 +61,8 @@ type Element struct {
 	Optional bool
 	// If true, this element will be declared as a pointer.
 	Nillable bool
-	// Default overrides the zero value of this element. Fixed overrides
-	// all values for this element.
-	Default, Fixed string
+	// Default overrides the zero value of this element.
+	Default string
 	// Any additional attributes provided in the <xs:element> element.
 	Attr []xml.Attr
 	// Used for resolving prefixed strings in extra attribute values.
@@ -85,9 +84,8 @@ type Attribute struct {
 	Type Type
 	// True if this attribute has a <list> simpleType
 	Plural bool
-	// Default overrides the zero value of this element. Fixed overrides
-	// All values for this element.
-	Default, Fixed string
+	// Default overrides the zero value of this element.
+	Default string
 	// Any additional attributes provided in the <xs:attribute> element.
 	Attr []xml.Attr
 	// Used for resolving qnames in additional attributes.

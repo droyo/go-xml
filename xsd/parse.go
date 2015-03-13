@@ -380,7 +380,6 @@ func parseElement(ns string, el *xmltree.Element) Element {
 		Name:     el.ResolveDefault(el.Attr("", "name"), ns),
 		Type:     parseType(el.Resolve(el.Attr("", "type"))),
 		Default:  el.Attr("", "default"),
-		Fixed:    el.Attr("", "fixed"),
 		Abstract: parseBool(el.Attr("", "abstract")),
 		Nillable: parseBool(el.Attr("", "nillable")),
 		Optional: (el.Attr("", "use") == "optional"),
@@ -409,7 +408,6 @@ func parseAttribute(ns string, el *xmltree.Element) Attribute {
 	}
 	a.Type = parseType(el.Resolve(el.Attr("", "type")))
 	a.Default = el.Attr("", "default")
-	a.Fixed = el.Attr("", "fixed")
 	a.Scope = el.Scope
 
 	walk(el, func(el *xmltree.Element) {
