@@ -81,16 +81,18 @@ func ExampleIgnoreAttributes() {
 
 func ExampleIgnoreElements() {
 	doc := xsdfile(`
-	  <complexType name="ArrayOfString">
+	  <complexType name="Person">
 	    <sequence>
 	      <element name="name" type="xs:string" />
-	      <element name="deceased" type="xs:boolean" />
+	      <element name="deceased" type="soapenc:boolean" />
 	      <element name="private" type="xs:int" />
 	    </sequence>
 	  </complexType>
 	`)
 	var cfg xsdgen.Config
-	cfg.Option(xsdgen.IgnoreElements("private"))
+	cfg.Option(
+		xsdgen.IgnoreElements("private"),
+		xsdgen.IgnoreAttributes("id", "href"))
 
 	out, err := cfg.GenSource(doc)
 	if err != nil {
@@ -100,7 +102,7 @@ func ExampleIgnoreElements() {
 
 	// Output: package ws
 	//
-	// type ArrayOfString struct {
+	// type Person struct {
 	// 	Name     string `xml:"http://www.example.com/ name"`
 	// 	Deceased bool   `xml:"http://www.example.com/ deceased"`
 	// }
