@@ -32,10 +32,7 @@ type Config struct {
 	// the go source.
 	filterTypes propertyFilter
 	// Transform for names
-	typeNameTransform nameTransform
-	elemNameTransform nameTransform
-	attrNameTransform nameTransform
-	allNameTransform  nameTransform
+	nameTransform func(xml.Name) xml.Name
 }
 
 func (cfg *Config) helper(name string) *ast.FuncDecl {
@@ -49,7 +46,6 @@ func (cfg *Config) helper(name string) *ast.FuncDecl {
 	return nil
 }
 
-type nameTransform func(xml.Name) string
 type typeTransform func(xsd.Schema, xsd.Type) xsd.Type
 type propertyFilter func(interface{}) bool
 type specTransform func(spec) spec
@@ -114,17 +110,25 @@ type Logger interface {
 	Printf(format string, v ...interface{})
 }
 
-// ErrorLog specifies an optional Logger for warnings and debug
-// information about the code generation process. The level parameter
-// should be a positive integer between 1 and 5, with 5 providing the
-// greatest verbosity.
-func ErrorLog(l Logger, level int) Option {
+// LogOutput specifies an optional Logger for warnings and debug
+// information about the code generation process.
+func LogOutput(l Logger) Option {
 	return func(cfg *Config) Option {
-		prevLogger := cfg.logger
-		prevLevel := cfg.loglevel
+		prev := cfg.logger
 		cfg.logger = l
+		return LogOutput(prev)
+	}
+}
+
+// LogLevel sets the verbosity of messages sent to the error log
+// configured with the LogOutput option. The level parameter should
+// be a positive integer between 1 and 5, with 5 providing the greatest
+// verbosity.
+func LogLevel(level int) Option {
+	return func(cfg *Config) Option {
+		prev := cfg.loglevel
 		cfg.loglevel = level
-		return ErrorLog(prevLogger, prevLevel)
+		return LogLevel(prev)
 	}
 }
 
@@ -196,14 +200,6 @@ func OnlyTypes(patterns ...string) Option {
 	}
 }
 
-func replaceNameTransform(p *nameTransform, fn nameTransform) Option {
-	return func(*Config) Option {
-		prev := *p
-		*p = fn
-		return replaceNameTransform(p, prev)
-	}
-}
-
 func replacePreprocessType(p *typeTransform, fn typeTransform) Option {
 	return func(*Config) Option {
 		prev := *p
@@ -238,33 +234,47 @@ func Replace(pat, repl string) Option {
 	reg, err := regexp.Compile(pat)
 
 	return func(cfg *Config) Option {
-		prev := cfg.allNameTransform
-		return replaceNameTransform(&cfg.allNameTransform,
-			func(name xml.Name) string {
-				s := name.Local
-				if prev != nil {
-					s = prev(name)
-				}
-				if err != nil {
-					cfg.logf("Invalid regex %q passed to Replace", pat)
-					return s
-				}
-				return reg.ReplaceAllString(s, repl)
-			})(cfg)
+		prev := cfg.nameTransform
+		return replaceNameTransform(func(name xml.Name) xml.Name {
+			if prev != nil {
+				name = prev(name)
+			}
+			if err != nil {
+				cfg.logf("Invalid regex %q passed to Replace", pat)
+				return name
+			}
+			r := reg.ReplaceAllString(name.Local, repl)
+			if r != name.Local {
+				cfg.debugf("changed name %s -> %s", name.Local, r)
+			}
+			name.Local = r
+			return name
+		})(cfg)
+	}
+}
+
+func replaceNameTransform(fn func(xml.Name) xml.Name) Option {
+	return func(cfg *Config) Option {
+		prev := cfg.nameTransform
+		cfg.nameTransform = fn
+		return replaceNameTransform(prev)
 	}
 }
 
 func replaceAllNamesRegex(reg *regexp.Regexp, repl string) Option {
 	return func(cfg *Config) Option {
-		prev := cfg.allNameTransform
-		return replaceNameTransform(&cfg.allNameTransform,
-			func(name xml.Name) string {
-				s := name.Local
-				if prev != nil {
-					s = prev(name)
-				}
-				return reg.ReplaceAllString(s, repl)
-			})(cfg)
+		prev := cfg.nameTransform
+		return replaceNameTransform(func(name xml.Name) xml.Name {
+			if prev != nil {
+				name = prev(name)
+			}
+			s := reg.ReplaceAllString(name.Local, repl)
+			if s != name.Local {
+				cfg.debugf("changed %s -> %s", name.Local, s)
+			}
+			name.Local = s
+			return name
+		})(cfg)
 	}
 }
 
@@ -417,11 +427,10 @@ func (cfg *Config) typeName(name xml.Name) string {
 }
 
 func (cfg *Config) public(name xml.Name) string {
-	s := name.Local
-	if cfg.allNameTransform != nil {
-		s = cfg.allNameTransform(name)
+	if cfg.nameTransform != nil {
+		name = cfg.nameTransform(name)
 	}
-	return strings.Title(s)
+	return strings.Title(name.Local)
 }
 
 //

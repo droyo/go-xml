@@ -48,9 +48,11 @@ func ExampleConfig_GenCLI() {
 	}
 }
 
-func ExampleErrorLog() {
+func ExampleLogOutput() {
 	var cfg xsdgen.Config
-	cfg.Option(xsdgen.ErrorLog(log.New(os.Stderr, "", 0), 1))
+	cfg.Option(
+		xsdgen.LogOutput(log.New(os.Stderr, "", 0)),
+		xsdgen.LogLevel(2))
 	if err := cfg.GenCLI("file.wsdl"); err != nil {
 		log.Fatal(err)
 	}

@@ -137,6 +137,8 @@ func (cfg *Config) GenCLI(arguments ...string) error {
 		fs           = flag.NewFlagSet("xsdgen", flag.ExitOnError)
 		packageName  = fs.String("pkg", "", "name of the the generated package")
 		output       = fs.String("o", "xsdgen_output.go", "name of the output file")
+		verbose      = fs.Bool("v", false, "print verbose output")
+		debug        = fs.Bool("vv", false, "print debug output")
 	)
 	fs.Var(&replaceRules, "r", "replacement rule 'regex -> repl' (can be used multiple times)")
 	fs.Var(&xmlns, "ns", "target namespace(s) to generate types for")
@@ -144,6 +146,11 @@ func (cfg *Config) GenCLI(arguments ...string) error {
 	fs.Parse(arguments)
 	if fs.NArg() == 0 {
 		return errors.New("Usage: xsdgen [-ns xmlns] [-r rule] [-o file] [-pkg pkg] file ...")
+	}
+	if *debug {
+		cfg.Option(LogLevel(5))
+	} else if *verbose {
+		cfg.Option(LogLevel(1))
 	}
 	cfg.Option(Namespaces(xmlns...))
 	for _, r := range replaceRules {
