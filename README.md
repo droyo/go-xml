@@ -1,3 +1,5 @@
+[![GoDoc](https://godoc.org/aqwari.net/xml?status.svg)](https://godoc.org/aqwari.net/xml)
+
 This repository contains a collection of Go packages for working
 with XML, with the ultimate goal of enabling code generation based
 on XML documents.
