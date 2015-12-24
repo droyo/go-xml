@@ -6,7 +6,7 @@ import (
 )
 
 var xmlTmpl = template.Must(template.New("Marshal XML Elements").Parse(
-	`{{define "Element"}}<{{.Name.Local}}{{range .StartElement.Attr}} {{.Name.Local}}="{{.Value}}"{{end}}>{{if .Children | len | lt 0}}{{range .Children}}{{template "Element" .}}{{end}}{{end}}</{{.Name.Local}}>{{end}}`))
+	`{{define "Element"}}<{{.Name.Local}}{{range .StartElement.Attr}} {{.Name.Local}}="{{.Value}}"{{end}}>{{range .Children}}{{template "Element" .}}{{else}}{{printf "%s" .Content}}{{end}}</{{.Name.Local}}>{{end}}`))
 
 type marshalError string
 
