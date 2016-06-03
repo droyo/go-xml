@@ -450,7 +450,7 @@ func (s *Schema) parseSimpleType(root *xmltree.Element) *SimpleType {
 }
 
 func parseAnnotation(el *xmltree.Element) (doc annotation) {
-	if err := el.Unmarshal(&doc); err != nil {
+	if err := xmltree.Unmarshal(el, &doc); err != nil {
 		stop(err.Error())
 	}
 	return doc
