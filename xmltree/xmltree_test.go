@@ -5,6 +5,73 @@ import (
 	"testing"
 )
 
+var googleSOAP = []byte(`<soap11:Envelope
+  xmlns="urn:GoogleSearch"
+  xmlns:google="urn:GoogleSearch"
+  xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/"
+  xmlns:soap11="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap11:Body>
+    <doGoogleSearchResponse>
+      <return>
+        <documentFiltering>false</documentFiltering>
+        <estimatedTotalResultsCount>3</estimatedTotalResultsCount>
+        <directoryCategories soapenc:arrayType="google:DirectoryCategory[0]"></directoryCategories>
+        <searchTime>0.194871</searchTime>
+        <resultElements soapenc:arrayType="google:ResultElement[3]">
+          <item>
+            <cachedSize>12k</cachedSize>
+            <hostName></hostName>
+            <snippet> <b>...</b> on a simple dialog (via <b>teletype</b>) with a user, about a <b>...</b> http://hci.stanford.edu/<b>winograd</b>/<b>shrdlu</b><br /> . It is written in <b>MacLisp</b>, vintage 1970, and to <b>...</b></snippet>
+            <directoryCategory>
+              <specialEncoding></specialEncoding>
+              <fullViewableName></fullViewableName>
+            </directoryCategory>
+            <relatedInformationPresent>true</relatedInformationPresent>
+            <directoryTitle></directoryTitle>
+            <summary></summary>
+            <URL>http://hci.stanford.edu/cs147/examples/shrdlu/</URL>
+            <title>SHRDLU</title>
+          </item>
+          <item>
+            <cachedSize>12k</cachedSize>
+            <hostName></hostName>
+            <snippet> <b>...</b> on a simple dialog (via <b>teletype</b>) with a user, about a <b>...</b> http://hci.stanford.edu/<b>winograd</b>/<b>shrdlu</b>/code<br /> . It is written in <b>MacLisp</b>, vintage 1970, and to <b>...</b></snippet>
+            <directoryCategory>
+              <specialEncoding></specialEncoding>
+              <fullViewableName></fullViewableName>
+            </directoryCategory>
+            <relatedInformationPresent>true</relatedInformationPresent>
+            <directoryTitle></directoryTitle>
+            <summary></summary>
+            <URL>http://hci.stanford.edu/winograd/shrdlu</URL>
+            <title><b>SHRDLU</b></title>
+          </item>
+          <item>
+            <cachedSize>32k</cachedSize>
+            <hostName></hostName>
+            <snippet> <b>...</b> man and woman through <b>teletype</b> and has to <b>...</b> human diseases) 1970* Terry <b>Winograd&apos;s</b> <b>SHRDLU</b><br /> (Natural Language Processing <b>...</b> Lisp Machine Lisp, <b>MacLisp</b>, NIL, S-1 <b>...</b></snippet>
+            <directoryCategory>
+              <specialEncoding></specialEncoding>
+              <fullViewableName></fullViewableName>
+            </directoryCategory>
+            <relatedInformationPresent>true</relatedInformationPresent>
+            <directoryTitle></directoryTitle>
+            <summary></summary>
+            <URL>http://www.trentu.ca/csd/newsarchives/trentu/csp/cr350/79</URL>
+            <title></title>
+          </item>
+        </resultElements>
+        <endIndex>3</endIndex>
+        <searchTips></searchTips>
+        <searchComments></searchComments>
+        <startIndex>1</startIndex>
+        <estimateIsExact>true</estimateIsExact>
+        <searchQuery>shrdlu winograd maclisp teletype</searchQuery>
+      </return>
+    </doGoogleSearchResponse>
+  </soap11:Body>
+</soap11:Envelope>`)
+
 var exampleDoc = []byte(`<?xml version="1.0" encoding="utf-8"?>
 <wsdl:definitions xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:tm="http://microsoft.com/wsdl/mime/textMatching/" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:mime="http://schemas.xmlsoap.org/wsdl/mime/" xmlns:tns="http://www.sci-grupo.com.mx/" xmlns:s="http://www.w3.org/2001/XMLSchema" xmlns:soap12="http://schemas.xmlsoap.org/wsdl/soap12/" xmlns:http="http://schemas.xmlsoap.org/wsdl/http/" targetNamespace="http://www.sci-grupo.com.mx/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns="http://defaultns.net/">
   <wsdl:types>
@@ -185,4 +252,35 @@ func TestStringPreserveNS(t *testing.T) {
 	if len(root.Search("http://www.w3.org/2001/XMLSchema", "sequence")) == 0 {
 		t.Errorf("Could not find <s:sequence> in %s", root.String())
 	}
+}
+
+func TestUnmarshal(t *testing.T) {
+	root := parseDoc(t, googleSOAP)
+	type searchItem struct {
+		CachedSize string `xml:"urn:GoogleSearch cachedSize"`
+		Title      string `xml:"urn:GoogleSearch title"`
+		URL        string `xml:"urn:GoogleSearch URL"`
+	}
+	var v searchItem
+	const changedURL = "http://i-changed-this/"
+	var item *Element
+	for _, item = range root.Search("", "item") {
+		for i, c := range item.Children {
+			if c.Name.Local == "URL" {
+				item.Children[i].Content = []byte(changedURL)
+			}
+		}
+		t.Logf("test unmarshal %s", Marshal(item))
+		break
+	}
+	if err := item.Unmarshal(&v); err != nil {
+		t.Fatal(err)
+	}
+	if len(v.CachedSize) == 0 || len(v.Title) == 0 {
+		t.Errorf("failed to unmarshal <item>; empty <title> or <cachedSize>")
+	}
+	if v.URL != changedURL {
+		t.Errorf("modification to <item> URL field was not respected: %s != %s", v.URL, changedURL)
+	}
+	t.Logf("%#v", v)
 }

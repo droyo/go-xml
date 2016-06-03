@@ -66,49 +66,7 @@ func (outer *Scope) JoinScope(inner *Scope) *Scope {
 // xml.Unmarshal, but only parses the portion of the XML document
 // contained by the Element.
 func (el *Element) Unmarshal(v interface{}) error {
-	start := el.StartElement
-	for _, ns := range el.ns {
-		name := xml.Name{"", "xmlns"}
-		if ns.Local != "" {
-			name.Local += ":" + ns.Local
-		}
-		start.Attr = append(start.Attr, xml.Attr{name, ns.Space})
-	}
-	if start.Name.Space != "" {
-		for i := len(el.ns) - 1; i >= 0; i-- {
-			if el.ns[i].Space == start.Name.Space {
-				start.Name.Space = ""
-				start.Name.Local = el.ns[i].Local + ":" + start.Name.Local
-				break
-			}
-		}
-		if start.Name.Space != "" {
-			return fmt.Errorf("Could not find namespace prefix for %q when decoding %s",
-				start.Name.Space, start.Name.Local)
-		}
-	}
-
-	var buf bytes.Buffer
-	e := xml.NewEncoder(&buf)
-
-	if err := e.EncodeToken(start); err != nil {
-		return err
-	}
-	if err := e.Flush(); err != nil {
-		return err
-	}
-
-	// BUG(droyo) The Unmarshal method unmarshals an XML fragment as it
-	// was returned by the Parse method; further modifications to a tree of
-	// Elements are ignored by the Unmarshal method.
-	buf.Write(el.Content)
-	if err := e.EncodeToken(xml.EndElement{start.Name}); err != nil {
-		return err
-	}
-	if err := e.Flush(); err != nil {
-		return err
-	}
-	return xml.Unmarshal(buf.Bytes(), v)
+	return xml.Unmarshal(Marshal(el), v)
 }
 
 // A Scope represents the xml namespace scope at a given position in
