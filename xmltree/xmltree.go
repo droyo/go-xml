@@ -65,7 +65,7 @@ func (outer *Scope) JoinScope(inner *Scope) *Scope {
 // in the value pointed to by v. Unmarshal follows the same rules as
 // xml.Unmarshal, but only parses the portion of the XML document
 // contained by the Element.
-func (el *Element) Unmarshal(v interface{}) error {
+func Unmarshal(el *Element, v interface{}) error {
 	return xml.Unmarshal(Marshal(el), v)
 }
 

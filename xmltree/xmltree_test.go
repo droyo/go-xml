@@ -153,7 +153,7 @@ func TestParse(t *testing.T) {
 	el := parseDoc(t, exampleDoc)
 	el.walk(func(el *Element) {
 		el.walk(func(el *Element) {
-			if err := el.Unmarshal(&buf); err != nil {
+			if err := Unmarshal(el, &buf); err != nil {
 				t.Error(err)
 			}
 			t.Logf("%s", buf.Data)
@@ -273,7 +273,7 @@ func TestUnmarshal(t *testing.T) {
 		t.Logf("test unmarshal %s", Marshal(item))
 		break
 	}
-	if err := item.Unmarshal(&v); err != nil {
+	if err := Unmarshal(item, &v); err != nil {
 		t.Fatal(err)
 	}
 	if len(v.CachedSize) == 0 || len(v.Title) == 0 {
