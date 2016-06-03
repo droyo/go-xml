@@ -126,30 +126,26 @@ func (scope *Scope) ResolveDefault(qname, defaultns string) xml.Name {
 // prefix:local. If the namespace cannot be found, or is the
 // default namespace, an unqualified name is returned.
 func (scope *Scope) Prefix(name xml.Name) (qname string) {
-	// print("LOOKUP ", name.Space, " ", name.Local)
 	switch name.Space {
 	case "":
-		// println(" ->", name.Local)
 		return name.Local
 	case xmlLangURI:
-		// println(" ->", "xml:"+name.Local)
 		return "xml:" + name.Local
 	case xmlNamespaceURI:
-		// println(" ->", "xmlns:"+name.Local)
 		return "xmlns:" + name.Local
 	}
 	for i := len(scope.ns) - 1; i >= 0; i-- {
 		if scope.ns[i].Space == name.Space {
 			if scope.ns[i].Local == "" {
-				// println(" ->", name.Local, "(default)")
-				return name.Local
+				// Favor default NS if there is an extra
+				// qualified NS declaration
+				qname = name.Local
+			} else if len(qname) == 0 {
+				qname = scope.ns[i].Local + ":" + name.Local
 			}
-			// println(" ->", scope.ns[i].Local+":"+name.Local)
-			return scope.ns[i].Local + ":" + name.Local
 		}
 	}
-	// println(" ->", name.Local)
-	return name.Local
+	return qname
 }
 
 func (scope *Scope) pushNS(tag xml.StartElement) {
