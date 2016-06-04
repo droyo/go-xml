@@ -245,6 +245,12 @@ func (el *Element) walk(fn walkFunc) error {
 	return nil
 }
 
+// Flatten produces a slice of Element pointers referring to
+// the children of el, and their children, in depth-first order.
+func (el *Element) Flatten() []*Element {
+	return el.SearchFunc(func(*Element) bool { return true })
+}
+
 // SetAttr adds an XML attribute to an Element's existing Attributes.
 // If the attribute already exists, it is replaced.
 func (el *Element) SetAttr(space, local, value string) {

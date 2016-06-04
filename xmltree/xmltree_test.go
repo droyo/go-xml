@@ -240,7 +240,7 @@ func TestStringPreserveNS(t *testing.T) {
 	root := parseDoc(t, exampleDoc)
 	var doc []byte
 	var descent = 4
-	for _, el := range root.SearchFunc(func(*Element) bool { return true }) {
+	for _, el := range root.Flatten() {
 		descent--
 		if descent <= 0 {
 			doc = Marshal(el)
