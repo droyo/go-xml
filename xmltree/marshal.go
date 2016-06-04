@@ -38,6 +38,24 @@ func Marshal(el *Element) []byte {
 	return buf.Bytes()
 }
 
+// MarshalIndent is like Marshal, but adds line breaks for each
+// successive element. Each line begins with prefix and is
+// followed by zero or more copies of indent according to the
+// nesting depth.
+func MarshalIndent(el *Element, prefix, indent string) []byte {
+	var buf bytes.Buffer
+	enc := encoder{
+		w:      &buf,
+		prefix: prefix,
+		indent: indent,
+		pretty: true,
+	}
+	if err := enc.encode(el, nil, 0); err != nil {
+		panic(err)
+	}
+	return buf.Bytes()
+}
+
 // Encode writes the XML encoding of the Element to w.
 // Encode returns any errors encountered writing to w.
 func Encode(w io.Writer, el *Element) error {
@@ -68,6 +86,15 @@ func (e *encoder) encode(el, parent *Element, depth int) error {
 		// We only return I/O errors
 		return nil
 	}
+	if e.pretty {
+		io.WriteString(e.w, e.prefix)
+		if depth > 0 {
+			io.WriteString(e.w, "\n")
+			for i := 0; i < depth; i++ {
+				io.WriteString(e.w, e.indent)
+			}
+		}
+	}
 	scope := diffScope(parent, el)
 	if err := e.encodeOpenTag(el, scope); err != nil {
 		return err
@@ -83,6 +110,10 @@ func (e *encoder) encode(el, parent *Element, depth int) error {
 		if err := e.encode(&child, el, depth+1); err != nil {
 			return err
 		}
+	}
+	if e.pretty && depth == 0 {
+		io.WriteString(e.w, "\n")
+		io.WriteString(e.w, e.prefix)
 	}
 	if err := e.encodeCloseTag(el); err != nil {
 		return err
