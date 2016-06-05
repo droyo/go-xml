@@ -1,5 +1,8 @@
 language: go
 go_import_path: aqwari.net/xml
+go:
+  - 1.6
+
 notifications:
   email:
     recipients: droyo@aqwari.net
