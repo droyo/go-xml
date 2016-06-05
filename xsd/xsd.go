@@ -141,8 +141,8 @@ func (linkedType) isType() {}
 // and elements in its content. Complex types are derived by extending
 // or restricting another type. The xsd package records the elements and
 // attributes that may occur in an xml element conforming to the type.
-// A ComplexType is guaranteed to be part of a linked less, through its
-// Base field, that ends in the Builtin value AnyType.
+// A ComplexType is part of a linked list, through its Base field, that is
+// guaranteed to end in the Builtin value AnyType.
 //
 // http://www.w3.org/TR/2004/REC-xmlschema-1-20041028/structures.html#element-complexType
 type ComplexType struct {
