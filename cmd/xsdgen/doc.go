@@ -18,7 +18,7 @@ be used more than once. If -ns is not specified, types for all schema in
 all files will be declared.
 
 The default package name and output file are "ws" and "xsdgen_output.go",
-and can be overriddent by the -pkg and -o flags, respectively. The xsdgen
+and can be overridden by the -pkg and -o flags, respectively. The xsdgen
 command will try to fetch any schema dependencies before parsing.
 
 The -r flag can be used to specify a series of replacement rules. A replacement
