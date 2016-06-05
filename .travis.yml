@@ -1,0 +1,7 @@
+language: go
+go_import_path: aqwari.net/xml
+notifications:
+  email:
+    recipients: droyo@aqwari.net
+    on_success: change
+    on_failure: always
