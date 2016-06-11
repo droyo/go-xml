@@ -1,8 +1,9 @@
-// Package xmltree converts XML documents as a tree of Go structs.
+// Package xmltree converts XML documents into a tree of Go values.
 //
-// The xmltree package provides routines for accessing an XML document
-// as a tree, along with functionality to resolve namespace-prefixed
-// strings at any point in the tree.
+// The xmltree package provides types and routines for accessing
+// and manipulating XML documents as trees, along with
+// functionality to resolve XML namespace prefixes at any point
+// in the tree.
 package xmltree // import "aqwari.net/xml/xmltree"
 
 import (
