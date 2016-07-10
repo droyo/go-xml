@@ -605,11 +605,29 @@ func (cfg *Config) soapArrayToSlice(s spec) spec {
 	}
 
 	itemType := gen.ExprString(slice.Elt)
-	unmarshal, err := gen.Func("UnmarshalXML").
+	unmarshalFn := gen.Func("UnmarshalXML").
 		Receiver("a *"+s.name).
 		Args("d *xml.Decoder", "start xml.StartElement").
-		Returns("err error").
-		Body(`
+		Returns("err error")
+
+	if xmltag.Local == ",any" {
+		unmarshalFn = unmarshalFn.Body(`
+			var tok xml.Token
+			for tok, err = d.Token(); err == nil; tok, err = d.Token() {
+				if tok, ok := tok.(xml.StartElement); ok {
+					var item %s
+					if err = d.DecodeElement(&item, &tok); err == nil {
+						*a = append(*a, item)
+					}
+				}
+				if _, ok := tok.(xml.EndElement); ok {
+					break
+				}
+			}
+			return err
+		`, itemType)
+	} else {
+		unmarshalFn = unmarshalFn.Body(`
 			var tok xml.Token
 			var itemTag = xml.Name{%q, %q}
 			
@@ -629,7 +647,9 @@ func (cfg *Config) soapArrayToSlice(s spec) spec {
 				}
 			}
 			return err
-		`, xmltag.Space, xmltag.Local, itemType).Decl()
+		`, xmltag.Space, xmltag.Local, itemType)
+	}
+	unmarshal, err := unmarshalFn.Decl()
 	if err != nil {
 		cfg.logf("error generating UnmarshalXML method of %s: %v", s.name, err)
 		return s
@@ -640,14 +660,14 @@ func (cfg *Config) soapArrayToSlice(s spec) spec {
 		Args("e *xml.Encoder", "start xml.StartElement").
 		Returns("error").
 		Body(`
-			tag := xml.StartElement{Name: xml.Name{"", "item"}}
+			tag := xml.StartElement{Name: xml.Name{%q, %q}}
 			for _, elt := range *a {
 				if err := e.EncodeElement(elt, tag); err != nil {
 					return err
 				}
 			}
 			return nil
-		`).Decl()
+		`, xmltag.Space, xmltag.Local).Decl()
 	if err != nil {
 		cfg.logf("error generating MarshalXML method of %s: %v", s.name, err)
 		return s
