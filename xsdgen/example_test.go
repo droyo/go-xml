@@ -199,6 +199,8 @@ func ExampleSOAPArrayAsSlice() {
 	cfg.Option(
 		xsdgen.HandleSOAPArrayType(),
 		xsdgen.SOAPArrayAsSlice(),
+		xsdgen.LogOutput(log.New(os.Stderr, "", 0)),
+		xsdgen.LogLevel(3),
 		xsdgen.IgnoreAttributes("offset", "id", "href"))
 
 	out, err := cfg.GenSource(doc)
@@ -214,7 +216,7 @@ func ExampleSOAPArrayAsSlice() {
 	// type BoolArray []bool
 	//
 	// func (a *BoolArray) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
-	// 	tag := xml.StartElement{Name: xml.Name{"", "item"}}
+	// 	tag := xml.StartElement{Name: xml.Name{"", ",any"}}
 	// 	for _, elt := range *a {
 	// 		if err := e.EncodeElement(elt, tag); err != nil {
 	// 			return err
@@ -224,14 +226,9 @@ func ExampleSOAPArrayAsSlice() {
 	// }
 	// func (a *BoolArray) UnmarshalXML(d *xml.Decoder, start xml.StartElement) (err error) {
 	// 	var tok xml.Token
-	// 	var itemTag = xml.Name{"", ",any"}
 	// 	for tok, err = d.Token(); err == nil; tok, err = d.Token() {
 	// 		if tok, ok := tok.(xml.StartElement); ok {
 	// 			var item bool
-	// 			if itemTag.Local != ",any" && itemTag != tok.Name {
-	// 				err = d.Skip()
-	// 				continue
-	// 			}
 	// 			if err = d.DecodeElement(&item, &tok); err == nil {
 	// 				*a = append(*a, item)
 	// 			}
