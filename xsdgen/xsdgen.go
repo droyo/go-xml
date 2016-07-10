@@ -685,25 +685,187 @@ func (cfg *Config) genSimpleListSpec(t *xsd.SimpleType) ([]spec, error) {
 		expr:    expr,
 		xsdType: t,
 	}
-	marshal, err := gen.Func("MarshalText").
+	marshalFn := gen.Func("MarshalText").
 		Receiver("x *"+s.name).
-		Returns("[]byte", "error").
-		Body(`
-			return nil, nil
-		`).Decl()
+		Returns("[]byte", "error")
+	unmarshalFn := gen.Func("UnmarshalText").
+		Receiver("x *" + s.name).
+		Args("text []byte").
+		Returns("error")
 
+	base := t.Base
+	for xsd.Base(base) != nil {
+		base = xsd.Base(base)
+	}
+
+	switch base.(xsd.Builtin) {
+	case xsd.ID, xsd.NCName, xsd.NMTOKEN, xsd.Name, xsd.QName, xsd.ENTITY, xsd.AnyURI, xsd.Language, xsd.String, xsd.Token, xsd.XMLLang, xsd.XMLSpace, xsd.XMLBase, xsd.XMLId, xsd.Duration, xsd.NormalizedString:
+		marshalFn = marshalFn.Body(`
+			result := make([][]byte, 0, len(*x))
+			for _, v := range *x {
+				result = append(result, []byte(v))
+			}
+			return bytes.Join(result, []byte(" ")), nil
+		`)
+		unmarshalFn = marshalFn.Body(`
+			for _, v := range bytes.Fields(text) {
+				*x = append(*x, string(v))
+			}
+			return nil
+		`)
+	case xsd.Date, xsd.DateTime, xsd.GDay, xsd.GMonth, xsd.GMonthDay, xsd.GYear, xsd.GYearMonth, xsd.Time:
+		marshalFn = marshalFn.Body(`
+			result := make([][]byte, 0, len(*x))
+			for _, v := range *x {
+				if b, err := v.MarshalText(); err != nil {
+					return result, err
+				} else {
+					result = append(result, b)
+				}
+			}
+			return bytes.Join(result, []byte(" "))
+		`)
+		unmarshalFn = unmarshalFn.Body(`
+			for _, v := range bytes.Fields(text) {
+				var t %s
+				if err := t.UnmarshalText(v); err != nil {
+					return err
+				}
+				*x = append(*x, t)
+			}
+		`, builtinExpr(base.(xsd.Builtin)).(*ast.Ident).Name)
+	case xsd.Long:
+		marshalFn = marshalFn.Body(`
+			result := make([][]byte, 0, len(*x))
+			for _, v := range *x {
+				result = append(result, []byte(strconv.FormatInt(v, 10)))
+			}
+			return bytes.Join(result, []byte(" ")), nil
+		`)
+		unmarshalFn = unmarshalFn.Body(`
+			for _, v := range strings.Fields(string(text)) {
+				if i, err := strconv.ParseInt(v, 10, 64); err != nil {
+					return err
+				} else {
+					*x = append(*x, i)
+				}
+			}
+			return nil
+		`)
+	case xsd.Decimal, xsd.Double:
+		marshalFn = marshalFn.Body(`
+			result := make([][]byte, 0, len(*x))
+			for _, v := range *x {
+				s := strconv.FormatFloat(v, 'g', -1, 64)
+				result = append(result, []byte(s))
+			}
+			return bytes.Join(result, []byte(" ")), nil
+		`)
+		unmarshalFn = unmarshalFn.Body(`
+			for _, v := range strings.Fields(string(text)) {
+				if f, err := strconv.ParseFloat(v, 64); err != nil {
+					return err
+				} else {
+					*x = append(*x, f)
+				}
+			}
+			return nil
+		`)
+	case xsd.Int, xsd.Integer, xsd.NegativeInteger, xsd.NonNegativeInteger, xsd.NonPositiveInteger, xsd.Short:
+		marshalFn = marshalFn.Body(`
+			result := make([][]byte, 0, len(*x))
+			for _, v := range *x {
+				result = append(result, []byte(strconv.Itoa(v)))
+			}
+			return bytes.Join(result, []byte(" ")), nil
+		`)
+		unmarshalFn = unmarshalFn.Body(`
+			for _, v := range strings.Fields(string(text)) {
+				if i, err := strconv.Atoi(v); err != nil {
+					return err
+				} else {
+					*x = append(*x, i)
+				}
+			}
+			return nil
+		`)
+	case xsd.UnsignedInt, xsd.UnsignedShort:
+		marshalFn = marshalFn.Body(`
+			result := make([][]byte, 0, len(*x))
+			for _, v := range *x {
+				result = append(result, []byte(strconv.FormatUInt(uint64(v), 10)))
+			}
+			return bytes.Join(result, []byte(" ")), nil
+		`)
+		unmarshalFn = unmarshalFn.Body(`
+			for _, v := range strings.Fields(string(text)) {
+				if i, err := strconv.ParseUInt(v, 10, 32); err != nil {
+					return err
+				} else {
+					*x = append(*x, uint(i))
+				}
+			}
+			return nil
+		`)
+	case xsd.UnsignedLong:
+		marshalFn = marshalFn.Body(`
+			result := make([][]byte, 0, len(*x))
+			for _, v := range *x {
+				result = append(result, []byte(strconv.FormatUInt(v, 10)))
+			}
+			return bytes.Join(result, []byte(" ")), nil
+		`)
+		unmarshalFn = unmarshalFn.Body(`
+			for _, v := range strings.Fields(string(text)) {
+				if i, err := strconv.ParseInt(v, 10, 64); err != nil {
+					return err
+				} else {
+					*x = append(*x, i)
+				}
+			}
+			return nil
+		`)
+	case xsd.Byte, xsd.UnsignedByte:
+		marshalFn = marshalFn.Body(`
+			return []byte(*x), nil
+		`)
+		unmarshalFn = unmarshalFn.Body(`
+			*x = %s(text)
+			return nil
+		`, s.name)
+	case xsd.Boolean:
+		marshalFn = marshalFn.Body(`
+			result := make([][]byte
+			for _, b := range *x {
+				if b {
+					result = append(result, []byte("1"))
+				} else {
+					result = append(result, []byte("0"))
+				}
+			}
+			return bytes.Join(result, []byte(" ")), nil
+		`)
+		unmarshalFn = unmarshalFn.Body(`
+			for _, v := range bytes.Fields(text) {
+				switch string(v) {
+				case "1", "true":
+					*x = append(*x, true)
+				default:
+					*x = append(*x, false)
+				}
+			}
+			return nil
+		`)
+	default:
+		return nil, fmt.Errorf("don't know how to marshal/unmarshal <list> of %s", base)
+	}
+
+	marshal, err := marshalFn.Decl()
 	if err != nil {
 		return nil, fmt.Errorf("MarshalText %s: %v", s.name, err)
 	}
 
-	unmarshal, err := gen.Func("UnmarshalText").
-		Receiver("x *" + s.name).
-		Args("text []byte").
-		Returns("error").
-		Body(`
-			return nil
-		`).Decl()
-
+	unmarshal, err := unmarshalFn.Decl()
 	if err != nil {
 		return nil, fmt.Errorf("UnmarshalText %s: %v", s.name, err)
 	}
