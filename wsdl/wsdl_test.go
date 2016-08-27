@@ -21,9 +21,10 @@ func TestParse(t *testing.T) {
 			t.Error(err)
 			continue
 		}
-		_, err = Parse(data)
+		def, err := Parse(data)
 		if err != nil {
 			t.Errorf("parse %s: %s", filename, err)
 		}
+		t.Logf("\n%s", def)
 	}
 }
