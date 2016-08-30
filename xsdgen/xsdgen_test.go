@@ -40,8 +40,9 @@ func testGen(t *testing.T, ns string, files ...string) {
 
 	var cfg Config
 	cfg.Option(DefaultOptions...)
+	cfg.Option(LogOutput((*testLogger)(t)))
 
-	args := []string{"-o", file.Name(), "-ns", ns}
+	args := []string{"-v", "-o", file.Name(), "-ns", ns}
 	err = cfg.GenCLI(append(args, files...)...)
 	if err != nil {
 		t.Error(err)
