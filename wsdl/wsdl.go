@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"aqwari.net/xml/xmltree"
-	"aqwari.net/xml/xsd"
 )
 
 const (
@@ -27,7 +26,6 @@ const (
 // from a wsdl document.
 type Definition struct {
 	Doc      string
-	Schema   []xsd.Schema
 	Ports    []Port
 	Message  map[xml.Name]Message
 	TargetNS string
@@ -172,16 +170,11 @@ func parseOperations(targetNS string, root, port *xmltree.Element) []Operation {
 // Parse reads the first WSDL definition from data.
 func Parse(data []byte) (*Definition, error) {
 	var def Definition
-	schema, err := xsd.Parse(data)
-	if err != nil {
-		return nil, err
-	}
 	root, err := xmltree.Parse(data)
 	if err != nil {
 		return nil, err
 	}
 
-	def.Schema = schema
 	def.TargetNS = root.Attr("", "targetNamespace")
 	def.Message = parseMessages(def.TargetNS, root)
 
