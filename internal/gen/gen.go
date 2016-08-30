@@ -195,7 +195,9 @@ func (fn *Function) Decl() (*ast.FuncDecl, error) {
 	if fn.godoc != "" {
 		comments = &ast.CommentGroup{List: []*ast.Comment{}}
 		for _, line := range strings.Split(fn.godoc, "\n") {
-			comments.List = append(comments.List, &ast.Comment{Text: line})
+			comments.List = append(comments.List, &ast.Comment{
+				Text: "// " + line + "\n",
+			})
 		}
 	}
 	fl := func(args ...string) (list *ast.FieldList) {
