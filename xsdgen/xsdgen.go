@@ -17,12 +17,6 @@ import (
 	"aqwari.net/xml/xsd"
 )
 
-var defaultConfig Config
-
-func init() {
-	defaultConfig.Option(DefaultOptions...)
-}
-
 type errorList []error
 
 func (l errorList) Error() string {
