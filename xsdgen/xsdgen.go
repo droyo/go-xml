@@ -241,6 +241,11 @@ func (cfg *Config) flatten(types map[xml.Name]xsd.Type) []xsd.Type {
 		if cfg.filterTypes != nil && cfg.filterTypes(t) {
 			continue
 		}
+		if len(cfg.allowTypes) > 0 {
+			if !cfg.allowTypes[xsd.XMLName(t)] {
+				continue
+			}
+		}
 		if t := cfg.flatten1(t, push); t != nil {
 			result = append(result, t)
 		}
