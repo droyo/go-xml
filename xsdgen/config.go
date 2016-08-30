@@ -433,10 +433,12 @@ func (cfg *Config) expr(t xsd.Type) (ast.Expr, error) {
 		}
 		return ex, nil
 	}
-	return ast.NewIdent(cfg.typeName(xsd.XMLName(t))), nil
+	return ast.NewIdent(cfg.public(xsd.XMLName(t))), nil
 }
 
-func (cfg *Config) typeName(name xml.Name) string {
+// NameOf converts a canonical XML name to a Go identifier,
+// applying any user-provided filters.
+func (cfg *Config) NameOf(name xml.Name) string {
 	return cfg.public(name)
 }
 

@@ -471,7 +471,7 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 	}
 	expr := gen.Struct(fields...)
 	s := spec{
-		name:    cfg.typeName(t.Name),
+		name:    cfg.public(t.Name),
 		expr:    expr,
 		xsdType: t,
 	}
@@ -508,7 +508,7 @@ func (cfg *Config) genSimpleType(t *xsd.SimpleType) ([]spec, error) {
 		// to be generated to check which of the member types
 		// the value would be is too complex.
 		result = append(result, spec{
-			name:    cfg.typeName(t.Name),
+			name:    cfg.public(t.Name),
 			expr:    builtinExpr(xsd.String),
 			xsdType: t,
 		})
@@ -520,7 +520,7 @@ func (cfg *Config) genSimpleType(t *xsd.SimpleType) ([]spec, error) {
 			t.Name.Local, xsd.XMLName(t.Base).Local, err)
 	}
 	result = append(result, spec{
-		name:    cfg.typeName(t.Name),
+		name:    cfg.public(t.Name),
 		expr:    base,
 		xsdType: t,
 	})
@@ -679,7 +679,7 @@ func (cfg *Config) genSimpleListSpec(t *xsd.SimpleType) ([]spec, error) {
 		return nil, err
 	}
 	s := spec{
-		name:    cfg.typeName(t.Name),
+		name:    cfg.public(t.Name),
 		expr:    expr,
 		xsdType: t,
 	}
