@@ -1,18 +1,15 @@
 package xsdgen
 
 import (
-	"bytes"
 	"errors"
 	"flag"
 	"fmt"
 	"go/ast"
-	"go/format"
-	"go/token"
 	"io/ioutil"
 
 	"aqwari.net/xml/internal/commandline"
+	"aqwari.net/xml/internal/gen"
 	"aqwari.net/xml/xsd"
-	"golang.org/x/tools/imports"
 )
 
 // GenAST creates an *ast.File containing type declarations and
@@ -64,22 +61,11 @@ func (cfg *Config) GenAST(files ...string) (*ast.File, error) {
 // The GenSource method converts the AST returned by GenAST to formatted
 // Go source code.
 func (cfg *Config) GenSource(files ...string) ([]byte, error) {
-	var buf bytes.Buffer
-
 	file, err := cfg.GenAST(files...)
 	if err != nil {
 		return nil, err
 	}
-
-	fileset := token.NewFileSet()
-	if err := format.Node(&buf, fileset, file); err != nil {
-		return nil, err
-	}
-	out, err := imports.Process("", buf.Bytes(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("%v in %s", err, buf.String())
-	}
-	return out, nil
+	return gen.FormattedSource(file)
 }
 
 // GenCLI creates a file containing Go source generated from an XML
@@ -123,14 +109,9 @@ func (cfg *Config) GenCLI(arguments ...string) error {
 		return err
 	}
 
-	var buf bytes.Buffer
-	fileset := token.NewFileSet()
-	if err := format.Node(&buf, fileset, file); err != nil {
-		return err
-	}
-	out, err := imports.Process("", buf.Bytes(), nil)
+	data, err := gen.FormattedSource(file)
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(*output, out, 0666)
+	return ioutil.WriteFile(*output, data, 0666)
 }

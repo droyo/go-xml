@@ -5,16 +5,21 @@
 package gen
 
 import (
+	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
 	"go/ast"
+	"go/format"
 	"go/parser"
 	"go/printer"
 	"go/token"
+	"io"
 	"reflect"
 	"strconv"
 	"strings"
+
+	"golang.org/x/tools/imports"
 )
 
 // TypeDecl generates a type declaration with the given name.
@@ -287,4 +292,35 @@ func TagKey(field *ast.Field, key string) string {
 		return ""
 	}
 	return reflect.StructTag(field.Tag.Value).Get(key)
+}
+
+// FormattedSource converts an abstract syntax tree to
+// formatted Go source code.
+func FormattedSource(file *ast.File) ([]byte, error) {
+	var buf bytes.Buffer
+
+	fileset := token.NewFileSet()
+
+	// our *ast.File did not come from a real Go source
+	// file. As such, all of its node positions are 0, and
+	// the go/printer package will print the package
+	// comment between the package statement and
+	// the package name. The most straightforward way
+	// to work around this is to put the package comment
+	// there ourselves.
+	if file.Doc != nil {
+		for _, v := range file.Doc.List {
+			io.WriteString(&buf, v.Text)
+			io.WriteString(&buf, "\n")
+		}
+		file.Doc = nil
+	}
+	if err := format.Node(&buf, fileset, file); err != nil {
+		return nil, err
+	}
+	out, err := imports.Process("", buf.Bytes(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("%v in %s", err, buf.String())
+	}
+	return out, nil
 }
