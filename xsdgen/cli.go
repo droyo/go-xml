@@ -12,18 +12,10 @@ import (
 	"aqwari.net/xml/xsd"
 )
 
-// GenAST creates an *ast.File containing type declarations and
-// associated methods based on a set of XML schema.
-func (cfg *Config) GenAST(files ...string) (*ast.File, error) {
-	data := make([][]byte, 0, len(files))
-	for _, filename := range files {
-		b, err := ioutil.ReadFile(filename)
-		if err != nil {
-			return nil, err
-		}
-		cfg.debugf("read %s", filename)
-		data = append(data, b)
-	}
+// GenCode reads all xml schema definitions from the provided
+// data. If succesful, the returned *Code value can be used to
+// lookup identifiers and generate Go code.
+func (cfg *Config) GenCode(data ...[]byte) (*Code, error) {
 	if len(cfg.namespaces) == 0 {
 		cfg.debugf("setting namespaces to %s", cfg.namespaces)
 		cfg.Option(Namespaces(lookupTargetNS(data...)...))
@@ -45,17 +37,27 @@ func (cfg *Config) GenAST(files ...string) (*ast.File, error) {
 		return nil, fmt.Errorf("could not find schema for all namespaces in %s",
 			cfg.namespaces)
 	}
+	cfg.addStandardHelpers()
+	return cfg.gen(primaries, deps)
+}
 
-	var file *ast.File
-	for _, s := range primaries {
-		f, err := cfg.genAST(s, deps...)
+// GenAST creates an *ast.File containing type declarations and
+// associated methods based on a set of XML schema.
+func (cfg *Config) GenAST(files ...string) (*ast.File, error) {
+	data := make([][]byte, 0, len(files))
+	for _, filename := range files {
+		b, err := ioutil.ReadFile(filename)
 		if err != nil {
 			return nil, err
 		}
-		file = mergeASTFile(file, f)
+		cfg.debugf("read %s", filename)
+		data = append(data, b)
 	}
-
-	return file, nil
+	code, err := cfg.GenCode(data...)
+	if err != nil {
+		return nil, err
+	}
+	return code.GenAST()
 }
 
 // The GenSource method converts the AST returned by GenAST to formatted

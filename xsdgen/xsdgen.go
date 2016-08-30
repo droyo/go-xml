@@ -7,8 +7,6 @@ import (
 	"go/ast"
 	"go/token"
 	"io"
-	"io/ioutil"
-	"net/http"
 	"sort"
 	"strings"
 
@@ -48,148 +46,136 @@ func lookupTargetNS(data ...[]byte) []string {
 	return result
 }
 
-func mergeASTFile(dst, src *ast.File) *ast.File {
-	if dst == nil {
-		return src
-	}
-	if dst.Doc != nil {
-		dst.Doc = src.Doc
-	}
-	dst.Decls = append(dst.Decls, src.Decls...)
-	return dst
+// Code is the intermediate representation used by the xsdgen
+// package. It can be used to generate a Go source file, and to
+// lookup identifiers and attributes for a given type.
+type Code struct {
+	cfg   *Config
+	names map[xml.Name]string
+	decls map[string]spec
+	types map[xml.Name]xsd.Type
 }
 
-func (cfg *Config) resolveDependencies(data ...[]byte) ([][]byte, error) {
-	var imports []xsd.Ref
-	have := make(map[string]bool)
+// NameOf returns the Go identifier associated with the canonical
+// XML type.
+func (c *Code) NameOf(name xml.Name) string {
+	if id, ok := c.names[name]; ok {
+		return id
+	}
 
-	for _, b := range data {
-		refs, err := xsd.Imports(b)
+	if b, err := xsd.ParseBuiltin(name); err == nil {
+		s, err := gen.ToString(builtinExpr(b))
 		if err != nil {
-			return nil, err
+			return "ERROR" + name.Local
 		}
-		imports = append(imports, refs...)
-		for _, tns := range lookupTargetNS(b) {
-			have[tns] = true
-		}
+		c.names[name] = s
+		return s
 	}
-	for _, r := range imports {
-		if have[r.Namespace] {
-			continue
-		}
-		d, err := cfg.resolveDependencies1(r, have, 1)
-		if err != nil {
-			return nil, err
-		}
-		data = append(data, d...)
+
+	t, ok := c.types[name]
+	if !ok {
+		return "NOTFOUND" + name.Local
 	}
-	return data, nil
+
+	specs, err := c.cfg.genTypeSpec(t)
+	if err != nil {
+		c.cfg.logf("error generating type for %s: %s", name.Local, err)
+		return "ERROR" + name.Local
+	}
+
+	// memoize them for later
+	for _, s := range specs {
+		c.names[xsd.XMLName(s.xsdType)] = s.name
+	}
+	if s, ok := c.names[name]; ok {
+		return s
+	}
+	return "NOTFOUND" + name.Local
 }
 
-type xsdSet map[string]bool
-
-func (cfg *Config) resolveDependencies1(ref xsd.Ref, have xsdSet, depth int) ([][]byte, error) {
-	var result [][]byte
-	const maxDepth = 10
-	if have[ref.Namespace] {
-		return nil, nil
-	}
-
-	if depth >= maxDepth {
-		return nil, fmt.Errorf("maximum depth of %d reached", maxDepth)
-	}
-
-	if ref.Location == "" {
-		return nil, fmt.Errorf("do not know where to find schema for %s", ref.Namespace)
-	}
-	rsp, err := http.Get(ref.Location)
-	if err != nil {
-		return nil, err
-	}
-	body, err := ioutil.ReadAll(rsp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	refs, err := xsd.Imports(body)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, ns := range lookupTargetNS(body) {
-		have[ns] = true
-	}
-
-	for _, r := range refs {
-		if have[ref.Namespace] {
-			continue
-		}
-		d, err := cfg.resolveDependencies1(r, have, depth+1)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, d...)
-	}
-	return result, nil
-}
-
-func (cfg *Config) genAST(schema xsd.Schema, extra ...xsd.Schema) (*ast.File, error) {
+func (cfg *Config) gen(primaries, deps []xsd.Schema) (*Code, error) {
 	var errList errorList
-	decls := make(map[string]spec)
 
-	cfg.addStandardHelpers()
-	collect := make(map[xml.Name]xsd.Type)
-	for k, v := range schema.Types {
-		collect[k] = v
+	code := &Code{
+		cfg:   cfg,
+		names: make(map[xml.Name]string),
+		decls: make(map[string]spec),
 	}
-	for _, schema := range extra {
-		for k, v := range schema.Types {
-			collect[k] = v
+
+	all := make(map[xml.Name]xsd.Type)
+	for _, primary := range primaries {
+		for k, v := range primary.Types {
+			all[k] = v
 		}
 	}
-	prev := schema.Types
-	schema.Types = collect
+	for _, dep := range deps {
+		for k, v := range dep.Types {
+			all[k] = v
+		}
+	}
+
+	code.types = all
 	if cfg.preprocessType != nil {
 		cfg.debugf("running user-defined pre-processing functions")
-		for name, t := range prev {
-			if t := cfg.preprocessType(schema, t); t != nil {
-				prev[name] = t
+		for i, primary := range primaries {
+			// So user code has visibility into all types
+			prev := primary.Types
+			primary.Types = all
+
+			for name, t := range prev {
+				if t := cfg.preprocessType(primary, t); t != nil {
+					prev[name] = t
+				}
 			}
+
+			// So we don't pull in type expressions for
+			// unused dependencies
+			primaries[i].Types = prev
 		}
 	}
-	schema.Types = prev
 
-	cfg.debugf("generating Go source for schema %q", schema.TargetNS)
-	typeList := cfg.flatten(schema.Types)
-
-	for _, t := range typeList {
-		specs, err := cfg.genTypeSpec(t)
-		if err != nil {
-			errList = append(errList, fmt.Errorf("generate type %q: %v", xsd.XMLName(t).Local, err))
-		} else {
-			for _, s := range specs {
-				decls[s.name] = s
+	for _, primary := range primaries {
+		cfg.debugf("flattening type hierarchy for schema %q", primary.TargetNS)
+		for _, t := range cfg.flatten(primary.Types) {
+			specs, err := cfg.genTypeSpec(t)
+			if err != nil {
+				errList = append(errList, fmt.Errorf("gen type %q: %v",
+					xsd.XMLName(t).Local, err))
+			} else {
+				for _, s := range specs {
+					code.names[xsd.XMLName(s.xsdType)] = s.name
+					code.decls[s.name] = s
+				}
 			}
-		}
-	}
-	if cfg.postprocessType != nil {
-		cfg.debugf("running user-defined post-processing functions")
-		for name, s := range decls {
-			decls[name] = cfg.postprocessType(s)
 		}
 	}
 
 	if len(errList) > 0 {
 		return nil, errList
 	}
-	var result []ast.Decl
-	keys := make([]string, 0, len(decls))
-	for name := range decls {
+
+	if cfg.postprocessType != nil {
+		cfg.debugf("running user-defined post-processing functions")
+		for name, s := range code.decls {
+			code.decls[name] = cfg.postprocessType(s)
+		}
+	}
+
+	return code, nil
+}
+
+// GenAST generates a Go abstract syntax tree with
+// the type declarations contained in the xml schema document.
+func (code *Code) GenAST() (*ast.File, error) {
+	var file ast.File
+
+	keys := make([]string, 0, len(code.decls))
+	for name := range code.decls {
 		keys = append(keys, name)
 	}
 	sort.Strings(keys)
 	for _, name := range keys {
-		info := decls[name]
+		info := code.decls[name]
 		typeDecl := &ast.GenDecl{
 			Tok: token.TYPE,
 			Specs: []ast.Spec{
@@ -199,20 +185,17 @@ func (cfg *Config) genAST(schema xsd.Schema, extra ...xsd.Schema) (*ast.File, er
 				},
 			},
 		}
-		result = append(result, typeDecl)
+		file.Decls = append(file.Decls, typeDecl)
 		for _, f := range info.methods {
-			result = append(result, f)
+			file.Decls = append(file.Decls, f)
 		}
 	}
-	if cfg.pkgname == "" {
-		cfg.pkgname = "ws"
+	pkgname := code.cfg.pkgname
+	if pkgname == "" {
+		pkgname = "ws"
 	}
-	file := &ast.File{
-		Decls: result,
-		Name:  ast.NewIdent(cfg.pkgname),
-		Doc:   nil,
-	}
-	return file, nil
+	file.Name = ast.NewIdent(pkgname)
+	return &file, nil
 }
 
 type spec struct {
@@ -506,7 +489,8 @@ func (cfg *Config) genSimpleType(t *xsd.SimpleType) ([]spec, error) {
 	if len(t.Union) > 0 {
 		// We don't support unions because the code that needs
 		// to be generated to check which of the member types
-		// the value would be is too complex.
+		// the value would be is too complex. Need a use case
+		// first.
 		result = append(result, spec{
 			name:    cfg.public(t.Name),
 			expr:    builtinExpr(xsd.String),

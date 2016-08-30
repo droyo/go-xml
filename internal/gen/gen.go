@@ -35,6 +35,13 @@ func TypeDecl(name *ast.Ident, typ ast.Expr) *ast.GenDecl {
 	}
 }
 
+// ToString converts the expression to a Go source string.
+func ToString(expr ast.Expr) (string, error) {
+	var buf bytes.Buffer
+	err := format.Node(&buf, token.NewFileSet(), expr)
+	return buf.String(), err
+}
+
 // Struct creates a struct{} expression. The arguments are a series
 // of name/type/tag tuples. Name must be of type *ast.Ident, type
 // must be of type ast.Expr, and tag must be of type *ast.BasicLit,
