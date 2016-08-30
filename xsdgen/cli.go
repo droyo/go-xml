@@ -9,53 +9,11 @@ import (
 	"go/format"
 	"go/token"
 	"io/ioutil"
-	"regexp"
-	"strings"
 
+	"aqwari.net/xml/internal/commandline"
 	"aqwari.net/xml/xsd"
 	"golang.org/x/tools/imports"
 )
-
-type replaceRule struct {
-	from *regexp.Regexp
-	to   string
-}
-
-type replaceRuleList []replaceRule
-
-func (r *replaceRuleList) String() string {
-	var buf bytes.Buffer
-	for _, item := range *r {
-		fmt.Fprintf(&buf, "%s -> %s\n", item.from, item.to)
-	}
-	return buf.String()
-}
-
-func (r *replaceRuleList) Set(s string) error {
-	parts := strings.SplitN(s, "->", 2)
-	if len(parts) != 2 {
-		return fmt.Errorf("invalid replace rule %q. must be \"regex -> replacement\"", s)
-	}
-	parts[0] = strings.TrimSpace(parts[0])
-	parts[1] = strings.TrimSpace(parts[1])
-	reg, err := regexp.Compile(parts[0])
-	if err != nil {
-		return fmt.Errorf("invalid regex %q: %v", parts[0], err)
-	}
-	*r = append(*r, replaceRule{reg, parts[1]})
-	return nil
-}
-
-type stringSlice []string
-
-func (s *stringSlice) String() string {
-	return strings.Join(*s, ",")
-}
-
-func (s *stringSlice) Set(val string) error {
-	*s = append(*s, val)
-	return nil
-}
 
 // GenAST creates an *ast.File containing type declarations and
 // associated methods based on a set of XML schema.
@@ -132,8 +90,8 @@ func (cfg *Config) GenSource(files ...string) ([]byte, error) {
 func (cfg *Config) GenCLI(arguments ...string) error {
 	var (
 		err          error
-		replaceRules replaceRuleList
-		xmlns        stringSlice
+		replaceRules commandline.ReplaceRuleList
+		xmlns        commandline.Strings
 		fs           = flag.NewFlagSet("xsdgen", flag.ExitOnError)
 		packageName  = fs.String("pkg", "", "name of the the generated package")
 		output       = fs.String("o", "xsdgen_output.go", "name of the output file")
@@ -154,7 +112,7 @@ func (cfg *Config) GenCLI(arguments ...string) error {
 	}
 	cfg.Option(Namespaces(xmlns...))
 	for _, r := range replaceRules {
-		cfg.Option(replaceAllNamesRegex(r.from, r.to))
+		cfg.Option(replaceAllNamesRegex(r.From, r.To))
 	}
 	if *packageName != "" {
 		cfg.Option(PackageName(*packageName))
