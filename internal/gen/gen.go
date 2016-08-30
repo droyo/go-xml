@@ -176,6 +176,30 @@ func ConstImaginary(args ...string) *ast.GenDecl {
 	return constDecl(token.IMAG, args...)
 }
 
+// PackageDoc inserts package-level comments into a file,
+// preceding the "package" statement.
+func PackageDoc(file *ast.File, comments ...string) *ast.File {
+	if len(comments) == 0 {
+		return file
+	}
+	file.Doc = CommentGroup(comments...)
+	return file
+}
+
+// CommentGroup creates a comment group from strings.
+func CommentGroup(comments ...string) *ast.CommentGroup {
+	var group ast.CommentGroup
+	for _, v := range comments {
+		line := bufio.NewScanner(strings.NewReader(v))
+		for line.Scan() {
+			group.List = append(group.List, &ast.Comment{
+				Text: "// " + strings.TrimSpace(line.Text()),
+			})
+		}
+	}
+	return &group
+}
+
 type Function struct {
 	name, receiver, godoc string
 	args, returns         []string
