@@ -579,7 +579,6 @@ func (cfg *Config) genTimeSpec(t xsd.Builtin) ([]spec, error) {
 	}
 	s.methods = append(s.methods, unmarshal, marshal)
 	if helper := cfg.helper("_unmarshalTime"); helper != nil {
-		//panic(fmt.Sprint("adding ", helper.Name.Name, " to functions for ", s.name))
 		s.methods = append(s.methods, helper)
 	}
 	return []spec{s}, nil

@@ -175,6 +175,11 @@ type Function struct {
 	body                  string
 }
 
+// Name returns the name of the function.
+func (fn *Function) Name() string {
+	return fn.name
+}
+
 func Func(name string) *Function {
 	return &Function{name: name}
 }

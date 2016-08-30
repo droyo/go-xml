@@ -21,7 +21,7 @@ type Config struct {
 	preprocessType  typeTransform
 	postprocessType specTransform
 	// Helper functions
-	helpers []*ast.FuncDecl
+	helpers map[string]*ast.FuncDecl
 	// Attributes for which this returns true won't be a part
 	// of any complex types.
 	filterAttributes propertyFilter
@@ -36,14 +36,7 @@ type Config struct {
 }
 
 func (cfg *Config) helper(name string) *ast.FuncDecl {
-	for i, v := range cfg.helpers {
-		if v.Name.Name == name {
-			cfg.helpers[i] = cfg.helpers[len(cfg.helpers)-1]
-			cfg.helpers = cfg.helpers[:len(cfg.helpers)-1]
-			return v
-		}
-	}
-	return nil
+	return cfg.helpers[name]
 }
 
 type typeTransform func(xsd.Schema, xsd.Type) xsd.Type
@@ -548,6 +541,7 @@ Loop:
 }
 
 func (cfg *Config) addStandardHelpers() {
+	cfg.helpers = make(map[string]*ast.FuncDecl)
 	fns := []*gen.Function{
 		gen.Func("_unmarshalTime").
 			Args("text []byte", "t *time.Time", "format string").
@@ -568,7 +562,7 @@ func (cfg *Config) addStandardHelpers() {
 			// should never fail to parse
 			panic("failed to create helper function: " + err.Error())
 		}
-		cfg.helpers = append(cfg.helpers, x)
+		cfg.helpers[fn.Name()] = x
 	}
 }
 
