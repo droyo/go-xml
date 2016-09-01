@@ -642,7 +642,7 @@ func (cfg *Config) genTokenListSpec(t xsd.Builtin) ([]spec, error) {
 		xsdType: t,
 	}
 	marshal, err := gen.Func("MarshalText").
-		Receiver("x "+s.name).
+		Receiver("x *"+s.name).
 		Returns("[]byte", "error").
 		Body(`
 			return []byte(strings.Join(x, " ")), nil
@@ -653,7 +653,7 @@ func (cfg *Config) genTokenListSpec(t xsd.Builtin) ([]spec, error) {
 	}
 
 	unmarshal, err := gen.Func("UnmarshalText").
-		Receiver("x " + s.name).
+		Receiver("x *" + s.name).
 		Args("text []byte").
 		Returns("error").
 		Body(`
