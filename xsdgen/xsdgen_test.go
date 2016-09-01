@@ -3,17 +3,8 @@ package xsdgen
 import (
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"testing"
 )
-
-func glob(dir ...string) []string {
-	files, err := filepath.Glob(filepath.Join(dir...))
-	if err != nil {
-		panic("error in glob util function: " + err.Error())
-	}
-	return files
-}
 
 type testLogger testing.T
 
