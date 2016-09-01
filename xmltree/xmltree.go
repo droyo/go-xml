@@ -275,10 +275,7 @@ func (el *Element) SetAttr(space, local, value string) {
 type walkFunc func(*Element)
 
 // SearchFunc traverses the Element tree in depth-first order and returns
-// a slice of Elements for which the function fn returns true. Note that
-// SearchFunc does not search the children of Elements that match the search;
-// there is no parent-child relationship between the Elements returned in
-// the result.
+// a slice of Elements for which the function fn returns true.
 func (root *Element) SearchFunc(fn func(*Element) bool) []*Element {
 	var results []*Element
 	var search func(el *Element)
