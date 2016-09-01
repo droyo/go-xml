@@ -47,3 +47,7 @@ func TestNationalWeatherForecast(t *testing.T) {
 func testGlobalWeather(t *testing.T) {
 	testGen(t, "../testdata/webservicex-globalweather-ws.wsdl")
 }
+
+func TestHello(t *testing.T) {
+	testGen(t, "../testdata/hello.wsdl")
+}
