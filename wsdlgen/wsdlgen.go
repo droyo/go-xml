@@ -160,6 +160,33 @@ func (p *printer) operation(port wsdl.Port, op wsdl.Operation) error {
 		Comment(op.Doc).
 		Receiver("c *Client").
 		Args(params.input...).
+		BodyTmpl(`
+			var input struct {
+				XMLName struct{} `+"`"+`xml:"{{.InputName.Space}} {{.InputName.Local}}"`+"`"+`
+				{{ range .InputFields -}}
+				{{.Name}} {{.Type}} `+"`"+`xml:"{{.XMLName.Space}} {{.XMLName.Local}}"`+"`"+`
+				{{ end -}}
+			}
+			
+			{{- range .InputFields }}
+			input.{{.Name}} = {{.InputArg}}
+			{{ end }}
+			
+			var output struct {
+				XMLName struct{} `+"`"+`xml:"{{.OutputName.Space}} {{.OutputName.Local}}"`+"`"+`
+				{{ range .OutputFields -}}
+				{{.Name}} {{.Type}} `+"`"+`xml:"{{.XMLName.Space}} {{.XMLName.Local}}"`+"`"+`
+				{{ end -}}
+			}
+			
+			err := client.Do({{.Method|printf "%q"}}, {{.Address|printf "%q"}}, &input, &output)
+			
+			{{ if .OutputFields -}}
+			return {{ range .OutputFields }}output.{{.Name}}, {{ end }} err
+			{{- else -}}
+			return err
+			{{- end -}}
+		`, params).
 		Returns(params.output...)
 	if decl, err := fn.Decl(); err != nil {
 		return err
