@@ -30,6 +30,9 @@ func TestPurchasOrderSchema(t *testing.T) {
 func TestUSTreasureSDN(t *testing.T) {
 	testGen(t, "http://tempuri.org/sdnList.xsd", "testdata/sdn.xsd")
 }
+func TestSoap(t *testing.T) {
+	testGen(t, "http://schemas.xmlsoap.org/soap/encoding/", "testdata/soap11.xsd")
+}
 
 func testGen(t *testing.T, ns string, files ...string) {
 	file, err := ioutil.TempFile("", "xsdgen")
