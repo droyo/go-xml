@@ -87,6 +87,7 @@ func LogLevel(level int) Option {
 	return func(cfg *Config) Option {
 		prev := cfg.loglevel
 		cfg.loglevel = level
+		cfg.xsdgen.Option(xsdgen.LogLevel(level))
 		return LogLevel(prev)
 	}
 }
