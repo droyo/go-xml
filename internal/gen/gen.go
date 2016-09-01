@@ -36,6 +36,21 @@ func TypeDecl(name *ast.Ident, typ ast.Expr) *ast.GenDecl {
 	}
 }
 
+// Sanitize modifies any names that are reserved in
+// Go, so that they may be used as identifiers without
+// causing a syntax error.
+func Sanitize(name string) string {
+	switch name {
+	case "break", "default", "func", "interface", "select",
+		"case", "defer", "go", "map", "struct",
+		"chan", "else", "goto", "package", "switch",
+		"const", "fallthrough", "if", "range", "type",
+		"continue", "for", "import", "return", "var":
+		return name + "_"
+	}
+	return name
+}
+
 // ToString converts the expression to a Go source string.
 func ToString(expr ast.Expr) (string, error) {
 	var buf bytes.Buffer
