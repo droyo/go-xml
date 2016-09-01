@@ -302,6 +302,7 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type)) xsd.Type {
 				}
 			}
 			t.Elements[i] = el
+			push(el.Type)
 		}
 		for i, attr := range t.Attributes {
 			attr.Type = cfg.flatten1(attr.Type, push)
