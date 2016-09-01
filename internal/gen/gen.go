@@ -18,6 +18,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"text/template"
 
 	"golang.org/x/tools/imports"
 )
@@ -203,6 +204,7 @@ func CommentGroup(comments ...string) *ast.CommentGroup {
 type Function struct {
 	name, receiver, godoc string
 	args, returns         []string
+	err                   error
 	body                  string
 }
 
@@ -221,6 +223,9 @@ func (fn *Function) Decl() (*ast.FuncDecl, error) {
 	var err error
 	var comments *ast.CommentGroup
 
+	if fn.err != nil {
+		return nil, fn.err
+	}
 	if fn.name == "" {
 		return nil, errors.New("function name unset")
 	}
@@ -251,7 +256,7 @@ func (fn *Function) Decl() (*ast.FuncDecl, error) {
 	}
 	body, err := parseBlock(fn.body)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse function body of %s: %v", fn.name, err)
+		return nil, fmt.Errorf("could not parse function body of %s: %v in\n%s", fn.name, err, fn.body)
 	}
 	return &ast.FuncDecl{
 		Doc:  comments,
@@ -269,6 +274,26 @@ func (fn *Function) Decl() (*ast.FuncDecl, error) {
 // enclosing braces.
 func (fn *Function) Body(format string, v ...interface{}) *Function {
 	fn.body = fmt.Sprintf(format, v...)
+	return fn
+}
+
+// BodyTmpl allows use of the text/template package to construct
+// the body of a function.
+func (fn *Function) BodyTmpl(tmpl string, dot interface{}) *Function {
+	var buf bytes.Buffer
+	t, err := template.New(fn.Name()).Funcs(template.FuncMap{
+		"title":    strings.Title,
+		"split":    strings.Split,
+		"join":     strings.Join,
+		"sanitize": Sanitize,
+	}).Parse(tmpl)
+	if err != nil {
+		fn.err = err
+	} else if err := t.Execute(&buf, dot); err != nil {
+		fn.err = err
+	} else {
+		fn.body = buf.String()
+	}
 	return fn
 }
 
