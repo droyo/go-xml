@@ -80,8 +80,8 @@ type Operation struct {
 
 // A Port describes a set of RPCs and the address to reach them.
 type Port struct {
-	Name, Address string
-	Operations    []Operation
+	Name, Address, Method string
+	Operations            []Operation
 }
 
 // Collect multiple <documentation> children into a newline-separate string
@@ -127,10 +127,31 @@ func parsePorts(targetNS string, root, svc *xmltree.Element) []Port {
 		for _, addr := range port.Search(soap12NS, "address") {
 			p.Address = addr.Attr("", "location")
 		}
+		p.Method = "POST"
+		p.Method = parseMethod(targetNS, root, port)
 		p.Operations = parseOperations(targetNS, root, port)
 		ports = append(ports, p)
 	}
 	return ports
+}
+
+// The HTTP verb used for the set of operations bound to port, default POST
+func parseMethod(targetNS string, root, port *xmltree.Element) string {
+	binding := port.Resolve(port.Attr("", "binding"))
+	predicate := func(el *xmltree.Element) bool {
+		return el.Name.Space == wsdlNS &&
+			el.Name.Local == "binding" &&
+			el.ResolveDefault(el.Attr("", "name"), targetNS) == binding
+	}
+	for _, bind := range root.SearchFunc(predicate) {
+		for _, httpbind := range bind.Search(httpNS, "binding") {
+			verb := httpbind.Attr("", "verb")
+			if len(verb) > 0 {
+				return strings.ToUpper(verb)
+			}
+		}
+	}
+	return "POST"
 }
 
 func parseOperations(targetNS string, root, port *xmltree.Element) []Operation {
