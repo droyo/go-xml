@@ -19,6 +19,8 @@ type Config struct {
 	logger    Logger
 	loglevel  int
 	xsdgen    xsdgen.Config
+
+	maxArgs, maxReturns int
 }
 
 var defaultConfig Config
@@ -97,5 +99,31 @@ func LogOutput(dest Logger) Option {
 		cfg.logger = dest
 		cfg.xsdgen.Option(xsdgen.LogOutput(dest))
 		return LogOutput(prev)
+	}
+}
+
+// InputThreshold sets the maximum number of parameters a
+// generated function may take. If a WSDL operation is defined as
+// taking greater than n parameters, the generated function will
+// take only one parameter; a struct, through which all arguments
+// will be accessed.
+func InputThreshold(n int) Option {
+	return func(cfg *Config) Option {
+		prev := cfg.maxArgs
+		cfg.maxArgs = n
+		return InputThreshold(prev)
+	}
+}
+
+// OutputThreshold sets the maximum number of values that a
+// generated function may return. If a WSDL operation is defined
+// as returning greater than n values, the generated function will
+// return a wrapper struct instead. Note that the error value that all
+// generated functions return is not counted against the threshold.
+func OutputThreshold(n int) Option {
+	return func(cfg *Config) Option {
+		prev := cfg.maxReturns
+		cfg.maxReturns = n
+		return OutputThreshold(prev)
 	}
 }
