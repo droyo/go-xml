@@ -59,7 +59,9 @@ type Code struct {
 // NameOf returns the Go identifier associated with the canonical
 // XML type.
 func (c *Code) NameOf(name xml.Name) string {
+	c.cfg.debugf("looking up Go name for %v", name)
 	if id, ok := c.names[name]; ok {
+		c.cfg.debugf("%v -> %s", name, id)
 		return id
 	}
 
@@ -220,6 +222,7 @@ func (cfg *Config) flatten(types map[xml.Name]xsd.Type) []xsd.Type {
 		result = append(result, t)
 	}
 	for _, t := range types {
+		cfg.debugf("flattening type %T(%s)\n", t, xsd.XMLName(t).Local)
 		if cfg.filterTypes != nil && cfg.filterTypes(t) {
 			continue
 		}
@@ -271,6 +274,8 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type)) xsd.Type {
 			}
 		}
 		t.Base = builtin
+		cfg.debugf("%T(%s) -> %T(%s)", t, xsd.XMLName(t).Local,
+			t.Base, xsd.XMLName(t.Base).Local)
 		return t
 	case *xsd.ComplexType:
 		// We can "unpack" a struct if it is extending a simple
@@ -282,7 +287,7 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type)) xsd.Type {
 			}
 			attributes, _ := cfg.filterFields(t)
 			if len(attributes) == 0 {
-				cfg.debugf("complexType %s extends simpleType %s, but all attributes are filtered. unpacking.",
+				cfg.debugf("complexType %s extends simpleType %s, but extra attributes are filtered. unpacking.",
 					t.Name.Local, xsd.XMLName(t.Base))
 				switch b := t.Base.(type) {
 				case xsd.Builtin:
@@ -303,6 +308,8 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type)) xsd.Type {
 			}
 			t.Elements[i] = el
 			push(el.Type)
+			cfg.debugf("%T(%s): %v", t, xsd.XMLName(t).Local,
+				xsd.XMLName(el.Type))
 		}
 		for i, attr := range t.Attributes {
 			attr.Type = cfg.flatten1(attr.Type, push)
@@ -313,6 +320,8 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type)) xsd.Type {
 			}
 			t.Attributes[i] = attr
 		}
+		cfg.debugf("%T(%s) -> %T(%s)", t, xsd.XMLName(t).Local,
+			t.Base, xsd.XMLName(t.Base).Local)
 		return t
 	case xsd.Builtin:
 		// There are a few built-ins that do not map directly to Go types.
