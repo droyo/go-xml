@@ -77,6 +77,11 @@ func (c *Code) NameOf(name xml.Name) string {
 		return "NOTFOUND" + name.Local
 	}
 
+	switch b := c.cfg.flatten1(t, func(xsd.Type) {}).(type) {
+	case xsd.Builtin:
+		return c.NameOf(b.Name())
+	}
+
 	specs, err := c.cfg.genTypeSpec(t)
 	if err != nil {
 		c.cfg.logf("error generating type for %s: %s", name.Local, err)
