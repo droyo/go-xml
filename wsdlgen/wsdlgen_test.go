@@ -4,6 +4,8 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"aqwari.net/xml/xsdgen"
 )
 
 type testLogger struct {

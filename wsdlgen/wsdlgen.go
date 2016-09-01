@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"go/ast"
 	"io/ioutil"
+	"strings"
 
 	"aqwari.net/xml/internal/gen"
 	"aqwari.net/xml/wsdl"
