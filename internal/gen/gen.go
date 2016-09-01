@@ -363,7 +363,7 @@ func parseBlock(s string) (*ast.BlockStmt, error) {
 	var buf bytes.Buffer
 
 	fmt.Fprintf(&buf, "package tmp\nfunc _block() {\n%s\n}", s)
-	file, err := parser.ParseFile(token.NewFileSet(), "", buf.Bytes(), 0)
+	file, err := parser.ParseFile(token.NewFileSet(), "", buf.Bytes(), parser.ParseComments)
 	if err != nil {
 		return nil, err
 	}
