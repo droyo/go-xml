@@ -339,6 +339,26 @@ func (fn *Function) Receiver(receiver string) *Function {
 	return fn
 }
 
+// Declarations parses a list of Go source code blocks and converts
+// them into *ast.Decl values. If a parsing error occurs, it is returned
+// immediately and no further parsing takes place.
+func Declarations(blocks ...string) ([]ast.Decl, error) {
+	var buf bytes.Buffer
+	decls := make([]ast.Decl, 0, len(blocks))
+	for _, block := range blocks {
+		fmt.Fprintf(&buf, "package tmp\n%s\n", block)
+		file, err := parser.ParseFile(
+			token.NewFileSet(), "",
+			buf.Bytes(), parser.ParseComments)
+		if err != nil {
+			return decls, err
+		}
+		decls = append(decls, file.Decls...)
+		buf.Reset()
+	}
+	return decls, nil
+}
+
 func parseBlock(s string) (*ast.BlockStmt, error) {
 	var buf bytes.Buffer
 
