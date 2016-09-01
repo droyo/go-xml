@@ -34,6 +34,38 @@ type printer struct {
 	file *ast.File
 }
 
+// Provides aspects about an RPC call to the template for the function
+// bodies.
+type opArgs struct {
+	// formatted with appropriate variable names
+	input, output []string
+
+	// URL to send request to
+	Address string
+
+	// POST or GET
+	Method string
+
+	// Name of the method to call
+	MsgName xml.Name
+
+	// if we're returning individual values, these slices
+	// are in an order matching the input/output slices.
+	InputName, OutputName xml.Name
+	InputFields           []field
+	OutputFields          []field
+}
+
+// struct members. Need to export the fields for our template
+type field struct {
+	Name, Type string
+	XMLName    xml.Name
+
+	// This refers to the name of the value to assign to this field
+	// in the argument list. Empty for return values.
+	InputArg string
+}
+
 // GenAST creates a Go source file containing type and method declarations
 // that can be used to access the service described in the provided set of wsdl
 // files.
@@ -111,21 +143,24 @@ func (p *printer) port(port wsdl.Port) error {
 }
 
 func (p *printer) operation(port wsdl.Port, op wsdl.Operation) error {
-	inputs, err := p.argList(op.Input, true)
+	input, ok := p.wsdl.Message[op.Input]
+	if !ok {
+		return fmt.Errorf("unknown input message type %s", op.Input.Local)
+	}
+	output, ok := p.wsdl.Message[op.Output]
+	if !ok {
+		return fmt.Errorf("unknown output message type %s", op.Output.Local)
+	}
+	params, err := p.opArgs(port.Address, port.Method, input, output)
 	if err != nil {
 		return err
 	}
-	outputs, err := p.argList(op.Output, false)
-	if err != nil {
-		return err
-	}
-	outputs = append(outputs, "error")
+
 	fn := gen.Func(p.xsdgen.NameOf(op.Name)).
 		Comment(op.Doc).
 		Receiver("c *Client").
-		Args(inputs...).
-		Body("return nil").
-		Returns(outputs...)
+		Args(params.input...).
+		Returns(params.output...)
 	if decl, err := fn.Decl(); err != nil {
 		return err
 	} else {
@@ -134,19 +169,36 @@ func (p *printer) operation(port wsdl.Port, op wsdl.Operation) error {
 	return nil
 }
 
-func (p *printer) argList(message xml.Name, named bool) ([]string, error) {
-	msg, ok := p.wsdl.Message[message]
-	if !ok {
-		return nil, fmt.Errorf("unknown message type %s", message.Local)
+func (p *printer) opArgs(addr, method string, input, output wsdl.Message) (opArgs, error) {
+	var args opArgs
+	args.Address = addr
+	args.Method = method
+	args.InputName = input.Name
+	for _, part := range input.Parts {
+		typ := p.code.NameOf(part.Type)
+		vname := gen.Sanitize(part.Name)
+		args.input = append(args.input, vname+" "+typ)
+		args.InputFields = append(args.InputFields, field{
+			Name:     strings.Title(part.Name),
+			Type:     typ,
+			XMLName:  xml.Name{p.wsdl.TargetNS, part.Name},
+			InputArg: vname,
+		})
 	}
-	args := make([]string, 0, len(msg.Parts))
-	for _, part := range msg.Parts {
-		arg := p.code.NameOf(part.Type)
-		if named {
-			arg = part.Name + " " + arg
-		}
-		args = append(args, arg)
+	args.OutputName = output.Name
+	for _, part := range output.Parts {
+		typ := p.code.NameOf(part.Type)
+		args.output = append(args.output, typ)
+		args.OutputFields = append(args.OutputFields, field{
+			Name:    strings.Title(part.Name),
+			Type:    typ,
+			XMLName: xml.Name{p.wsdl.TargetNS, part.Name},
+		})
 	}
+	// NOTE(droyo) if we decide to name our return values,
+	// we have to change this too.
+	args.output = append(args.output, "error")
+
 	return args, nil
 }
 
