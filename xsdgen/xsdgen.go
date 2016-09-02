@@ -338,7 +338,7 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type)) xsd.Type {
 		}
 		return t
 	}
-	panic(fmt.Sprintf("unexpected %T", t))
+	panic(fmt.Sprintf("unexpected %T(%s %s)", t, xsd.XMLName(t).Space, xsd.XMLName(t).Local))
 }
 
 func (cfg *Config) genTypeSpec(t xsd.Type) (result []spec, err error) {
