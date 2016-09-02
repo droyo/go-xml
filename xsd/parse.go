@@ -114,6 +114,9 @@ func Parse(docs ...[]byte) ([]Schema, error) {
 		if err := s.resolvePartialTypes(types); err != nil {
 			return nil, err
 		}
+		if err := s.addElementTypeAliases(schema[s.TargetNS], types); err != nil {
+			return nil, err
+		}
 		result = append(result, s)
 	}
 	return result, nil
@@ -227,6 +230,30 @@ func (s *Schema) parse(root *xmltree.Element, extra map[string]*xmltree.Element)
 		t := s.parseSimpleType(el)
 		s.Types[t.Name] = t
 	}
+}
+
+func (s *Schema) addElementTypeAliases(root *xmltree.Element, types map[xml.Name]Type) error {
+	for _, el := range root.Children {
+		if (el.Name != xml.Name{schemaNS, "element"}) {
+			continue
+		}
+		name := el.ResolveDefault(el.Attr("", "name"), s.TargetNS)
+		ref := el.ResolveDefault(el.Attr("", "type"), s.TargetNS)
+		if ref.Local == "" || name.Local == "" {
+			continue
+		}
+		if _, ok := s.Types[name]; !ok {
+			if t, ok := s.lookupType(linkedType(ref), types); !ok {
+				return fmt.Errorf("could not lookup type %s for element %s",
+					el.Prefix(ref), el.Prefix(name))
+			} else {
+				s.Types[name] = t
+			}
+		}
+	}
+	return nil
+}
+
 
 	return err
 }
@@ -610,9 +637,12 @@ func (s *Schema) resolvePartialTypes(types map[xml.Name]Type) error {
 }
 
 func (s *Schema) lookupType(name linkedType, ext map[xml.Name]Type) (Type, bool) {
-	if v, ok := s.Types[xml.Name(name)]; ok {
+	if b, err := ParseBuiltin(xml.Name(name)); err == nil {
+		return b, true
+	}
+	if v, ok := ext[xml.Name(name)]; ok {
 		return v, true
 	}
-	v, ok := ext[xml.Name(name)]
+	v, ok := s.Types[xml.Name(name)]
 	return v, ok
 }
