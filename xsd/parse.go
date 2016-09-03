@@ -249,7 +249,7 @@ func derefGroupAttrEl(root *xmltree.Element, targetNS string, extra map[string]*
 			continue
 		}
 		sameType := and(isElem(el.Name.Space, el.Name.Local), hasAttr("", "name"))
-		ref := el.ResolveDefault(el.Attr("", "ref"), targetNS)
+		ref := el.Resolve(el.Attr("", "ref"))
 		for ns, doc := range extra {
 			for _, real := range doc.SearchFunc(sameType) {
 				name := real.ResolveDefault(real.Attr("", "name"), ns)
@@ -330,7 +330,7 @@ func (s *Schema) addElementTypeAliases(root *xmltree.Element, types map[xml.Name
 			continue
 		}
 		name := el.ResolveDefault(el.Attr("", "name"), s.TargetNS)
-		ref := el.ResolveDefault(el.Attr("", "type"), s.TargetNS)
+		ref := el.Resolve(el.Attr("", "type"))
 		if ref.Local == "" || name.Local == "" {
 			continue
 		}
