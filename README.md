@@ -14,8 +14,11 @@ on XML documents.
 - The `xsdgen` package provides a customizable code generator that
   generates Go type declarations and marshal/unmarshal methods for
   an XML Schema.
-- The `xsdgen` command generates Go code with default settings and
-  is suitable for use with `go generate`.
+- The `wsdl` package parses Web Service Definition Language (WSDL)
+  files, which describe a (usually) SOAP web service.
+- The `wsdlgen` package genreates Go source code from WSDL files.
+- The `xsdgen` and `wsdlgen` commands generate Go code with default
+  settings and are suitable for use with `go generate`.
 
 This code is still very rough around the edges, but I have succesfully
 used it to generate type declarations for some pretty complex XML
