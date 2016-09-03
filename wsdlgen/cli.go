@@ -27,6 +27,7 @@ func (cfg *Config) GenCLI(arguments ...string) error {
 	var (
 		err          error
 		replaceRules commandline.ReplaceRuleList
+		ports        commandline.Strings
 		fs           = flag.NewFlagSet("wsdlgen", flag.ExitOnError)
 		packageName  = fs.String("pkg", "", "name of the generated package")
 		output       = fs.String("o", "wsdlgen_output.go", "name of the output file")
@@ -34,6 +35,7 @@ func (cfg *Config) GenCLI(arguments ...string) error {
 		debug        = fs.Bool("vv", false, "print debug output")
 	)
 	fs.Var(&replaceRules, "r", "replacement rule 'regex -> repl' (can be used multiple times)")
+	fs.Var(&ports, "port", "gen code for this port (can be used multiple times)")
 	fs.Parse(arguments)
 	if fs.NArg() == 0 {
 		return errors.New("Usage: wsdlgen [-r rule] [-o file] [-pkg pkg] file ...")
@@ -48,7 +50,9 @@ func (cfg *Config) GenCLI(arguments ...string) error {
 		cfg.Option(PackageName(*packageName))
 		cfg.XSDOption(xsdgen.PackageName(*packageName))
 	}
-
+	if len(ports) > 0 {
+		cfg.Option(OnlyPorts(ports...))
+	}
 	for _, r := range replaceRules {
 		cfg.XSDOption(xsdgen.Replace(r.From.String(), r.To))
 	}

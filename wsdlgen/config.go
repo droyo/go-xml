@@ -3,6 +3,7 @@ package wsdlgen
 import (
 	"encoding/xml"
 
+	"aqwari.net/xml/wsdl"
 	"aqwari.net/xml/xsdgen"
 )
 
@@ -14,11 +15,12 @@ func init() {
 // Users may modify the output of the wsdlgen package's code generation
 // by using a Config's Option method to change these parameters.
 type Config struct {
-	pkgName   string
-	pkgHeader string
-	logger    Logger
-	loglevel  int
-	xsdgen    xsdgen.Config
+	pkgName    string
+	pkgHeader  string
+	logger     Logger
+	loglevel   int
+	xsdgen     xsdgen.Config
+	portFilter func(wsdl.Port) bool
 
 	maxArgs, maxReturns int
 }
@@ -70,6 +72,23 @@ type Option func(*Config) Option
 // DefaultOptions are the default options for Go source code generation.
 var DefaultOptions = []Option{
 	PackageName("ws"),
+}
+
+// The OnlyPorts option defines a whitelist of WSDL ports to generate
+// code for. Any other ports will not have types or methods present in
+// the generated output.
+func OnlyPorts(ports ...string) Option {
+	return func(cfg *Config) Option {
+		cfg.portFilter = func(p wsdl.Port) bool {
+			for _, name := range ports {
+				if name == p.Name {
+					return true
+				}
+			}
+			return false
+		}
+		return OnlyPorts()
+	}
 }
 
 // PackageName specifies the name of the generated Go package.
