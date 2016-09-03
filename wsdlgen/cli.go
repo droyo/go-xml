@@ -38,7 +38,7 @@ func (cfg *Config) GenCLI(arguments ...string) error {
 	fs.Var(&ports, "port", "gen code for this port (can be used multiple times)")
 	fs.Parse(arguments)
 	if fs.NArg() == 0 {
-		return errors.New("Usage: wsdlgen [-r rule] [-o file] [-pkg pkg] file ...")
+		return errors.New("Usage: wsdlgen [-r rule] [-o file] [-port name] [-pkg pkg] file ...")
 	}
 
 	if *debug {
