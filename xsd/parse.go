@@ -293,32 +293,22 @@ Convert a form such as
         </s:sequence>
       </s:complexType>
     </s:element>
-    <s:element name="RecibeCFDResponse">
-      <s:complexType>
-        <s:sequence>
-          <s:element minOccurs="0" maxOccurs="1" name="RecibeCFDResult" type="s:string" />
-        </s:sequence>
-      </s:complexType>
-    </s:element>
   </s:schema>
 
 Into
 
   <s:schema elementFormDefault="qualified" targetNamespace="http://www.sci-grupo.com.mx/">
-    <s:complexType name="RecibeCFD">
-      <s:sequence>
-        <s:element minOccurs="0" maxOccurs="1" name="XMLCFD" type="s:string" />
-      </s:sequence>
-    </s:complexType>
-    <s:complexType name="RecibeCFDResponse">
-      <s:sequence>
-        <s:element minOccurs="0" maxOccurs="1" name="RecibeCFDResult" type="s:string" />
-      </s:sequence>
-    </s:complexType>
+    <s:element name="RecibeCFD">
+      <s:complexType name="RecibeCFD">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="XMLCFD" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+    </s:element>
   </s:schema>
 */
 func unpackTopElements(root *xmltree.Element) {
-	for i, el := range root.Children {
+	for _, el := range root.Children {
 		if (el.Name != xml.Name{schemaNS, "element"}) {
 			continue
 		}
@@ -331,7 +321,6 @@ func unpackTopElements(root *xmltree.Element) {
 			continue
 		}
 		child.SetAttr("", "name", el.Attr("", "name"))
-		root.Children[i] = child
 	}
 }
 
