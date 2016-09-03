@@ -7,6 +7,7 @@ import (
 
 	"aqwari.net/xml/internal/commandline"
 	"aqwari.net/xml/internal/gen"
+	"aqwari.net/xml/xsdgen"
 )
 
 // The GenSource method converts the AST returned by GenAST to formatted
@@ -45,8 +46,12 @@ func (cfg *Config) GenCLI(arguments ...string) error {
 	}
 	if len(*packageName) > 0 {
 		cfg.Option(PackageName(*packageName))
+		cfg.XSDOption(xsdgen.PackageName(*packageName))
 	}
 
+	for _, r := range replaceRules {
+		cfg.XSDOption(xsdgen.Replace(r.From.String(), r.To))
+	}
 	file, err := cfg.GenAST(fs.Args()...)
 	if err != nil {
 		return err
