@@ -1,74 +1,21 @@
 package xsdgen
 
 import (
-	"bytes"
 	"errors"
 	"flag"
 	"fmt"
 	"go/ast"
-	"go/format"
-	"go/token"
 	"io/ioutil"
-	"regexp"
-	"strings"
 
+	"aqwari.net/xml/internal/commandline"
+	"aqwari.net/xml/internal/gen"
 	"aqwari.net/xml/xsd"
-	"golang.org/x/tools/imports"
 )
 
-type replaceRule struct {
-	from *regexp.Regexp
-	to   string
-}
-
-type replaceRuleList []replaceRule
-
-func (r *replaceRuleList) String() string {
-	var buf bytes.Buffer
-	for _, item := range *r {
-		fmt.Fprintf(&buf, "%s -> %s\n", item.from, item.to)
-	}
-	return buf.String()
-}
-
-func (r *replaceRuleList) Set(s string) error {
-	parts := strings.SplitN(s, "->", 2)
-	if len(parts) != 2 {
-		return fmt.Errorf("invalid replace rule %q. must be \"regex -> replacement\"", s)
-	}
-	parts[0] = strings.TrimSpace(parts[0])
-	parts[1] = strings.TrimSpace(parts[1])
-	reg, err := regexp.Compile(parts[0])
-	if err != nil {
-		return fmt.Errorf("invalid regex %q: %v", parts[0], err)
-	}
-	*r = append(*r, replaceRule{reg, parts[1]})
-	return nil
-}
-
-type stringSlice []string
-
-func (s *stringSlice) String() string {
-	return strings.Join(*s, ",")
-}
-
-func (s *stringSlice) Set(val string) error {
-	*s = append(*s, val)
-	return nil
-}
-
-// GenAST creates an *ast.File containing type declarations and
-// associated methods based on a set of XML schema.
-func (cfg *Config) GenAST(files ...string) (*ast.File, error) {
-	data := make([][]byte, 0, len(files))
-	for _, filename := range files {
-		b, err := ioutil.ReadFile(filename)
-		if err != nil {
-			return nil, err
-		}
-		cfg.debugf("read %s", filename)
-		data = append(data, b)
-	}
+// GenCode reads all xml schema definitions from the provided
+// data. If succesful, the returned *Code value can be used to
+// lookup identifiers and generate Go code.
+func (cfg *Config) GenCode(data ...[]byte) (*Code, error) {
 	if len(cfg.namespaces) == 0 {
 		cfg.debugf("setting namespaces to %s", cfg.namespaces)
 		cfg.Option(Namespaces(lookupTargetNS(data...)...))
@@ -90,38 +37,37 @@ func (cfg *Config) GenAST(files ...string) (*ast.File, error) {
 		return nil, fmt.Errorf("could not find schema for all namespaces in %s",
 			cfg.namespaces)
 	}
+	cfg.addStandardHelpers()
+	return cfg.gen(primaries, deps)
+}
 
-	var file *ast.File
-	for _, s := range primaries {
-		f, err := cfg.genAST(s, deps...)
+// GenAST creates an *ast.File containing type declarations and
+// associated methods based on a set of XML schema.
+func (cfg *Config) GenAST(files ...string) (*ast.File, error) {
+	data := make([][]byte, 0, len(files))
+	for _, filename := range files {
+		b, err := ioutil.ReadFile(filename)
 		if err != nil {
 			return nil, err
 		}
-		file = mergeASTFile(file, f)
+		cfg.debugf("read %s", filename)
+		data = append(data, b)
 	}
-
-	return file, nil
+	code, err := cfg.GenCode(data...)
+	if err != nil {
+		return nil, err
+	}
+	return code.GenAST()
 }
 
 // The GenSource method converts the AST returned by GenAST to formatted
 // Go source code.
 func (cfg *Config) GenSource(files ...string) ([]byte, error) {
-	var buf bytes.Buffer
-
 	file, err := cfg.GenAST(files...)
 	if err != nil {
 		return nil, err
 	}
-
-	fileset := token.NewFileSet()
-	if err := format.Node(&buf, fileset, file); err != nil {
-		return nil, err
-	}
-	out, err := imports.Process("", buf.Bytes(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("%v in %s", err, buf.String())
-	}
-	return out, nil
+	return gen.FormattedSource(file)
 }
 
 // GenCLI creates a file containing Go source generated from an XML
@@ -132,8 +78,8 @@ func (cfg *Config) GenSource(files ...string) ([]byte, error) {
 func (cfg *Config) GenCLI(arguments ...string) error {
 	var (
 		err          error
-		replaceRules replaceRuleList
-		xmlns        stringSlice
+		replaceRules commandline.ReplaceRuleList
+		xmlns        commandline.Strings
 		fs           = flag.NewFlagSet("xsdgen", flag.ExitOnError)
 		packageName  = fs.String("pkg", "", "name of the the generated package")
 		output       = fs.String("o", "xsdgen_output.go", "name of the output file")
@@ -154,7 +100,7 @@ func (cfg *Config) GenCLI(arguments ...string) error {
 	}
 	cfg.Option(Namespaces(xmlns...))
 	for _, r := range replaceRules {
-		cfg.Option(replaceAllNamesRegex(r.from, r.to))
+		cfg.Option(replaceAllNamesRegex(r.From, r.To))
 	}
 	if *packageName != "" {
 		cfg.Option(PackageName(*packageName))
@@ -165,14 +111,9 @@ func (cfg *Config) GenCLI(arguments ...string) error {
 		return err
 	}
 
-	var buf bytes.Buffer
-	fileset := token.NewFileSet()
-	if err := format.Node(&buf, fileset, file); err != nil {
-		return err
-	}
-	out, err := imports.Process("", buf.Bytes(), nil)
+	data, err := gen.FormattedSource(file)
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(*output, out, 0666)
+	return ioutil.WriteFile(*output, data, 0666)
 }

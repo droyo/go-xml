@@ -114,6 +114,9 @@ func Parse(docs ...[]byte) ([]Schema, error) {
 		if err := s.resolvePartialTypes(types); err != nil {
 			return nil, err
 		}
+		if err := s.addElementTypeAliases(schema[s.TargetNS], types); err != nil {
+			return nil, err
+		}
 		result = append(result, s)
 	}
 	return result, nil
@@ -131,10 +134,32 @@ func anonTypeName(n int, ns string) xml.Name {
 	return xml.Name{ns, fmt.Sprintf("_anon%d", n)}
 }
 
-func (s *Schema) parse(root *xmltree.Element, extra map[string]*xmltree.Element) (err error) {
-	defer catchParseError(&err)
+/*
+Convert
 
-	// First pass: name all anonymous types with placeholder names.
+  <xs:complexType name="foo" base="xs:anyType"/>
+    <xs:sequence>
+      <xs:element name="a">
+        <xs:simpleType base="xs:int">
+          ...
+        </xs:simpleType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+
+to
+
+  <xs:complexType name="foo" base="xs:anyType"/>
+    <xs:sequence>
+      <xs:element name="a">
+        <xs:simpleType name="_anon1" _isAnonymous="true" base="xs:int">
+          ...
+        </xs:simpleType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+*/
+func nameAnonymousTypes(root *xmltree.Element, targetNS string) error {
 	var (
 		typeCounter int
 		updateAttr  string
@@ -163,7 +188,7 @@ func (s *Schema) parse(root *xmltree.Element, extra map[string]*xmltree.Element)
 		}
 		for _, t := range el.SearchFunc(isType) {
 			typeCounter++
-			name := anonTypeName(typeCounter, s.TargetNS)
+			name := anonTypeName(typeCounter, targetNS)
 			qname := el.Prefix(name)
 
 			t.SetAttr("", "name", name.Local)
@@ -177,15 +202,54 @@ func (s *Schema) parse(root *xmltree.Element, extra map[string]*xmltree.Element)
 			}
 		}
 	}
+	return nil
+}
 
-	// Second pass: de-reference all group/element/attribute references.
+/*
+Convert
+
+  <xs:attributeGroup name="commonAttributes" >
+    <xs:attribute name="id" type="xs:ID" />
+    <xs:attribute name="href" type="xs:anyURI" />
+    <xs:anyAttribute namespace="##other" processContents="lax" />
+  </xs:attributeGroup>
+  <xs:attributeGroup name="arrayAttributes" >
+    <xs:attribute ref="tns:arrayType" />
+    <xs:attribute ref="tns:offset" />
+  </xs:attributeGroup>
+  <xs:group name="Array" >
+    <xs:sequence>
+      <xs:any namespace="##any" minOccurs="0" maxOccurs="unbounded" processContents="lax" />
+    </xs:sequence>
+  </xs:group>
+  <xs:complexType name="Array" >
+    <xs:group ref="tns:Array" minOccurs="0" />
+    <xs:attributeGroup ref="tns:arrayAttributes" />
+    <xs:attributeGroup ref="tns:commonAttributes" />
+  </xs:complexType>
+
+to
+
+  <xs:complexType name="Array" >
+    <xs:sequence>
+      <xs:any namespace="##any" minOccurs="0" maxOccurs="unbounded" processContents="lax" />
+    </xs:sequence>
+    <xs:attribute ref="tns:arrayType" />
+    <xs:attribute ref="tns:offset" />
+    <xs:attribute name="id" type="xs:ID" />
+    <xs:attribute name="href" type="xs:anyURI" />
+    <xs:anyAttribute namespace="##other" processContents="lax" />
+  </xs:complexType>
+
+*/
+func derefGroupAttrEl(root *xmltree.Element, targetNS string, extra map[string]*xmltree.Element) error {
 	for _, el := range root.SearchFunc(hasAttr("", "ref")) {
 		var found bool
-		sameType := and(isElem(el.Name.Space, el.Name.Local), hasAttr("", "name"))
 		if el.Name.Space != schemaNS {
 			continue
 		}
-		ref := el.ResolveDefault(el.Attr("", "ref"), s.TargetNS)
+		sameType := and(isElem(el.Name.Space, el.Name.Local), hasAttr("", "name"))
+		ref := el.Resolve(el.Attr("", "ref"))
 		for ns, doc := range extra {
 			for _, real := range doc.SearchFunc(sameType) {
 				name := real.ResolveDefault(real.Attr("", "name"), ns)
@@ -196,9 +260,9 @@ func (s *Schema) parse(root *xmltree.Element, extra map[string]*xmltree.Element)
 					el.Children = real.Children
 					el.Scope = *real.JoinScope(&el.Scope)
 					// In XML Schema, it is valid to
-					// reference another element and
-					// at the same time add attributes
-					// to it.	We handle this by merging
+					// reference another element and at
+					// the same time add attributes to
+					// it. We handle this by merging
 					// the attributes of elements and
 					// their references.
 					for _, attr := range extraAttr {
@@ -213,12 +277,89 @@ func (s *Schema) parse(root *xmltree.Element, extra map[string]*xmltree.Element)
 			}
 		}
 		if !found {
-			return fmt.Errorf("could not dereference %s %s %s", el.Name.Local,
-				el.Resolve(el.Attr("", "ref")).Space, el.Resolve(el.Attr("", "ref")).Local)
+			return fmt.Errorf("could not dereference %v", el.StartElement)
 		}
 	}
+	return nil
+}
 
-	// Final pass: parse all type declarations.
+/*
+Convert a form such as
+  <s:schema elementFormDefault="qualified" targetNamespace="http://www.sci-grupo.com.mx/">
+    <s:element name="RecibeCFD">
+      <s:complexType>
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="XMLCFD" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+    </s:element>
+  </s:schema>
+
+Into
+
+  <s:schema elementFormDefault="qualified" targetNamespace="http://www.sci-grupo.com.mx/">
+    <s:element name="RecibeCFD">
+      <s:complexType name="RecibeCFD">
+        <s:sequence>
+          <s:element minOccurs="0" maxOccurs="1" name="XMLCFD" type="s:string" />
+        </s:sequence>
+      </s:complexType>
+    </s:element>
+  </s:schema>
+*/
+func unpackTopElements(root *xmltree.Element) {
+	for _, el := range root.Children {
+		if (el.Name != xml.Name{schemaNS, "element"}) {
+			continue
+		}
+		childTypes := el.SearchFunc(isType)
+		if len(childTypes) != 1 {
+			continue
+		}
+		child := *childTypes[0]
+		if child.Attr("", "name") != "" {
+			continue
+		}
+		child.SetAttr("", "name", el.Attr("", "name"))
+	}
+}
+
+func (s *Schema) addElementTypeAliases(root *xmltree.Element, types map[xml.Name]Type) error {
+	for _, el := range root.Children {
+		if (el.Name != xml.Name{schemaNS, "element"}) {
+			continue
+		}
+		name := el.ResolveDefault(el.Attr("", "name"), s.TargetNS)
+		ref := el.Resolve(el.Attr("", "type"))
+		if ref.Local == "" || name.Local == "" {
+			continue
+		}
+		if _, ok := s.Types[name]; !ok {
+			if t, ok := s.lookupType(linkedType(ref), types); !ok {
+				return fmt.Errorf("could not lookup type %s for element %s",
+					el.Prefix(ref), el.Prefix(name))
+			} else {
+				s.Types[name] = t
+			}
+		}
+	}
+	return nil
+}
+
+func (s *Schema) parse(root *xmltree.Element, extra map[string]*xmltree.Element) error {
+	unpackTopElements(root)
+	if err := nameAnonymousTypes(root, s.TargetNS); err != nil {
+		return err
+	}
+	if err := derefGroupAttrEl(root, s.TargetNS, extra); err != nil {
+		return err
+	}
+	return s.parseTypes(root)
+}
+
+func (s *Schema) parseTypes(root *xmltree.Element) (err error) {
+	defer catchParseError(&err)
+
 	for _, el := range root.Search(schemaNS, "complexType") {
 		t := s.parseComplexType(el)
 		s.Types[t.Name] = t
@@ -610,9 +751,12 @@ func (s *Schema) resolvePartialTypes(types map[xml.Name]Type) error {
 }
 
 func (s *Schema) lookupType(name linkedType, ext map[xml.Name]Type) (Type, bool) {
-	if v, ok := s.Types[xml.Name(name)]; ok {
+	if b, err := ParseBuiltin(xml.Name(name)); err == nil {
+		return b, true
+	}
+	if v, ok := ext[xml.Name(name)]; ok {
 		return v, true
 	}
-	v, ok := ext[xml.Name(name)]
+	v, ok := s.Types[xml.Name(name)]
 	return v, ok
 }

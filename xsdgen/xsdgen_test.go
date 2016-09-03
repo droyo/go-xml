@@ -3,17 +3,8 @@ package xsdgen
 import (
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"testing"
 )
-
-func glob(dir ...string) []string {
-	files, err := filepath.Glob(filepath.Join(dir...))
-	if err != nil {
-		panic("error in glob util function: " + err.Error())
-	}
-	return files
-}
 
 type testLogger testing.T
 
@@ -30,6 +21,9 @@ func TestPurchasOrderSchema(t *testing.T) {
 func TestUSTreasureSDN(t *testing.T) {
 	testGen(t, "http://tempuri.org/sdnList.xsd", "testdata/sdn.xsd")
 }
+func TestSoap(t *testing.T) {
+	testGen(t, "http://schemas.xmlsoap.org/soap/encoding/", "testdata/soap11.xsd")
+}
 
 func testGen(t *testing.T, ns string, files ...string) {
 	file, err := ioutil.TempFile("", "xsdgen")
@@ -40,8 +34,9 @@ func testGen(t *testing.T, ns string, files ...string) {
 
 	var cfg Config
 	cfg.Option(DefaultOptions...)
+	cfg.Option(LogOutput((*testLogger)(t)))
 
-	args := []string{"-o", file.Name(), "-ns", ns}
+	args := []string{"-v", "-o", file.Name(), "-ns", ns}
 	err = cfg.GenCLI(append(args, files...)...)
 	if err != nil {
 		t.Error(err)

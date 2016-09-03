@@ -5,16 +5,22 @@
 package gen
 
 import (
+	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
 	"go/ast"
+	"go/format"
 	"go/parser"
 	"go/printer"
 	"go/token"
+	"io"
 	"reflect"
 	"strconv"
 	"strings"
+	"text/template"
+
+	"golang.org/x/tools/imports"
 )
 
 // TypeDecl generates a type declaration with the given name.
@@ -28,6 +34,28 @@ func TypeDecl(name *ast.Ident, typ ast.Expr) *ast.GenDecl {
 			},
 		},
 	}
+}
+
+// Sanitize modifies any names that are reserved in
+// Go, so that they may be used as identifiers without
+// causing a syntax error.
+func Sanitize(name string) string {
+	switch name {
+	case "break", "default", "func", "interface", "select",
+		"case", "defer", "go", "map", "struct",
+		"chan", "else", "goto", "package", "switch",
+		"const", "fallthrough", "if", "range", "type",
+		"continue", "for", "import", "return", "var":
+		return name + "_"
+	}
+	return name
+}
+
+// ToString converts the expression to a Go source string.
+func ToString(expr ast.Expr) (string, error) {
+	var buf bytes.Buffer
+	err := format.Node(&buf, token.NewFileSet(), expr)
+	return buf.String(), err
 }
 
 // Struct creates a struct{} expression. The arguments are a series
@@ -164,10 +192,40 @@ func ConstImaginary(args ...string) *ast.GenDecl {
 	return constDecl(token.IMAG, args...)
 }
 
+// PackageDoc inserts package-level comments into a file,
+// preceding the "package" statement.
+func PackageDoc(file *ast.File, comments ...string) *ast.File {
+	if len(comments) == 0 {
+		return file
+	}
+	file.Doc = CommentGroup(comments...)
+	return file
+}
+
+// CommentGroup creates a comment group from strings.
+func CommentGroup(comments ...string) *ast.CommentGroup {
+	var group ast.CommentGroup
+	for _, v := range comments {
+		line := bufio.NewScanner(strings.NewReader(v))
+		for line.Scan() {
+			group.List = append(group.List, &ast.Comment{
+				Text: "// " + strings.TrimSpace(line.Text()),
+			})
+		}
+	}
+	return &group
+}
+
 type Function struct {
 	name, receiver, godoc string
 	args, returns         []string
+	err                   error
 	body                  string
+}
+
+// Name returns the name of the function.
+func (fn *Function) Name() string {
+	return fn.name
 }
 
 func Func(name string) *Function {
@@ -180,6 +238,9 @@ func (fn *Function) Decl() (*ast.FuncDecl, error) {
 	var err error
 	var comments *ast.CommentGroup
 
+	if fn.err != nil {
+		return nil, fn.err
+	}
 	if fn.name == "" {
 		return nil, errors.New("function name unset")
 	}
@@ -190,7 +251,9 @@ func (fn *Function) Decl() (*ast.FuncDecl, error) {
 	if fn.godoc != "" {
 		comments = &ast.CommentGroup{List: []*ast.Comment{}}
 		for _, line := range strings.Split(fn.godoc, "\n") {
-			comments.List = append(comments.List, &ast.Comment{Text: line})
+			comments.List = append(comments.List, &ast.Comment{
+				Text: "// " + line + "\n",
+			})
 		}
 	}
 	fl := func(args ...string) (list *ast.FieldList) {
@@ -208,7 +271,7 @@ func (fn *Function) Decl() (*ast.FuncDecl, error) {
 	}
 	body, err := parseBlock(fn.body)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse function body of %s: %v", fn.name, err)
+		return nil, fmt.Errorf("could not parse function body of %s: %v in\n%s", fn.name, err, fn.body)
 	}
 	return &ast.FuncDecl{
 		Doc:  comments,
@@ -226,6 +289,26 @@ func (fn *Function) Decl() (*ast.FuncDecl, error) {
 // enclosing braces.
 func (fn *Function) Body(format string, v ...interface{}) *Function {
 	fn.body = fmt.Sprintf(format, v...)
+	return fn
+}
+
+// BodyTmpl allows use of the text/template package to construct
+// the body of a function.
+func (fn *Function) BodyTmpl(tmpl string, dot interface{}) *Function {
+	var buf bytes.Buffer
+	t, err := template.New(fn.Name()).Funcs(template.FuncMap{
+		"title":    strings.Title,
+		"split":    strings.Split,
+		"join":     strings.Join,
+		"sanitize": Sanitize,
+	}).Parse(tmpl)
+	if err != nil {
+		fn.err = err
+	} else if err := t.Execute(&buf, dot); err != nil {
+		fn.err = err
+	} else {
+		fn.body = buf.String()
+	}
 	return fn
 }
 
@@ -256,11 +339,31 @@ func (fn *Function) Receiver(receiver string) *Function {
 	return fn
 }
 
+// Declarations parses a list of Go source code blocks and converts
+// them into *ast.Decl values. If a parsing error occurs, it is returned
+// immediately and no further parsing takes place.
+func Declarations(blocks ...string) ([]ast.Decl, error) {
+	var buf bytes.Buffer
+	decls := make([]ast.Decl, 0, len(blocks))
+	for _, block := range blocks {
+		fmt.Fprintf(&buf, "package tmp\n%s\n", block)
+		file, err := parser.ParseFile(
+			token.NewFileSet(), "",
+			buf.Bytes(), parser.ParseComments)
+		if err != nil {
+			return decls, err
+		}
+		decls = append(decls, file.Decls...)
+		buf.Reset()
+	}
+	return decls, nil
+}
+
 func parseBlock(s string) (*ast.BlockStmt, error) {
 	var buf bytes.Buffer
 
 	fmt.Fprintf(&buf, "package tmp\nfunc _block() {\n%s\n}", s)
-	file, err := parser.ParseFile(token.NewFileSet(), "", buf.Bytes(), 0)
+	file, err := parser.ParseFile(token.NewFileSet(), "", buf.Bytes(), parser.ParseComments)
 	if err != nil {
 		return nil, err
 	}
@@ -287,4 +390,35 @@ func TagKey(field *ast.Field, key string) string {
 		return ""
 	}
 	return reflect.StructTag(field.Tag.Value).Get(key)
+}
+
+// FormattedSource converts an abstract syntax tree to
+// formatted Go source code.
+func FormattedSource(file *ast.File) ([]byte, error) {
+	var buf bytes.Buffer
+
+	fileset := token.NewFileSet()
+
+	// our *ast.File did not come from a real Go source
+	// file. As such, all of its node positions are 0, and
+	// the go/printer package will print the package
+	// comment between the package statement and
+	// the package name. The most straightforward way
+	// to work around this is to put the package comment
+	// there ourselves.
+	if file.Doc != nil {
+		for _, v := range file.Doc.List {
+			io.WriteString(&buf, v.Text)
+			io.WriteString(&buf, "\n")
+		}
+		file.Doc = nil
+	}
+	if err := format.Node(&buf, fileset, file); err != nil {
+		return nil, err
+	}
+	out, err := imports.Process("", buf.Bytes(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("%v in %s", err, buf.String())
+	}
+	return out, nil
 }

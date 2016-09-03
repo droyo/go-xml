@@ -7,8 +7,6 @@ import (
 	"go/ast"
 	"go/token"
 	"io"
-	"io/ioutil"
-	"net/http"
 	"sort"
 	"strings"
 
@@ -16,12 +14,6 @@ import (
 	"aqwari.net/xml/xmltree"
 	"aqwari.net/xml/xsd"
 )
-
-var defaultConfig Config
-
-func init() {
-	defaultConfig.Option(DefaultOptions...)
-}
 
 type errorList []error
 
@@ -54,148 +46,143 @@ func lookupTargetNS(data ...[]byte) []string {
 	return result
 }
 
-func mergeASTFile(dst, src *ast.File) *ast.File {
-	if dst == nil {
-		return src
-	}
-	if dst.Doc != nil {
-		dst.Doc = src.Doc
-	}
-	dst.Decls = append(dst.Decls, src.Decls...)
-	return dst
+// Code is the intermediate representation used by the xsdgen
+// package. It can be used to generate a Go source file, and to
+// lookup identifiers and attributes for a given type.
+type Code struct {
+	cfg   *Config
+	names map[xml.Name]string
+	decls map[string]spec
+	types map[xml.Name]xsd.Type
 }
 
-func (cfg *Config) resolveDependencies(data ...[]byte) ([][]byte, error) {
-	var imports []xsd.Ref
-	have := make(map[string]bool)
+// NameOf returns the Go identifier associated with the canonical
+// XML type.
+func (c *Code) NameOf(name xml.Name) string {
+	c.cfg.debugf("looking up Go name for %v", name)
+	if id, ok := c.names[name]; ok {
+		c.cfg.debugf("%v -> %s", name, id)
+		return id
+	}
 
-	for _, b := range data {
-		refs, err := xsd.Imports(b)
+	if b, err := xsd.ParseBuiltin(name); err == nil {
+		s, err := gen.ToString(builtinExpr(b))
 		if err != nil {
-			return nil, err
+			return "ERROR" + name.Local
 		}
-		imports = append(imports, refs...)
-		for _, tns := range lookupTargetNS(b) {
-			have[tns] = true
-		}
+		c.names[name] = s
+		return s
 	}
-	for _, r := range imports {
-		if have[r.Namespace] {
-			continue
-		}
-		d, err := cfg.resolveDependencies1(r, have, 1)
-		if err != nil {
-			return nil, err
-		}
-		data = append(data, d...)
+
+	t, ok := c.types[name]
+	if !ok {
+		return "NOTFOUND" + name.Local
 	}
-	return data, nil
+
+	switch b := c.cfg.flatten1(t, func(xsd.Type) {}).(type) {
+	case xsd.Builtin:
+		return c.NameOf(b.Name())
+	}
+
+	specs, err := c.cfg.genTypeSpec(t)
+	if err != nil {
+		c.cfg.logf("error generating type for %s: %s", name.Local, err)
+		return "ERROR" + name.Local
+	}
+
+	// memoize them for later
+	for _, s := range specs {
+		c.names[xsd.XMLName(s.xsdType)] = s.name
+	}
+	if s, ok := c.names[name]; ok {
+		return s
+	}
+	return "NOTFOUND" + name.Local
 }
 
-type xsdSet map[string]bool
-
-func (cfg *Config) resolveDependencies1(ref xsd.Ref, have xsdSet, depth int) ([][]byte, error) {
-	var result [][]byte
-	const maxDepth = 10
-	if have[ref.Namespace] {
-		return nil, nil
-	}
-
-	if depth >= maxDepth {
-		return nil, fmt.Errorf("maximum depth of %d reached", maxDepth)
-	}
-
-	if ref.Location == "" {
-		return nil, fmt.Errorf("do not know where to find schema for %s", ref.Namespace)
-	}
-	rsp, err := http.Get(ref.Location)
-	if err != nil {
-		return nil, err
-	}
-	body, err := ioutil.ReadAll(rsp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	refs, err := xsd.Imports(body)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, ns := range lookupTargetNS(body) {
-		have[ns] = true
-	}
-
-	for _, r := range refs {
-		if have[ref.Namespace] {
-			continue
-		}
-		d, err := cfg.resolveDependencies1(r, have, depth+1)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, d...)
-	}
-	return result, nil
-}
-
-func (cfg *Config) genAST(schema xsd.Schema, extra ...xsd.Schema) (*ast.File, error) {
+func (cfg *Config) gen(primaries, deps []xsd.Schema) (*Code, error) {
 	var errList errorList
-	decls := make(map[string]spec)
 
-	cfg.addStandardHelpers()
-	collect := make(map[xml.Name]xsd.Type)
-	for k, v := range schema.Types {
-		collect[k] = v
+	code := &Code{
+		cfg:   cfg,
+		names: make(map[xml.Name]string),
+		decls: make(map[string]spec),
 	}
-	for _, schema := range extra {
-		for k, v := range schema.Types {
-			collect[k] = v
+
+	all := make(map[xml.Name]xsd.Type)
+	for _, primary := range primaries {
+		for k, v := range primary.Types {
+			all[k] = v
 		}
 	}
-	prev := schema.Types
-	schema.Types = collect
+	for _, dep := range deps {
+		for k, v := range dep.Types {
+			all[k] = v
+		}
+	}
+
+	code.types = all
 	if cfg.preprocessType != nil {
 		cfg.debugf("running user-defined pre-processing functions")
-		for name, t := range prev {
-			if t := cfg.preprocessType(schema, t); t != nil {
-				prev[name] = t
+		for i, primary := range primaries {
+			// So user code has visibility into all types
+			prev := primary.Types
+			primary.Types = all
+
+			for name, t := range prev {
+				if t := cfg.preprocessType(primary, t); t != nil {
+					prev[name] = t
+				}
 			}
+
+			// So we don't pull in type expressions for
+			// unused dependencies
+			primaries[i].Types = prev
 		}
 	}
-	schema.Types = prev
 
-	cfg.debugf("generating Go source for schema %q", schema.TargetNS)
-	typeList := cfg.flatten(schema.Types)
-
-	for _, t := range typeList {
-		specs, err := cfg.genTypeSpec(t)
-		if err != nil {
-			errList = append(errList, fmt.Errorf("generate type %q: %v", xsd.XMLName(t).Local, err))
-		} else {
-			for _, s := range specs {
-				decls[s.name] = s
+	for _, primary := range primaries {
+		cfg.debugf("flattening type hierarchy for schema %q", primary.TargetNS)
+		for _, t := range cfg.flatten(primary.Types) {
+			specs, err := cfg.genTypeSpec(t)
+			if err != nil {
+				errList = append(errList, fmt.Errorf("gen type %q: %v",
+					xsd.XMLName(t).Local, err))
+			} else {
+				for _, s := range specs {
+					code.names[xsd.XMLName(s.xsdType)] = s.name
+					code.decls[s.name] = s
+				}
 			}
-		}
-	}
-	if cfg.postprocessType != nil {
-		cfg.debugf("running user-defined post-processing functions")
-		for name, s := range decls {
-			decls[name] = cfg.postprocessType(s)
 		}
 	}
 
 	if len(errList) > 0 {
 		return nil, errList
 	}
-	var result []ast.Decl
-	keys := make([]string, 0, len(decls))
-	for name := range decls {
+
+	if cfg.postprocessType != nil {
+		cfg.debugf("running user-defined post-processing functions")
+		for name, s := range code.decls {
+			code.decls[name] = cfg.postprocessType(s)
+		}
+	}
+
+	return code, nil
+}
+
+// GenAST generates a Go abstract syntax tree with
+// the type declarations contained in the xml schema document.
+func (code *Code) GenAST() (*ast.File, error) {
+	var file ast.File
+
+	keys := make([]string, 0, len(code.decls))
+	for name := range code.decls {
 		keys = append(keys, name)
 	}
 	sort.Strings(keys)
 	for _, name := range keys {
-		info := decls[name]
+		info := code.decls[name]
 		typeDecl := &ast.GenDecl{
 			Tok: token.TYPE,
 			Specs: []ast.Spec{
@@ -205,20 +192,17 @@ func (cfg *Config) genAST(schema xsd.Schema, extra ...xsd.Schema) (*ast.File, er
 				},
 			},
 		}
-		result = append(result, typeDecl)
+		file.Decls = append(file.Decls, typeDecl)
 		for _, f := range info.methods {
-			result = append(result, f)
+			file.Decls = append(file.Decls, f)
 		}
 	}
-	if cfg.pkgname == "" {
-		cfg.pkgname = "ws"
+	pkgname := code.cfg.pkgname
+	if pkgname == "" {
+		pkgname = "ws"
 	}
-	file := &ast.File{
-		Decls: result,
-		Name:  ast.NewIdent(cfg.pkgname),
-		Doc:   nil,
-	}
-	return file, nil
+	file.Name = ast.NewIdent(pkgname)
+	return &file, nil
 }
 
 type spec struct {
@@ -238,8 +222,14 @@ func (cfg *Config) flatten(types map[xml.Name]xsd.Type) []xsd.Type {
 		result = append(result, t)
 	}
 	for _, t := range types {
+		cfg.debugf("flattening type %T(%s)\n", t, xsd.XMLName(t).Local)
 		if cfg.filterTypes != nil && cfg.filterTypes(t) {
 			continue
+		}
+		if cfg.allowTypes != nil {
+			if !cfg.allowTypes[xsd.XMLName(t)] {
+				continue
+			}
 		}
 		if t := cfg.flatten1(t, push); t != nil {
 			result = append(result, t)
@@ -284,6 +274,8 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type)) xsd.Type {
 			}
 		}
 		t.Base = builtin
+		cfg.debugf("%T(%s) -> %T(%s)", t, xsd.XMLName(t).Local,
+			t.Base, xsd.XMLName(t.Base).Local)
 		return t
 	case *xsd.ComplexType:
 		// We can "unpack" a struct if it is extending a simple
@@ -295,7 +287,7 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type)) xsd.Type {
 			}
 			attributes, _ := cfg.filterFields(t)
 			if len(attributes) == 0 {
-				cfg.debugf("complexType %s extends simpleType %s, but all attributes are filtered. unpacking.",
+				cfg.debugf("complexType %s extends simpleType %s, but extra attributes are filtered. unpacking.",
 					t.Name.Local, xsd.XMLName(t.Base))
 				switch b := t.Base.(type) {
 				case xsd.Builtin:
@@ -315,6 +307,9 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type)) xsd.Type {
 				}
 			}
 			t.Elements[i] = el
+			push(el.Type)
+			cfg.debugf("%T(%s): %v", t, xsd.XMLName(t).Local,
+				xsd.XMLName(el.Type))
 		}
 		for i, attr := range t.Attributes {
 			attr.Type = cfg.flatten1(attr.Type, push)
@@ -325,6 +320,8 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type)) xsd.Type {
 			}
 			t.Attributes[i] = attr
 		}
+		cfg.debugf("%T(%s) -> %T(%s)", t, xsd.XMLName(t).Local,
+			t.Base, xsd.XMLName(t.Base).Local)
 		return t
 	case xsd.Builtin:
 		// There are a few built-ins that do not map directly to Go types.
@@ -341,7 +338,7 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type)) xsd.Type {
 		}
 		return t
 	}
-	panic(fmt.Sprintf("unexpected %T", t))
+	panic(fmt.Sprintf("unexpected %T(%s %s)", t, xsd.XMLName(t).Space, xsd.XMLName(t).Local))
 }
 
 func (cfg *Config) genTypeSpec(t xsd.Type) (result []spec, err error) {
@@ -472,7 +469,7 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 	}
 	expr := gen.Struct(fields...)
 	s := spec{
-		name:    cfg.typeName(t.Name),
+		name:    cfg.public(t.Name),
 		expr:    expr,
 		xsdType: t,
 	}
@@ -507,9 +504,10 @@ func (cfg *Config) genSimpleType(t *xsd.SimpleType) ([]spec, error) {
 	if len(t.Union) > 0 {
 		// We don't support unions because the code that needs
 		// to be generated to check which of the member types
-		// the value would be is too complex.
+		// the value would be is too complex. Need a use case
+		// first.
 		result = append(result, spec{
-			name:    cfg.typeName(t.Name),
+			name:    cfg.public(t.Name),
 			expr:    builtinExpr(xsd.String),
 			xsdType: t,
 		})
@@ -521,7 +519,7 @@ func (cfg *Config) genSimpleType(t *xsd.SimpleType) ([]spec, error) {
 			t.Name.Local, xsd.XMLName(t.Base).Local, err)
 	}
 	result = append(result, spec{
-		name:    cfg.typeName(t.Name),
+		name:    cfg.public(t.Name),
 		expr:    base,
 		xsdType: t,
 	})
@@ -579,7 +577,6 @@ func (cfg *Config) genTimeSpec(t xsd.Builtin) ([]spec, error) {
 	}
 	s.methods = append(s.methods, unmarshal, marshal)
 	if helper := cfg.helper("_unmarshalTime"); helper != nil {
-		//panic(fmt.Sprint("adding ", helper.Name.Name, " to functions for ", s.name))
 		s.methods = append(s.methods, helper)
 	}
 	return []spec{s}, nil
@@ -645,7 +642,7 @@ func (cfg *Config) genTokenListSpec(t xsd.Builtin) ([]spec, error) {
 		xsdType: t,
 	}
 	marshal, err := gen.Func("MarshalText").
-		Receiver("x "+s.name).
+		Receiver("x *"+s.name).
 		Returns("[]byte", "error").
 		Body(`
 			return []byte(strings.Join(x, " ")), nil
@@ -656,7 +653,7 @@ func (cfg *Config) genTokenListSpec(t xsd.Builtin) ([]spec, error) {
 	}
 
 	unmarshal, err := gen.Func("UnmarshalText").
-		Receiver("x " + s.name).
+		Receiver("x *" + s.name).
 		Args("text []byte").
 		Returns("error").
 		Body(`
@@ -681,29 +678,191 @@ func (cfg *Config) genSimpleListSpec(t *xsd.SimpleType) ([]spec, error) {
 		return nil, err
 	}
 	s := spec{
-		name:    cfg.typeName(t.Name),
+		name:    cfg.public(t.Name),
 		expr:    expr,
 		xsdType: t,
 	}
-	marshal, err := gen.Func("MarshalText").
+	marshalFn := gen.Func("MarshalText").
 		Receiver("x *"+s.name).
-		Returns("[]byte", "error").
-		Body(`
-			return nil, nil
-		`).Decl()
+		Returns("[]byte", "error")
+	unmarshalFn := gen.Func("UnmarshalText").
+		Receiver("x *" + s.name).
+		Args("text []byte").
+		Returns("error")
 
+	base := t.Base
+	for xsd.Base(base) != nil {
+		base = xsd.Base(base)
+	}
+
+	switch base.(xsd.Builtin) {
+	case xsd.ID, xsd.NCName, xsd.NMTOKEN, xsd.Name, xsd.QName, xsd.ENTITY, xsd.AnyURI, xsd.Language, xsd.String, xsd.Token, xsd.XMLLang, xsd.XMLSpace, xsd.XMLBase, xsd.XMLId, xsd.Duration, xsd.NormalizedString:
+		marshalFn = marshalFn.Body(`
+			result := make([][]byte, 0, len(*x))
+			for _, v := range *x {
+				result = append(result, []byte(v))
+			}
+			return bytes.Join(result, []byte(" ")), nil
+		`)
+		unmarshalFn = marshalFn.Body(`
+			for _, v := range bytes.Fields(text) {
+				*x = append(*x, string(v))
+			}
+			return nil
+		`)
+	case xsd.Date, xsd.DateTime, xsd.GDay, xsd.GMonth, xsd.GMonthDay, xsd.GYear, xsd.GYearMonth, xsd.Time:
+		marshalFn = marshalFn.Body(`
+			result := make([][]byte, 0, len(*x))
+			for _, v := range *x {
+				if b, err := v.MarshalText(); err != nil {
+					return result, err
+				} else {
+					result = append(result, b)
+				}
+			}
+			return bytes.Join(result, []byte(" "))
+		`)
+		unmarshalFn = unmarshalFn.Body(`
+			for _, v := range bytes.Fields(text) {
+				var t %s
+				if err := t.UnmarshalText(v); err != nil {
+					return err
+				}
+				*x = append(*x, t)
+			}
+		`, builtinExpr(base.(xsd.Builtin)).(*ast.Ident).Name)
+	case xsd.Long:
+		marshalFn = marshalFn.Body(`
+			result := make([][]byte, 0, len(*x))
+			for _, v := range *x {
+				result = append(result, []byte(strconv.FormatInt(v, 10)))
+			}
+			return bytes.Join(result, []byte(" ")), nil
+		`)
+		unmarshalFn = unmarshalFn.Body(`
+			for _, v := range strings.Fields(string(text)) {
+				if i, err := strconv.ParseInt(v, 10, 64); err != nil {
+					return err
+				} else {
+					*x = append(*x, i)
+				}
+			}
+			return nil
+		`)
+	case xsd.Decimal, xsd.Double:
+		marshalFn = marshalFn.Body(`
+			result := make([][]byte, 0, len(*x))
+			for _, v := range *x {
+				s := strconv.FormatFloat(v, 'g', -1, 64)
+				result = append(result, []byte(s))
+			}
+			return bytes.Join(result, []byte(" ")), nil
+		`)
+		unmarshalFn = unmarshalFn.Body(`
+			for _, v := range strings.Fields(string(text)) {
+				if f, err := strconv.ParseFloat(v, 64); err != nil {
+					return err
+				} else {
+					*x = append(*x, f)
+				}
+			}
+			return nil
+		`)
+	case xsd.Int, xsd.Integer, xsd.NegativeInteger, xsd.NonNegativeInteger, xsd.NonPositiveInteger, xsd.Short:
+		marshalFn = marshalFn.Body(`
+			result := make([][]byte, 0, len(*x))
+			for _, v := range *x {
+				result = append(result, []byte(strconv.Itoa(v)))
+			}
+			return bytes.Join(result, []byte(" ")), nil
+		`)
+		unmarshalFn = unmarshalFn.Body(`
+			for _, v := range strings.Fields(string(text)) {
+				if i, err := strconv.Atoi(v); err != nil {
+					return err
+				} else {
+					*x = append(*x, i)
+				}
+			}
+			return nil
+		`)
+	case xsd.UnsignedInt, xsd.UnsignedShort:
+		marshalFn = marshalFn.Body(`
+			result := make([][]byte, 0, len(*x))
+			for _, v := range *x {
+				result = append(result, []byte(strconv.FormatUInt(uint64(v), 10)))
+			}
+			return bytes.Join(result, []byte(" ")), nil
+		`)
+		unmarshalFn = unmarshalFn.Body(`
+			for _, v := range strings.Fields(string(text)) {
+				if i, err := strconv.ParseUInt(v, 10, 32); err != nil {
+					return err
+				} else {
+					*x = append(*x, uint(i))
+				}
+			}
+			return nil
+		`)
+	case xsd.UnsignedLong:
+		marshalFn = marshalFn.Body(`
+			result := make([][]byte, 0, len(*x))
+			for _, v := range *x {
+				result = append(result, []byte(strconv.FormatUInt(v, 10)))
+			}
+			return bytes.Join(result, []byte(" ")), nil
+		`)
+		unmarshalFn = unmarshalFn.Body(`
+			for _, v := range strings.Fields(string(text)) {
+				if i, err := strconv.ParseInt(v, 10, 64); err != nil {
+					return err
+				} else {
+					*x = append(*x, i)
+				}
+			}
+			return nil
+		`)
+	case xsd.Byte, xsd.UnsignedByte:
+		marshalFn = marshalFn.Body(`
+			return []byte(*x), nil
+		`)
+		unmarshalFn = unmarshalFn.Body(`
+			*x = %s(text)
+			return nil
+		`, s.name)
+	case xsd.Boolean:
+		marshalFn = marshalFn.Body(`
+			result := make([][]byte
+			for _, b := range *x {
+				if b {
+					result = append(result, []byte("1"))
+				} else {
+					result = append(result, []byte("0"))
+				}
+			}
+			return bytes.Join(result, []byte(" ")), nil
+		`)
+		unmarshalFn = unmarshalFn.Body(`
+			for _, v := range bytes.Fields(text) {
+				switch string(v) {
+				case "1", "true":
+					*x = append(*x, true)
+				default:
+					*x = append(*x, false)
+				}
+			}
+			return nil
+		`)
+	default:
+		return nil, fmt.Errorf("don't know how to marshal/unmarshal <list> of %s", base)
+	}
+
+	marshal, err := marshalFn.Decl()
 	if err != nil {
 		return nil, fmt.Errorf("MarshalText %s: %v", s.name, err)
 	}
 
-	unmarshal, err := gen.Func("UnmarshalText").
-		Receiver("x *" + s.name).
-		Args("text []byte").
-		Returns("error").
-		Body(`
-			return nil
-		`).Decl()
-
+	unmarshal, err := unmarshalFn.Decl()
 	if err != nil {
 		return nil, fmt.Errorf("UnmarshalText %s: %v", s.name, err)
 	}
