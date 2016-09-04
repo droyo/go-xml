@@ -23,6 +23,13 @@ import (
 	"golang.org/x/tools/imports"
 )
 
+var genFuncMap = template.FuncMap{
+	"title":    strings.Title,
+	"split":    strings.Split,
+	"join":     strings.Join,
+	"sanitize": Sanitize,
+}
+
 // TypeDecl generates a type declaration with the given name.
 func TypeDecl(name *ast.Ident, typ ast.Expr) *ast.GenDecl {
 	return &ast.GenDecl{
@@ -296,12 +303,7 @@ func (fn *Function) Body(format string, v ...interface{}) *Function {
 // the body of a function.
 func (fn *Function) BodyTmpl(tmpl string, dot interface{}) *Function {
 	var buf bytes.Buffer
-	t, err := template.New(fn.Name()).Funcs(template.FuncMap{
-		"title":    strings.Title,
-		"split":    strings.Split,
-		"join":     strings.Join,
-		"sanitize": Sanitize,
-	}).Parse(tmpl)
+	t, err := template.New(fn.Name()).Funcs(genFuncMap).Parse(tmpl)
 	if err != nil {
 		fn.err = err
 	} else if err := t.Execute(&buf, dot); err != nil {
@@ -357,6 +359,25 @@ func Declarations(blocks ...string) ([]ast.Decl, error) {
 		buf.Reset()
 	}
 	return decls, nil
+}
+
+// Snippets evaluates zero or more input templates with dot set to val
+// and parses them as Go source code.
+func Snippets(val interface{}, snippets ...string) ([]ast.Decl, error) {
+	var buf bytes.Buffer
+	blocks := make([]string, 0, len(snippets))
+
+	for _, text := range snippets {
+		t, err := template.New("snippet").Funcs(genFuncMap).Parse(text)
+		if err != nil {
+			return nil, err
+		} else if err := t.Execute(&buf, val); err != nil {
+			return nil, err
+		}
+		blocks = append(blocks, buf.String())
+		buf.Reset()
+	}
+	return Declarations(blocks...)
 }
 
 func parseBlock(s string) (*ast.BlockStmt, error) {
