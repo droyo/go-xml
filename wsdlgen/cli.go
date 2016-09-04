@@ -4,6 +4,8 @@ import (
 	"errors"
 	"flag"
 	"io/ioutil"
+	"log"
+	"os"
 
 	"aqwari.net/xml/internal/commandline"
 	"aqwari.net/xml/internal/gen"
@@ -79,5 +81,6 @@ func GenCLI(args ...string) error {
 	var cfg Config
 	cfg.Option(DefaultOptions...)
 	cfg.XSDOption(xsdgen.DefaultOptions...)
+	cfg.Option(LogOutput(log.New(os.Stderr, "", 0)))
 	return cfg.GenCLI(args...)
 }
