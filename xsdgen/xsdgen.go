@@ -184,6 +184,7 @@ func (code *Code) GenAST() (*ast.File, error) {
 	for _, name := range keys {
 		info := code.decls[name]
 		typeDecl := &ast.GenDecl{
+			Doc: gen.CommentGroup(info.doc),
 			Tok: token.TYPE,
 			Specs: []ast.Spec{
 				&ast.TypeSpec{
@@ -206,11 +207,11 @@ func (code *Code) GenAST() (*ast.File, error) {
 }
 
 type spec struct {
-	name    string
-	expr    ast.Expr
-	private bool
-	methods []*ast.FuncDecl
-	xsdType xsd.Type
+	name, doc string
+	expr      ast.Expr
+	private   bool
+	methods   []*ast.FuncDecl
+	xsdType   xsd.Type
 }
 
 // Flatten out our tree of dependent types. If a type is marked as
@@ -276,7 +277,26 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type)) xsd.Type {
 		t.Base = builtin
 		cfg.debugf("%T(%s) -> %T(%s)", t, xsd.XMLName(t).Local,
 			t.Base, xsd.XMLName(t.Base).Local)
-		return t
+
+		// NOTE(droyo) if a simpleType does not impose any(many?) restrictions
+		// on a builtin type, and does not require its own XML marshal/unmarshal
+		// methods, it does not really add any value, as we can just use the builtin
+		// type (which maps directly to a Go type). So a simpleType must prove it
+		// is useful enough for its own Go type. Our threshold for "useful enough"
+		// is pretty low; if we can attach a godoc comment to it describing how it
+		// should be used, that's good enough.
+		if t.List {
+			return t
+		}
+		if len(t.Restriction.Enum) > 0 {
+			t.Doc = "May be one of " + strings.Join(t.Restriction.Enum, ", ")
+			return t
+		}
+		if t.Restriction.Pattern != nil {
+			t.Doc = "Must match the pattern " + t.Restriction.Pattern.String()
+			return t
+		}
+		return nil
 	case *xsd.ComplexType:
 		// We can "unpack" a struct if it is extending a simple
 		// or built-in type and we are ignoring all of its attributes.
@@ -469,6 +489,7 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 	}
 	expr := gen.Struct(fields...)
 	s := spec{
+		doc:     t.Doc,
 		name:    cfg.public(t.Name),
 		expr:    expr,
 		xsdType: t,
@@ -507,6 +528,7 @@ func (cfg *Config) genSimpleType(t *xsd.SimpleType) ([]spec, error) {
 		// the value would be is too complex. Need a use case
 		// first.
 		result = append(result, spec{
+			doc:     t.Doc,
 			name:    cfg.public(t.Name),
 			expr:    builtinExpr(xsd.String),
 			xsdType: t,
@@ -519,6 +541,7 @@ func (cfg *Config) genSimpleType(t *xsd.SimpleType) ([]spec, error) {
 			t.Name.Local, xsd.XMLName(t.Base).Local, err)
 	}
 	result = append(result, spec{
+		doc:     t.Doc,
 		name:    cfg.public(t.Name),
 		expr:    base,
 		xsdType: t,
