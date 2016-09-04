@@ -40,6 +40,8 @@ type Config struct {
 }
 
 func (cfg *Config) helper(name string) *ast.FuncDecl {
+	// So we add helpers at most once
+	defer delete(cfg.helpers, name)
 	return cfg.helpers[name]
 }
 
