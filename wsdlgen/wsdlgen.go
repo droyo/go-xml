@@ -268,6 +268,9 @@ func (p *printer) opArgs(addr, method string, input, output wsdl.Message) (opArg
 		typ := p.code.NameOf(part.Type)
 		inputType := exposeType(typ)
 		vname := gen.Sanitize(part.Name)
+		if vname == typ {
+			vname += "_"
+		}
 		args.input = append(args.input, vname+" "+inputType)
 		args.InputFields = append(args.InputFields, field{
 			Name:       strings.Title(part.Name),
