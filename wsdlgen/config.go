@@ -7,10 +7,6 @@ import (
 	"aqwari.net/xml/xsdgen"
 )
 
-func init() {
-	defaultConfig.Option(DefaultOptions...)
-}
-
 // A Config contains parameters for the various code generation processes.
 // Users may modify the output of the wsdlgen package's code generation
 // by using a Config's Option method to change these parameters.
@@ -24,8 +20,6 @@ type Config struct {
 
 	maxArgs, maxReturns int
 }
-
-var defaultConfig Config
 
 func (cfg *Config) logf(format string, args ...interface{}) {
 	if cfg.logger != nil {
