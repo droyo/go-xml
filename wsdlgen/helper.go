@@ -19,7 +19,9 @@ var helpers string = `
 	type soapEnvelope struct {
 		XMLName struct{} ` + "`" + `xml:"http://schemas.xmlsoap.org/soap/envelope/ Envelope"` + "`" + `
 		Header []byte ` + "`" + `xml:"http://schemas.xmlsoap.org/soap/envelope/ Header"` + "`" + `
-		Body interface{} ` + "`" + `xml:"http://schemas.xmlsoap.org/soap/envelope/ Body"` + "`" + `
+		Body struct {
+			Message interface{} 
+		}` + "`" + `xml:"http://schemas.xmlsoap.org/soap/envelope/ Body"` + "`" + `
 	}
 	
 	func (c *Client) Do(method, uri string, in, out interface{}) error {
@@ -28,7 +30,7 @@ var helpers string = `
 		
 		if method == "POST" || method == "PUT" {
 			var buf bytes.Buffer
-			envelope.Body = in
+			envelope.Body.Message = in
 			enc := xml.NewEncoder(&buf)
 			if err := enc.Encode(envelope); err != nil {
 				return err
@@ -56,7 +58,7 @@ var helpers string = `
 		}
 		
 		dec := xml.NewDecoder(rsp.Body)
-		envelope.body = out
+		envelope.Body.Message = out
 		return dec.Decode(&envelope)
 		
 	}
