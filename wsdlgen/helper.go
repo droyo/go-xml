@@ -15,19 +15,19 @@ var helpers string = `
 		ResponseHook func(*http.Response)
 		RequestHook func(*http.Request)
 	}
-	
+
 	type soapEnvelope struct {
 		XMLName struct{} ` + "`" + `xml:"http://schemas.xmlsoap.org/soap/envelope/ Envelope"` + "`" + `
 		Header []byte ` + "`" + `xml:"http://schemas.xmlsoap.org/soap/envelope/ Header"` + "`" + `
 		Body struct {
-			Message interface{} 
+			Message interface{}
 		}` + "`" + `xml:"http://schemas.xmlsoap.org/soap/envelope/ Body"` + "`" + `
 	}
 
 	func (c *Client) do(method, uri string, in, out interface{}) error {
 		var body io.Reader
 		var envelope soapEnvelope
-		
+
 		if method == "POST" || method == "PUT" {
 			var buf bytes.Buffer
 			envelope.Body.Message = in
@@ -52,15 +52,14 @@ var helpers string = `
 			return err
 		}
 		defer rsp.Body.Close()
-		
+
 		if c.ResponseHook != nil {
 			c.ResponseHook(rsp)
 		}
-		
+
 		dec := xml.NewDecoder(rsp.Body)
 		envelope.Body.Message = out
 		return dec.Decode(&envelope)
-		
 	}
 `
 
