@@ -170,7 +170,7 @@ func (p *printer) operation(port wsdl.Port, op wsdl.Operation) error {
 			}
 			
 			{{- range .InputFields }}
-			input.{{.Name}} = {{.InputArg}}
+			input.{{.Name}} = {{.Type}}({{.InputArg}})
 			{{ end }}
 			
 			var output struct {
@@ -197,6 +197,22 @@ func (p *printer) operation(port wsdl.Port, op wsdl.Operation) error {
 	return nil
 }
 
+// The xsdgen package generates private types for some builtin
+// types. These types should be hidden from the user and converted
+// on the fly.
+func exposeType(typ string) string {
+	switch typ {
+	case "xsdDate", "xsdTime", "xsdDateTime", "gDay",
+		"gMonth", "gMonthDay", "gYear", "gYearMonth":
+		return "time.Time"
+	case "hexBinary", "base64Binary":
+		return "[]byte"
+	case "idrefs", "nmtokens", "notation", "entities":
+		return "[]string"
+	}
+	return typ
+}
+
 func (p *printer) opArgs(addr, method string, input, output wsdl.Message) (opArgs, error) {
 	var args opArgs
 	args.Address = addr
@@ -204,8 +220,9 @@ func (p *printer) opArgs(addr, method string, input, output wsdl.Message) (opArg
 	args.InputName = input.Name
 	for _, part := range input.Parts {
 		typ := p.code.NameOf(part.Type)
+		inputType := exposeType(typ)
 		vname := gen.Sanitize(part.Name)
-		args.input = append(args.input, vname+" "+typ)
+		args.input = append(args.input, vname+" "+inputType)
 		args.InputFields = append(args.InputFields, field{
 			Name:     strings.Title(part.Name),
 			Type:     typ,
@@ -216,7 +233,8 @@ func (p *printer) opArgs(addr, method string, input, output wsdl.Message) (opArg
 	args.OutputName = output.Name
 	for _, part := range output.Parts {
 		typ := p.code.NameOf(part.Type)
-		args.output = append(args.output, typ)
+		outputType := exposeType(typ)
+		args.output = append(args.output, outputType)
 		args.OutputFields = append(args.OutputFields, field{
 			Name:    strings.Title(part.Name),
 			Type:    typ,
