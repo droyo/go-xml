@@ -279,12 +279,14 @@ func ExampleUseFieldNames() {
 	// 	Published xsdDate `xml:"http://www.example.com/ published"`
 	// 	Author    string  `xml:"http://www.example.com/ author"`
 	// }
+	//
 	// type Library struct {
 	// 	Book      []Book  `xml:"http://www.example.com/ book"`
 	// 	Title     string  `xml:"http://www.example.com/ title"`
 	// 	Published xsdDate `xml:"http://www.example.com/ published"`
 	// 	Author    string  `xml:"http://www.example.com/ author"`
 	// }
+	//
 	// type xsdDate time.Time
 	//
 	// func (t *xsdDate) UnmarshalText(text []byte) error {
