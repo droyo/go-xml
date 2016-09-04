@@ -21,11 +21,11 @@ var helpers string = `
 		Header []byte ` + "`" + `xml:"http://schemas.xmlsoap.org/soap/envelope/ Header"` + "`" + `
 		Body struct {
 			Message interface{}
-			Fault struct {
-				String string ` + "`xml:\"faultstring\"`" + `
-				Code string ` + "`xml:\"faultcode\"`" + `
-				Detail string ` + "`xml:\"detail\"`" + `
-			} ` + "`xml:\"http://schemas.xmlsoap.org/soap/envelope/ Fault\"`" + `
+			Fault *struct {
+				String string ` + "`xml:\"faultstring,omitempty\"`" + `
+				Code string ` + "`xml:\"faultcode,omitempty\"`" + `
+				Detail string ` + "`xml:\"detail,omitempty\"`" + `
+			} ` + "`xml:\"http://schemas.xmlsoap.org/soap/envelope/ Fault,omitempty\"`" + `
 		}` + "`" + `xml:"http://schemas.xmlsoap.org/soap/envelope/ Body"` + "`" + `
 	}
 
@@ -68,7 +68,7 @@ var helpers string = `
 		if err := dec.Decode(&envelope); err != nil {
 			return err
 		}
-		if envelope.Body.Fault.Code != "" || envelope.Body.Fault.String != "" {
+		if envelope.Body.Fault != nil {
 			return fmt.Errorf("%s: %s", envelope.Body.Fault.Code, envelope.Body.Fault.String)
 		}
 		return nil
