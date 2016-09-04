@@ -24,7 +24,7 @@ var helpers string = `
 		}` + "`" + `xml:"http://schemas.xmlsoap.org/soap/envelope/ Body"` + "`" + `
 	}
 
-	func (c *Client) do(method, uri string, in, out interface{}) error {
+	func (c *Client) do(method, uri, action string, in, out interface{}) error {
 		var body io.Reader
 		var envelope soapEnvelope
 
@@ -44,6 +44,7 @@ var helpers string = `
 		if err != nil {
 			return err
 		}
+		req.Header.Set("SOAPAction", action)
 		if c.RequestHook != nil {
 			c.RequestHook(req)
 		}

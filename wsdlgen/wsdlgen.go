@@ -47,6 +47,8 @@ type opArgs struct {
 	// POST or GET
 	Method string
 
+	SOAPAction string
+
 	// Name of the method to call
 	MsgName xml.Name
 
@@ -166,7 +168,7 @@ func (p *printer) operation(port wsdl.Port, op wsdl.Operation) error {
 	if !ok {
 		return fmt.Errorf("unknown output message type %s", op.Output.Local)
 	}
-	params, err := p.opArgs(port.Address, port.Method, input, output)
+	params, err := p.opArgs(port.Address, port.Method, op.SOAPAction, input, output)
 	if err != nil {
 		return err
 	}
@@ -220,7 +222,7 @@ func (p *printer) operation(port wsdl.Port, op wsdl.Operation) error {
 				{{ end -}}
 			}
 			
-			err := c.do({{.Method|printf "%q"}}, {{.Address|printf "%q"}}, &input, &output)
+			err := c.do({{.Method|printf "%q"}}, {{.Address|printf "%q"}}, {{.SOAPAction|printf "%q"}}, &input, &output)
 			
 			{{ if .OutputFields -}}
 			return {{ range .OutputFields }}{{.Type}}(output.{{.Name}}), {{ end }} err
@@ -259,10 +261,11 @@ func exposeType(typ string) string {
 	return typ
 }
 
-func (p *printer) opArgs(addr, method string, input, output wsdl.Message) (opArgs, error) {
+func (p *printer) opArgs(addr, method, action string, input, output wsdl.Message) (opArgs, error) {
 	var args opArgs
 	args.Address = addr
 	args.Method = method
+	args.SOAPAction = action
 	args.InputName = input.Name
 	for _, part := range input.Parts {
 		typ := p.code.NameOf(part.Type)

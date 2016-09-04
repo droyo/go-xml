@@ -74,6 +74,7 @@ type Part struct {
 // defined for a single endpoint.
 type Operation struct {
 	Doc           string
+	SOAPAction    string
 	Name          xml.Name
 	Input, Output xml.Name
 }
@@ -180,6 +181,9 @@ func parseOperations(targetNS string, root, port *xmltree.Element) []Operation {
 				}
 				for _, output := range op.Search(wsdlNS, "output") {
 					oper.Output = output.Resolve(output.Attr("", "message"))
+				}
+				for _, soapOp := range op.Search(soapNS, "operation") {
+					oper.SOAPAction = soapOp.Attr("", "soapAction")
 				}
 				ops = append(ops, oper)
 			}
