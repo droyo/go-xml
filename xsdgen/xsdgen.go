@@ -8,6 +8,7 @@ import (
 	"go/token"
 	"io"
 	"sort"
+	"strconv"
 	"strings"
 
 	"aqwari.net/xml/internal/gen"
@@ -294,6 +295,14 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type)) xsd.Type {
 		}
 		if t.Restriction.Pattern != nil {
 			t.Doc = "Must match the pattern " + t.Restriction.Pattern.String()
+			return t
+		}
+		if t.Restriction.MaxLength != 0 {
+			t.Doc = "May be no more than " + strconv.Itoa(t.Restriction.MaxLength) + " items long"
+			return t
+		}
+		if t.Restriction.MinLength != 0 {
+			t.Doc = "Must be at least " + strconv.Itoa(t.Restriction.MinLength) + " items long"
 			return t
 		}
 		return nil
