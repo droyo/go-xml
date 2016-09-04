@@ -30,6 +30,7 @@ func (cfg *Config) GenCLI(arguments ...string) error {
 		ports        commandline.Strings
 		fs           = flag.NewFlagSet("wsdlgen", flag.ExitOnError)
 		packageName  = fs.String("pkg", "", "name of the generated package")
+		comment      = fs.String("c", "", "First line of package-level comments")
 		output       = fs.String("o", "wsdlgen_output.go", "name of the output file")
 		verbose      = fs.Bool("v", false, "print verbose output")
 		debug        = fs.Bool("vv", false, "print debug output")
@@ -49,6 +50,9 @@ func (cfg *Config) GenCLI(arguments ...string) error {
 	if len(*packageName) > 0 {
 		cfg.Option(PackageName(*packageName))
 		cfg.XSDOption(xsdgen.PackageName(*packageName))
+	}
+	if len(*comment) > 0 {
+		cfg.Option(PackageComment(*comment))
 	}
 	if len(ports) > 0 {
 		cfg.Option(OnlyPorts(ports...))

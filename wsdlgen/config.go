@@ -100,6 +100,17 @@ func PackageName(name string) Option {
 	}
 }
 
+// PackageComment specifies the first line of package-level Godoc comments.
+// If the input WSDL file provides package-level comments, they are added after
+// the provided comment, separated by a newline.
+func PackageComment(comment string) Option {
+	return func(cfg *Config) Option {
+		prev := cfg.pkgHeader
+		cfg.pkgHeader = comment
+		return PackageComment(prev)
+	}
+}
+
 // LogLevel sets the level of verbosity for log messages generated during
 // the code generation process.
 func LogLevel(level int) Option {
