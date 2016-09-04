@@ -606,6 +606,25 @@ func (cfg *Config) soapArrayToSlice(s spec) spec {
 	if !ok {
 		return s
 	}
+
+	var baseType xml.Name
+	// the parseSOAPArray pre-processor would have replaced the wildcard
+	// element in the array with the appropriate type.
+	complex, ok := s.xsdType.(*xsd.ComplexType)
+	if !ok {
+		return s
+	}
+
+	for _, el := range complex.Elements {
+		if el.Wildcard {
+			baseType = xsd.XMLName(el.Type)
+			break
+		}
+	}
+
+	if baseType.Space == "" && baseType.Local == "" {
+		return s
+	}
 	cfg.debugf("flattening single-element slice struct type %s to []%v", s.name, slice.Elt)
 	tag := gen.TagKey(str.Fields.List[0], "xml")
 	xmltag := xml.Name{"", ",any"}
@@ -678,18 +697,22 @@ func (cfg *Config) soapArrayToSlice(s spec) spec {
 		xmltag.Local = "item"
 	}
 	marshal, err := gen.Func("MarshalXML").
-		Receiver("a *"+s.name).
+		Receiver("a "+s.name).
 		Args("e *xml.Encoder", "start xml.StartElement").
 		Returns("error").
 		Body(`
-			tag := xml.StartElement{Name: xml.Name{%q, %q}}
-			for _, elt := range *a {
-				if err := e.EncodeElement(elt, tag); err != nil {
-					return err
-				}
+			var output struct {
+				ArrayType string `+"`xml:\"http://schemas.xmlsoap.org/wsdl/ arrayType,attr\"`"+`
+				Items []%[1]s `+"`xml:\"%[2]s %[3]s\"`"+`
 			}
-			return nil
-		`, xmltag.Space, xmltag.Local).Decl()
+			output.Items = []%[1]s(a)
+			start.Attr = append(start.Attr, xml.Attr {
+				Name: xml.Name{"", "xmlns:ns1"},
+				Value: %[4]q,
+			})
+			output.ArrayType = "ns1:%[5]s[]"
+			return e.EncodeElement(&output, start)
+		`, itemType, xmltag.Space, xmltag.Local, baseType.Space, baseType.Local).Decl()
 	if err != nil {
 		cfg.logf("error generating MarshalXML method of %s: %v", s.name, err)
 		return s

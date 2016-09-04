@@ -216,14 +216,15 @@ func ExampleSOAPArrayAsSlice() {
 	//
 	// type BoolArray []bool
 	//
-	// func (a *BoolArray) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
-	// 	tag := xml.StartElement{Name: xml.Name{"", ",any"}}
-	// 	for _, elt := range *a {
-	// 		if err := e.EncodeElement(elt, tag); err != nil {
-	// 			return err
-	// 		}
+	// func (a BoolArray) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	// 	var output struct {
+	// 		ArrayType string `xml:"http://schemas.xmlsoap.org/wsdl/ arrayType,attr"`
+	// 		Items     []bool `xml:" item"`
 	// 	}
-	// 	return nil
+	// 	output.Items = []bool(a)
+	// 	start.Attr = append(start.Attr, xml.Attr{Name: xml.Name{"", "xmlns:ns1"}, Value: "http://www.w3.org/2001/XMLSchema"})
+	// 	output.ArrayType = "ns1:boolean[]"
+	// 	return e.EncodeElement(&output, start)
 	// }
 	// func (a *BoolArray) UnmarshalXML(d *xml.Decoder, start xml.StartElement) (err error) {
 	// 	var tok xml.Token
