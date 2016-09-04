@@ -12,12 +12,7 @@ import "aqwari.net/xml/internal/gen"
 var helpers string = `
 	type Client struct {
 		HTTPClient http.Client
-		
-		// Called when a succesful response is received,
-		// before the response body is read.
 		ResponseHook func(*http.Response)
-		
-		// Called before the request is sent.
 		RequestHook func(*http.Request)
 	}
 	
