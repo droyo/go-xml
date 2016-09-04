@@ -180,7 +180,7 @@ func (p *printer) operation(port wsdl.Port, op wsdl.Operation) error {
 				{{ end -}}
 			}
 			
-			err := client.Do({{.Method|printf "%q"}}, {{.Address|printf "%q"}}, &input, &output)
+			err := c.do({{.Method|printf "%q"}}, {{.Address|printf "%q"}}, &input, &output)
 			
 			{{ if .OutputFields -}}
 			return {{ range .OutputFields }}output.{{.Name}}, {{ end }} err

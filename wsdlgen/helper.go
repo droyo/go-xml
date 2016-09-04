@@ -23,8 +23,8 @@ var helpers string = `
 			Message interface{} 
 		}` + "`" + `xml:"http://schemas.xmlsoap.org/soap/envelope/ Body"` + "`" + `
 	}
-	
-	func (c *Client) Do(method, uri string, in, out interface{}) error {
+
+	func (c *Client) do(method, uri string, in, out interface{}) error {
 		var body io.Reader
 		var envelope soapEnvelope
 		
