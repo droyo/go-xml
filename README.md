@@ -20,6 +20,13 @@ on XML documents.
 - The `xsdgen` and `wsdlgen` commands generate Go code with default
   settings and are suitable for use with `go generate`.
 
+The directory wsdlgen/examples contains packages that were (mostly)
+automatically generated using the wsdlgen package. You can run
+
+	go generate
+
+within the subdirectories to re-generate the code if you make changes
+to the wsdlgen package.
 This code is still very rough around the edges, but I have succesfully
 used it to generate type declarations for some pretty complex XML
 schema from an Apache Axis application. There are github issues
