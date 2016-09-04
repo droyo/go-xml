@@ -233,6 +233,7 @@ func (p *printer) opArgs(addr, method string, input, output wsdl.Message) (opArg
 // To keep our output small (as possible), we only generate type
 // declarations for the types that are named in the WSDL definition.
 func (cfg *Config) registerXSDTypes(def *wsdl.Definition) {
+	xmlns := make(map[string]struct{})
 	// Some schema may list messages that are not used by any
 	// ports, so we have to be thorough.
 	for _, port := range def.Ports {
@@ -242,10 +243,16 @@ func (cfg *Config) registerXSDTypes(def *wsdl.Definition) {
 					cfg.logf("ERROR: No message def found for %s", name.Local)
 				} else {
 					for _, part := range msg.Parts {
+						xmlns[part.Type.Space] = struct{}{}
 						cfg.xsdgen.Option(xsdgen.AllowType(part.Type))
 					}
 				}
 			}
 		}
 	}
+	namespaces := make([]string, 0, len(xmlns))
+	for ns := range xmlns {
+		namespaces = append(namespaces, ns)
+	}
+	cfg.xsdgen.Option(xsdgen.Namespaces(namespaces...))
 }
