@@ -674,6 +674,9 @@ func (cfg *Config) soapArrayToSlice(s spec) spec {
 		return s
 	}
 
+	if xmltag.Local == ",any" {
+		xmltag.Local = "item"
+	}
 	marshal, err := gen.Func("MarshalXML").
 		Receiver("a *"+s.name).
 		Args("e *xml.Encoder", "start xml.StartElement").
