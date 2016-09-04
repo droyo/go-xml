@@ -168,7 +168,7 @@ func (p *printer) operation(port wsdl.Port, op wsdl.Operation) error {
 	if !ok {
 		return fmt.Errorf("unknown output message type %s", op.Output.Local)
 	}
-	params, err := p.opArgs(port.Address, port.Method, op.SOAPAction, input, output)
+	params, err := p.opArgs(port.Address, port.Method, op, input, output)
 	if err != nil {
 		return err
 	}
@@ -205,31 +205,35 @@ func (p *printer) operation(port wsdl.Port, op wsdl.Operation) error {
 		Args(params.input...).
 		BodyTmpl(`
 			var input struct {
-				XMLName struct{} `+"`"+`xml:"{{.InputName.Space}} {{.InputName.Local}}"`+"`"+`
-				{{ range .InputFields -}}
-				{{.Name}} {{.Type}} `+"`"+`xml:"{{.XMLName.Space}} {{.XMLName.Local}}"`+"`"+`
-				{{ end -}}
+				XMLName struct{} `+"`"+`xml:"{{.MsgName.Space}} {{.MsgName.Local}}"`+"`"+`
+				Args struct {
+					{{ range .InputFields -}}
+					{{.Name}} {{.Type}} `+"`"+`xml:"{{.XMLName.Space}} {{.XMLName.Local}}"`+"`"+`
+					{{ end -}}
+				}`+"`xml:\"{{.InputName.Space}} {{.InputName.Local}}\"`"+`
 			}
 			
 			{{- range .InputFields }}
-			input.{{.Name}} = {{.Type}}({{.InputArg}})
+			input.Args.{{.Name}} = {{.Type}}({{.InputArg}})
 			{{ end }}
 			
 			var output struct {
-				XMLName struct{} `+"`"+`xml:"{{.OutputName.Space}} {{.OutputName.Local}}"`+"`"+`
-				{{ range .OutputFields -}}
-				{{.Name}} {{.Type}} `+"`"+`xml:"{{.XMLName.Space}} {{.XMLName.Local}}"`+"`"+`
-				{{ end -}}
+				XMLName struct{} `+"`"+`xml:"{{.MsgName.Space}} {{.MsgName.Local}}"`+"`"+`
+				Args struct {
+					{{ range .OutputFields -}}
+					{{.Name}} {{.Type}} `+"`"+`xml:"{{.XMLName.Space}} {{.XMLName.Local}}"`+"`"+`
+					{{ end -}}
+				}`+"`xml:\"{{.OutputName.Space}} {{.OutputName.Local}}\"`"+`
 			}
 			
 			err := c.do({{.Method|printf "%q"}}, {{.Address|printf "%q"}}, {{.SOAPAction|printf "%q"}}, &input, &output)
 			
 			{{ if .OutputFields -}}
-			return {{ range .OutputFields }}{{.Type}}(output.{{.Name}}), {{ end }} err
+			return {{ range .OutputFields }}{{.Type}}(output.Args.{{.Name}}), {{ end }} err
 			{{- else if .ReturnType -}}
 			var result {{ .ReturnType }}
 			{{ range .ReturnFields -}}
-			result.{{.Name}} = {{.Type}}(output.{{.InputArg}})
+			result.{{.Name}} = {{.Type}}(output.Args.{{.InputArg}})
 			{{ end -}}
 			return result, err
 			{{- else -}}
@@ -261,11 +265,12 @@ func exposeType(typ string) string {
 	return typ
 }
 
-func (p *printer) opArgs(addr, method, action string, input, output wsdl.Message) (opArgs, error) {
+func (p *printer) opArgs(addr, method string, op wsdl.Operation, input, output wsdl.Message) (opArgs, error) {
 	var args opArgs
 	args.Address = addr
 	args.Method = method
-	args.SOAPAction = action
+	args.SOAPAction = op.SOAPAction
+	args.MsgName = op.Name
 	args.InputName = input.Name
 	for _, part := range input.Parts {
 		typ := p.code.NameOf(part.Type)
