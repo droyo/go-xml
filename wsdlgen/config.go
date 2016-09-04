@@ -66,6 +66,8 @@ type Option func(*Config) Option
 // DefaultOptions are the default options for Go source code generation.
 var DefaultOptions = []Option{
 	PackageName("ws"),
+	InputThreshold(3),
+	OutputThreshold(2),
 }
 
 // The OnlyPorts option defines a whitelist of WSDL ports to generate

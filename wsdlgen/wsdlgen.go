@@ -55,12 +55,26 @@ type opArgs struct {
 	InputName, OutputName xml.Name
 	InputFields           []field
 	OutputFields          []field
+
+	// If not "", inputs come in a wrapper struct
+	InputType string
+
+	// If not "", we return values in a wrapper struct
+	ReturnType   string
+	ReturnFields []field
 }
 
 // struct members. Need to export the fields for our template
 type field struct {
 	Name, Type string
 	XMLName    xml.Name
+
+	// If this is a wrapper struct for >InputThreshold arguments,
+	// PublicType holds the type that we want to expose to the
+	// user. For example, if the web service expects an xsdDate
+	// to be sent to it, PublicType will be time.Time and a conversion
+	// will take place before sending the request to the server.
+	PublicType string
 
 	// This refers to the name of the value to assign to this field
 	// in the argument list. Empty for return values.
@@ -157,6 +171,32 @@ func (p *printer) operation(port wsdl.Port, op wsdl.Operation) error {
 		return err
 	}
 
+	if params.InputType != "" {
+		decls, err := gen.Snippets(params, `
+			type {{.InputType}} struct {
+			{{ range .InputFields -}}
+				{{.Name}} {{.PublicType}}
+			{{ end -}}
+			}`,
+		)
+		if err != nil {
+			return err
+		}
+		p.file.Decls = append(p.file.Decls, decls...)
+	}
+	if params.ReturnType != "" {
+		decls, err := gen.Snippets(params, `
+			type {{.ReturnType}} struct {
+			{{ range .ReturnFields -}}
+				{{.Name}} {{.Type}}
+			{{ end -}}
+			}`,
+		)
+		if err != nil {
+			return err
+		}
+		p.file.Decls = append(p.file.Decls, decls...)
+	}
 	fn := gen.Func(p.xsdgen.NameOf(op.Name)).
 		Comment(op.Doc).
 		Receiver("c *Client").
@@ -183,7 +223,13 @@ func (p *printer) operation(port wsdl.Port, op wsdl.Operation) error {
 			err := c.do({{.Method|printf "%q"}}, {{.Address|printf "%q"}}, &input, &output)
 			
 			{{ if .OutputFields -}}
-			return {{ range .OutputFields }}output.{{.Name}}, {{ end }} err
+			return {{ range .OutputFields }}{{.Type}}(output.{{.Name}}), {{ end }} err
+			{{- else if .ReturnType -}}
+			var result {{ .ReturnType }}
+			{{ range .ReturnFields -}}
+			result.{{.Name}} = {{.Type}}(output.{{.InputArg}})
+			{{ end -}}
+			return result, err
 			{{- else -}}
 			return err
 			{{- end -}}
@@ -224,11 +270,19 @@ func (p *printer) opArgs(addr, method string, input, output wsdl.Message) (opArg
 		vname := gen.Sanitize(part.Name)
 		args.input = append(args.input, vname+" "+inputType)
 		args.InputFields = append(args.InputFields, field{
-			Name:     strings.Title(part.Name),
-			Type:     typ,
-			XMLName:  xml.Name{p.wsdl.TargetNS, part.Name},
-			InputArg: vname,
+			Name:       strings.Title(part.Name),
+			Type:       typ,
+			PublicType: exposeType(typ),
+			XMLName:    xml.Name{p.wsdl.TargetNS, part.Name},
+			InputArg:   vname,
 		})
+	}
+	if len(args.input) > p.maxArgs {
+		args.InputType = strings.Title(args.InputName.Local)
+		args.input = []string{"v " + args.InputName.Local}
+		for i, v := range input.Parts {
+			args.InputFields[i].InputArg = "v." + strings.Title(v.Name)
+		}
 	}
 	args.OutputName = output.Name
 	for _, part := range output.Parts {
@@ -240,6 +294,18 @@ func (p *printer) opArgs(addr, method string, input, output wsdl.Message) (opArg
 			Type:    typ,
 			XMLName: xml.Name{p.wsdl.TargetNS, part.Name},
 		})
+	}
+	if len(args.output) > p.maxReturns {
+		args.ReturnType = strings.Title(args.OutputName.Local)
+		args.ReturnFields = make([]field, len(args.OutputFields))
+		for i, v := range args.OutputFields {
+			args.ReturnFields[i] = field{
+				Name:     v.Name,
+				Type:     exposeType(v.Type),
+				InputArg: v.Name,
+			}
+		}
+		args.output = []string{args.ReturnType}
 	}
 	// NOTE(droyo) if we decide to name our return values,
 	// we have to change this too.
