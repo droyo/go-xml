@@ -71,3 +71,13 @@ func (cfg *Config) GenCLI(arguments ...string) error {
 	}
 	return ioutil.WriteFile(*output, data, 0666)
 }
+
+// The GenCLI function generates Go source code using the default
+// options chosen by the wsdlgen package. It is meant to be used from
+// the main package of a command-line program.
+func GenCLI(args ...string) error {
+	var cfg Config
+	cfg.Option(DefaultOptions...)
+	cfg.XSDOption(xsdgen.DefaultOptions...)
+	return cfg.GenCLI(args...)
+}
