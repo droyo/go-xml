@@ -119,6 +119,7 @@ func Parse(docs ...[]byte) ([]Schema, error) {
 		}
 		result = append(result, s)
 	}
+	result = append(result, standardSchema)
 	return result, nil
 }
 

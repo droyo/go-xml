@@ -1,5 +1,7 @@
 package xsd
 
+import "encoding/xml"
+
 var wsdl2003xsd = []byte(`<?xml version="1.0" encoding="UTF-8" ?> 
 <!-- 
  
@@ -1136,3 +1138,14 @@ var xmlnsxsd = []byte(`<?xml version='1.0'?>
 
 </xs:schema>
 `)
+
+var standardSchema = Schema{
+	TargetNS: schemaNS,
+}
+
+func init() {
+	standardSchema.Types = make(map[xml.Name]Type, int(UnsignedShort))
+	for i := AnyType; i < UnsignedShort; i++ {
+		standardSchema.Types[i.Name()] = i
+	}
+}
