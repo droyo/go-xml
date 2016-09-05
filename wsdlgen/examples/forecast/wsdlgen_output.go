@@ -43,6 +43,7 @@ package forecast
 import (
 	"bytes"
 	"encoding/xml"
+	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -144,15 +145,6 @@ func (t *xsdDate) UnmarshalText(text []byte) error {
 func (t *xsdDate) MarshalText() ([]byte, error) {
 	return []byte((*time.Time)(t).Format("2006-01-02")), nil
 }
-
-type xsdDateTime time.Time
-
-func (t *xsdDateTime) UnmarshalText(text []byte) error {
-	return _unmarshalTime(text, (*time.Time)(t), "2006-01-02T15:04:05.999999999")
-}
-func (t *xsdDateTime) MarshalText() ([]byte, error) {
-	return []byte((*time.Time)(t).Format("2006-01-02T15:04:05.999999999")), nil
-}
 func _unmarshalTime(text []byte, t *time.Time, format string) (err error) {
 	s := string(bytes.TrimSpace(text))
 	*t, err = time.Parse(format, s)
@@ -162,18 +154,34 @@ func _unmarshalTime(text []byte, t *time.Time, format string) (err error) {
 	return err
 }
 
+type xsdDateTime time.Time
+
+func (t *xsdDateTime) UnmarshalText(text []byte) error {
+	return _unmarshalTime(text, (*time.Time)(t), "2006-01-02T15:04:05.999999999")
+}
+func (t *xsdDateTime) MarshalText() ([]byte, error) {
+	return []byte((*time.Time)(t).Format("2006-01-02T15:04:05.999999999")), nil
+}
+
 type Client struct {
 	HTTPClient   http.Client
 	ResponseHook func(*http.Response)
 	RequestHook  func(*http.Request)
 }
 type soapEnvelope struct {
-	XMLName struct{}                      `xml:"http://schemas.xmlsoap.org/soap/envelope/ Envelope"`
-	Header  []byte                        `xml:"http://schemas.xmlsoap.org/soap/envelope/ Header"`
-	Body    struct{ Message interface{} } `xml:"http://schemas.xmlsoap.org/soap/envelope/ Body"`
+	XMLName struct{} `xml:"http://schemas.xmlsoap.org/soap/envelope/ Envelope"`
+	Header  []byte   `xml:"http://schemas.xmlsoap.org/soap/envelope/ Header"`
+	Body    struct {
+		Message interface{}
+		Fault   *struct {
+			String string `xml:"faultstring,omitempty"`
+			Code   string `xml:"faultcode,omitempty"`
+			Detail string `xml:"detail,omitempty"`
+		} `xml:"http://schemas.xmlsoap.org/soap/envelope/ Fault,omitempty"`
+	} `xml:"http://schemas.xmlsoap.org/soap/envelope/ Body"`
 }
 
-func (c *Client) do(method, uri string, in, out interface{}) error {
+func (c *Client) do(method, uri, action string, in, out interface{}) error {
 	var body io.Reader
 	var envelope soapEnvelope
 	if method == "POST" || method == "PUT" {
@@ -192,6 +200,7 @@ func (c *Client) do(method, uri string, in, out interface{}) error {
 	if err != nil {
 		return err
 	}
+	req.Header.Set("SOAPAction", action)
 	if c.RequestHook != nil {
 		c.RequestHook(req)
 	}
@@ -205,7 +214,13 @@ func (c *Client) do(method, uri string, in, out interface{}) error {
 	}
 	dec := xml.NewDecoder(rsp.Body)
 	envelope.Body.Message = out
-	return dec.Decode(&envelope)
+	if err := dec.Decode(&envelope); err != nil {
+		return err
+	}
+	if envelope.Body.Fault != nil {
+		return fmt.Errorf("%s: %s", envelope.Body.Fault.Code, envelope.Body.Fault.String)
+	}
+	return nil
 }
 
 type NDFDgenRequest struct {
@@ -221,28 +236,32 @@ type NDFDgenRequest struct {
 // Returns National Weather Service digital weather forecast data
 func (c *Client) NDFDgen(v NDFDgenRequest) (string, error) {
 	var input struct {
-		XMLName           struct{}          `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl NDFDgenRequest"`
-		Latitude          float64           `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl latitude"`
-		Longitude         float64           `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl longitude"`
-		Product           Product           `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl product"`
-		StartTime         xsdDateTime       `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl startTime"`
-		EndTime           xsdDateTime       `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl endTime"`
-		Unit              Unit              `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl Unit"`
-		WeatherParameters WeatherParameters `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl weatherParameters"`
+		XMLName struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl NDFDgen"`
+		Args    struct {
+			Latitude          float64           `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl latitude"`
+			Longitude         float64           `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl longitude"`
+			Product           Product           `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl product"`
+			StartTime         xsdDateTime       `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl startTime"`
+			EndTime           xsdDateTime       `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl endTime"`
+			Unit              Unit              `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl Unit"`
+			WeatherParameters WeatherParameters `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl weatherParameters"`
+		} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl NDFDgenRequest"`
 	}
-	input.Latitude = float64(v.Latitude)
-	input.Longitude = float64(v.Longitude)
-	input.Product = Product(v.Product)
-	input.StartTime = xsdDateTime(v.StartTime)
-	input.EndTime = xsdDateTime(v.EndTime)
-	input.Unit = Unit(v.Unit)
-	input.WeatherParameters = WeatherParameters(v.WeatherParameters)
+	input.Args.Latitude = float64(v.Latitude)
+	input.Args.Longitude = float64(v.Longitude)
+	input.Args.Product = Product(v.Product)
+	input.Args.StartTime = xsdDateTime(v.StartTime)
+	input.Args.EndTime = xsdDateTime(v.EndTime)
+	input.Args.Unit = Unit(v.Unit)
+	input.Args.WeatherParameters = WeatherParameters(v.WeatherParameters)
 	var output struct {
-		XMLName struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl NDFDgenResponse"`
-		DwmlOut string   `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl dwmlOut"`
+		XMLName struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl NDFDgen"`
+		Args    struct {
+			DwmlOut string `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl dwmlOut"`
+		} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl NDFDgenResponse"`
 	}
-	err := c.do("POST", "http://graphical.weather.gov/xml/SOAP_server/ndfdXMLserver.php", &input, &output)
-	return string(output.DwmlOut), err
+	err := c.do("POST", "http://graphical.weather.gov/xml/SOAP_server/ndfdXMLserver.php", "http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl#NDFDgen", &input, &output)
+	return string(output.Args.DwmlOut), err
 }
 
 type NDFDgenByDayRequest struct {
@@ -257,26 +276,30 @@ type NDFDgenByDayRequest struct {
 // Returns National Weather Service digital weather forecast data summarized over either 24- or 12-hourly periods
 func (c *Client) NDFDgenByDay(v NDFDgenByDayRequest) (string, error) {
 	var input struct {
-		XMLName   struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl NDFDgenByDayRequest"`
-		Latitude  float64  `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl latitude"`
-		Longitude float64  `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl longitude"`
-		StartDate xsdDate  `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl startDate"`
-		NumDays   int      `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl numDays"`
-		Unit      Unit     `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl Unit"`
-		Format    Format   `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl format"`
+		XMLName struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl NDFDgenByDay"`
+		Args    struct {
+			Latitude  float64 `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl latitude"`
+			Longitude float64 `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl longitude"`
+			StartDate xsdDate `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl startDate"`
+			NumDays   int     `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl numDays"`
+			Unit      Unit    `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl Unit"`
+			Format    Format  `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl format"`
+		} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl NDFDgenByDayRequest"`
 	}
-	input.Latitude = float64(v.Latitude)
-	input.Longitude = float64(v.Longitude)
-	input.StartDate = xsdDate(v.StartDate)
-	input.NumDays = int(v.NumDays)
-	input.Unit = Unit(v.Unit)
-	input.Format = Format(v.Format)
+	input.Args.Latitude = float64(v.Latitude)
+	input.Args.Longitude = float64(v.Longitude)
+	input.Args.StartDate = xsdDate(v.StartDate)
+	input.Args.NumDays = int(v.NumDays)
+	input.Args.Unit = Unit(v.Unit)
+	input.Args.Format = Format(v.Format)
 	var output struct {
-		XMLName      struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl NDFDgenByDayResponse"`
-		DwmlByDayOut string   `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl dwmlByDayOut"`
+		XMLName struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl NDFDgenByDay"`
+		Args    struct {
+			DwmlByDayOut string `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl dwmlByDayOut"`
+		} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl NDFDgenByDayResponse"`
 	}
-	err := c.do("POST", "http://graphical.weather.gov/xml/SOAP_server/ndfdXMLserver.php", &input, &output)
-	return string(output.DwmlByDayOut), err
+	err := c.do("POST", "http://graphical.weather.gov/xml/SOAP_server/ndfdXMLserver.php", "http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl#NDFDgenByDay", &input, &output)
+	return string(output.Args.DwmlByDayOut), err
 }
 
 type NDFDgenLatLonListRequest struct {
@@ -291,26 +314,30 @@ type NDFDgenLatLonListRequest struct {
 // Returns National Weather Service digital weather forecast data
 func (c *Client) NDFDgenLatLonList(v NDFDgenLatLonListRequest) (string, error) {
 	var input struct {
-		XMLName           struct{}          `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl NDFDgenLatLonListRequest"`
-		ListLatLon        ListLatLon        `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl listLatLon"`
-		Product           Product           `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl product"`
-		StartTime         xsdDateTime       `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl startTime"`
-		EndTime           xsdDateTime       `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl endTime"`
-		Unit              Unit              `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl Unit"`
-		WeatherParameters WeatherParameters `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl weatherParameters"`
+		XMLName struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl NDFDgenLatLonList"`
+		Args    struct {
+			ListLatLon        ListLatLon        `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl listLatLon"`
+			Product           Product           `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl product"`
+			StartTime         xsdDateTime       `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl startTime"`
+			EndTime           xsdDateTime       `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl endTime"`
+			Unit              Unit              `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl Unit"`
+			WeatherParameters WeatherParameters `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl weatherParameters"`
+		} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl NDFDgenLatLonListRequest"`
 	}
-	input.ListLatLon = ListLatLon(v.ListLatLon)
-	input.Product = Product(v.Product)
-	input.StartTime = xsdDateTime(v.StartTime)
-	input.EndTime = xsdDateTime(v.EndTime)
-	input.Unit = Unit(v.Unit)
-	input.WeatherParameters = WeatherParameters(v.WeatherParameters)
+	input.Args.ListLatLon = ListLatLon(v.ListLatLon)
+	input.Args.Product = Product(v.Product)
+	input.Args.StartTime = xsdDateTime(v.StartTime)
+	input.Args.EndTime = xsdDateTime(v.EndTime)
+	input.Args.Unit = Unit(v.Unit)
+	input.Args.WeatherParameters = WeatherParameters(v.WeatherParameters)
 	var output struct {
-		XMLName struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl NDFDgenLatLonListResponse"`
-		DwmlOut string   `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl dwmlOut"`
+		XMLName struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl NDFDgenLatLonList"`
+		Args    struct {
+			DwmlOut string `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl dwmlOut"`
+		} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl NDFDgenLatLonListResponse"`
 	}
-	err := c.do("POST", "http://graphical.weather.gov/xml/SOAP_server/ndfdXMLserver.php", &input, &output)
-	return string(output.DwmlOut), err
+	err := c.do("POST", "http://graphical.weather.gov/xml/SOAP_server/ndfdXMLserver.php", "http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl#NDFDgenLatLonList", &input, &output)
+	return string(output.Args.DwmlOut), err
 }
 
 type NDFDgenByDayLatLonListRequest struct {
@@ -324,24 +351,28 @@ type NDFDgenByDayLatLonListRequest struct {
 // Returns National Weather Service digital weather forecast data summarized over either 24- or 12-hourly periods
 func (c *Client) NDFDgenByDayLatLonList(v NDFDgenByDayLatLonListRequest) (string, error) {
 	var input struct {
-		XMLName    struct{}   `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl NDFDgenByDayLatLonListRequest"`
-		ListLatLon ListLatLon `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl listLatLon"`
-		StartDate  xsdDate    `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl startDate"`
-		NumDays    int        `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl numDays"`
-		Unit       Unit       `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl Unit"`
-		Format     Format     `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl format"`
+		XMLName struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl NDFDgenByDayLatLonList"`
+		Args    struct {
+			ListLatLon ListLatLon `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl listLatLon"`
+			StartDate  xsdDate    `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl startDate"`
+			NumDays    int        `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl numDays"`
+			Unit       Unit       `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl Unit"`
+			Format     Format     `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl format"`
+		} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl NDFDgenByDayLatLonListRequest"`
 	}
-	input.ListLatLon = ListLatLon(v.ListLatLon)
-	input.StartDate = xsdDate(v.StartDate)
-	input.NumDays = int(v.NumDays)
-	input.Unit = Unit(v.Unit)
-	input.Format = Format(v.Format)
+	input.Args.ListLatLon = ListLatLon(v.ListLatLon)
+	input.Args.StartDate = xsdDate(v.StartDate)
+	input.Args.NumDays = int(v.NumDays)
+	input.Args.Unit = Unit(v.Unit)
+	input.Args.Format = Format(v.Format)
 	var output struct {
-		XMLName      struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl NDFDgenByDayLatLonListResponse"`
-		DwmlByDayOut string   `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl dwmlByDayOut"`
+		XMLName struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl NDFDgenByDayLatLonList"`
+		Args    struct {
+			DwmlByDayOut string `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl dwmlByDayOut"`
+		} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl NDFDgenByDayLatLonListResponse"`
 	}
-	err := c.do("POST", "http://graphical.weather.gov/xml/SOAP_server/ndfdXMLserver.php", &input, &output)
-	return string(output.DwmlByDayOut), err
+	err := c.do("POST", "http://graphical.weather.gov/xml/SOAP_server/ndfdXMLserver.php", "http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl#NDFDgenByDayLatLonList", &input, &output)
+	return string(output.Args.DwmlByDayOut), err
 }
 
 type GmlLatLonListRequest struct {
@@ -354,22 +385,26 @@ type GmlLatLonListRequest struct {
 // Returns National Weather Service digital weather forecast data encoded in GML for a single time
 func (c *Client) GmlLatLonList(v GmlLatLonListRequest) (string, error) {
 	var input struct {
-		XMLName           struct{}          `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl GmlLatLonListRequest"`
-		ListLatLon        ListLatLon        `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl listLatLon"`
-		RequestedTime     xsdDateTime       `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl requestedTime"`
-		FeatureType       FeatureType       `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl featureType"`
-		WeatherParameters WeatherParameters `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl weatherParameters"`
+		XMLName struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl GmlLatLonList"`
+		Args    struct {
+			ListLatLon        ListLatLon        `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl listLatLon"`
+			RequestedTime     xsdDateTime       `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl requestedTime"`
+			FeatureType       FeatureType       `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl featureType"`
+			WeatherParameters WeatherParameters `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl weatherParameters"`
+		} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl GmlLatLonListRequest"`
 	}
-	input.ListLatLon = ListLatLon(v.ListLatLon)
-	input.RequestedTime = xsdDateTime(v.RequestedTime)
-	input.FeatureType = FeatureType(v.FeatureType)
-	input.WeatherParameters = WeatherParameters(v.WeatherParameters)
+	input.Args.ListLatLon = ListLatLon(v.ListLatLon)
+	input.Args.RequestedTime = xsdDateTime(v.RequestedTime)
+	input.Args.FeatureType = FeatureType(v.FeatureType)
+	input.Args.WeatherParameters = WeatherParameters(v.WeatherParameters)
 	var output struct {
-		XMLName  struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl GmlLatLonListResponse"`
-		DwGmlOut string   `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl dwGmlOut"`
+		XMLName struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl GmlLatLonList"`
+		Args    struct {
+			DwGmlOut string `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl dwGmlOut"`
+		} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl GmlLatLonListResponse"`
 	}
-	err := c.do("POST", "http://graphical.weather.gov/xml/SOAP_server/ndfdXMLserver.php", &input, &output)
-	return string(output.DwGmlOut), err
+	err := c.do("POST", "http://graphical.weather.gov/xml/SOAP_server/ndfdXMLserver.php", "http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl#GmlLatLonList", &input, &output)
+	return string(output.Args.DwGmlOut), err
 }
 
 type GmlTimeSeriesRequest struct {
@@ -384,26 +419,30 @@ type GmlTimeSeriesRequest struct {
 // Returns National Weather Service digital weather forecast data encoded in GML for a time period
 func (c *Client) GmlTimeSeries(v GmlTimeSeriesRequest) (string, error) {
 	var input struct {
-		XMLName      struct{}    `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl GmlTimeSeriesRequest"`
-		ListLatLon   ListLatLon  `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl listLatLon"`
-		StartTime    xsdDateTime `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl startTime"`
-		EndTime      xsdDateTime `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl endTime"`
-		CompType     CompType    `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl compType"`
-		FeatureType  FeatureType `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl featureType"`
-		PropertyName string      `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl propertyName"`
+		XMLName struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl GmlTimeSeries"`
+		Args    struct {
+			ListLatLon   ListLatLon  `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl listLatLon"`
+			StartTime    xsdDateTime `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl startTime"`
+			EndTime      xsdDateTime `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl endTime"`
+			CompType     CompType    `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl compType"`
+			FeatureType  FeatureType `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl featureType"`
+			PropertyName string      `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl propertyName"`
+		} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl GmlTimeSeriesRequest"`
 	}
-	input.ListLatLon = ListLatLon(v.ListLatLon)
-	input.StartTime = xsdDateTime(v.StartTime)
-	input.EndTime = xsdDateTime(v.EndTime)
-	input.CompType = CompType(v.CompType)
-	input.FeatureType = FeatureType(v.FeatureType)
-	input.PropertyName = string(v.PropertyName)
+	input.Args.ListLatLon = ListLatLon(v.ListLatLon)
+	input.Args.StartTime = xsdDateTime(v.StartTime)
+	input.Args.EndTime = xsdDateTime(v.EndTime)
+	input.Args.CompType = CompType(v.CompType)
+	input.Args.FeatureType = FeatureType(v.FeatureType)
+	input.Args.PropertyName = string(v.PropertyName)
 	var output struct {
-		XMLName  struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl GmlTimeSeriesResponse"`
-		DwGmlOut string   `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl dwGmlOut"`
+		XMLName struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl GmlTimeSeries"`
+		Args    struct {
+			DwGmlOut string `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl dwGmlOut"`
+		} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl GmlTimeSeriesResponse"`
 	}
-	err := c.do("POST", "http://graphical.weather.gov/xml/SOAP_server/ndfdXMLserver.php", &input, &output)
-	return string(output.DwGmlOut), err
+	err := c.do("POST", "http://graphical.weather.gov/xml/SOAP_server/ndfdXMLserver.php", "http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl#GmlTimeSeries", &input, &output)
+	return string(output.Args.DwGmlOut), err
 }
 
 type LatLonListSubgridRequest struct {
@@ -417,24 +456,28 @@ type LatLonListSubgridRequest struct {
 // Returns a list of latitude and longitude pairs in a rectangular subgrid defined by the lower left and upper right points
 func (c *Client) LatLonListSubgrid(v LatLonListSubgridRequest) (ListLatLon, error) {
 	var input struct {
-		XMLName             struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl LatLonListSubgridRequest"`
-		LowerLeftLatitude   float64  `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl lowerLeftLatitude"`
-		LowerLeftLongitude  float64  `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl lowerLeftLongitude"`
-		UpperRightLatitude  float64  `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl upperRightLatitude"`
-		UpperRightLongitude float64  `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl upperRightLongitude"`
-		Resolution          float64  `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl resolution"`
+		XMLName struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl LatLonListSubgrid"`
+		Args    struct {
+			LowerLeftLatitude   float64 `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl lowerLeftLatitude"`
+			LowerLeftLongitude  float64 `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl lowerLeftLongitude"`
+			UpperRightLatitude  float64 `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl upperRightLatitude"`
+			UpperRightLongitude float64 `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl upperRightLongitude"`
+			Resolution          float64 `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl resolution"`
+		} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl LatLonListSubgridRequest"`
 	}
-	input.LowerLeftLatitude = float64(v.LowerLeftLatitude)
-	input.LowerLeftLongitude = float64(v.LowerLeftLongitude)
-	input.UpperRightLatitude = float64(v.UpperRightLatitude)
-	input.UpperRightLongitude = float64(v.UpperRightLongitude)
-	input.Resolution = float64(v.Resolution)
+	input.Args.LowerLeftLatitude = float64(v.LowerLeftLatitude)
+	input.Args.LowerLeftLongitude = float64(v.LowerLeftLongitude)
+	input.Args.UpperRightLatitude = float64(v.UpperRightLatitude)
+	input.Args.UpperRightLongitude = float64(v.UpperRightLongitude)
+	input.Args.Resolution = float64(v.Resolution)
 	var output struct {
-		XMLName       struct{}   `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl LatLonListSubgridResponse"`
-		ListLatLonOut ListLatLon `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl listLatLonOut"`
+		XMLName struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl LatLonListSubgrid"`
+		Args    struct {
+			ListLatLonOut ListLatLon `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl listLatLonOut"`
+		} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl LatLonListSubgridResponse"`
 	}
-	err := c.do("POST", "http://graphical.weather.gov/xml/SOAP_server/ndfdXMLserver.php", &input, &output)
-	return ListLatLon(output.ListLatLonOut), err
+	err := c.do("POST", "http://graphical.weather.gov/xml/SOAP_server/ndfdXMLserver.php", "http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl#LatLonListSubgrid", &input, &output)
+	return ListLatLon(output.Args.ListLatLonOut), err
 }
 
 type LatLonListLineRequest struct {
@@ -447,37 +490,45 @@ type LatLonListLineRequest struct {
 // Returns a list of latitude and longitude pairs along a line defined by the latitude and longitude of the 2 endpoints
 func (c *Client) LatLonListLine(v LatLonListLineRequest) (ListLatLon, error) {
 	var input struct {
-		XMLName      struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl LatLonListLineRequest"`
-		EndPoint1Lat float64  `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl endPoint1Lat"`
-		EndPoint1Lon float64  `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl endPoint1Lon"`
-		EndPoint2Lat float64  `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl endPoint2Lat"`
-		EndPoint2Lon float64  `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl endPoint2Lon"`
+		XMLName struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl LatLonListLine"`
+		Args    struct {
+			EndPoint1Lat float64 `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl endPoint1Lat"`
+			EndPoint1Lon float64 `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl endPoint1Lon"`
+			EndPoint2Lat float64 `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl endPoint2Lat"`
+			EndPoint2Lon float64 `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl endPoint2Lon"`
+		} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl LatLonListLineRequest"`
 	}
-	input.EndPoint1Lat = float64(v.EndPoint1Lat)
-	input.EndPoint1Lon = float64(v.EndPoint1Lon)
-	input.EndPoint2Lat = float64(v.EndPoint2Lat)
-	input.EndPoint2Lon = float64(v.EndPoint2Lon)
+	input.Args.EndPoint1Lat = float64(v.EndPoint1Lat)
+	input.Args.EndPoint1Lon = float64(v.EndPoint1Lon)
+	input.Args.EndPoint2Lat = float64(v.EndPoint2Lat)
+	input.Args.EndPoint2Lon = float64(v.EndPoint2Lon)
 	var output struct {
-		XMLName       struct{}   `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl LatLonListLineResponse"`
-		ListLatLonOut ListLatLon `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl listLatLonOut"`
+		XMLName struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl LatLonListLine"`
+		Args    struct {
+			ListLatLonOut ListLatLon `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl listLatLonOut"`
+		} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl LatLonListLineResponse"`
 	}
-	err := c.do("POST", "http://graphical.weather.gov/xml/SOAP_server/ndfdXMLserver.php", &input, &output)
-	return ListLatLon(output.ListLatLonOut), err
+	err := c.do("POST", "http://graphical.weather.gov/xml/SOAP_server/ndfdXMLserver.php", "http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl#LatLonListLine", &input, &output)
+	return ListLatLon(output.Args.ListLatLonOut), err
 }
 
 // Returns a list of latitude and longitude pairs with each pair corresponding to an input zip code.
 func (c *Client) LatLonListZipCode(zipCodeList ZipCodeList) (ListLatLon, error) {
 	var input struct {
-		XMLName     struct{}    `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl LatLonListZipCodeRequest"`
-		ZipCodeList ZipCodeList `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl zipCodeList"`
+		XMLName struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl LatLonListZipCode"`
+		Args    struct {
+			ZipCodeList ZipCodeList `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl zipCodeList"`
+		} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl LatLonListZipCodeRequest"`
 	}
-	input.ZipCodeList = ZipCodeList(zipCodeList)
+	input.Args.ZipCodeList = ZipCodeList(zipCodeList)
 	var output struct {
-		XMLName       struct{}   `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl LatLonListZipCodeResponse"`
-		ListLatLonOut ListLatLon `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl listLatLonOut"`
+		XMLName struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl LatLonListZipCode"`
+		Args    struct {
+			ListLatLonOut ListLatLon `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl listLatLonOut"`
+		} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl LatLonListZipCodeResponse"`
 	}
-	err := c.do("POST", "http://graphical.weather.gov/xml/SOAP_server/ndfdXMLserver.php", &input, &output)
-	return ListLatLon(output.ListLatLonOut), err
+	err := c.do("POST", "http://graphical.weather.gov/xml/SOAP_server/ndfdXMLserver.php", "http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl#LatLonListZipCode", &input, &output)
+	return ListLatLon(output.Args.ListLatLonOut), err
 }
 
 type LatLonListSquareRequest struct {
@@ -491,52 +542,64 @@ type LatLonListSquareRequest struct {
 // Returns a list of latitude and longitude pairs in a rectangle defined by a central point and distance from that point in the latitudinal and longitudinal directions
 func (c *Client) LatLonListSquare(v LatLonListSquareRequest) (ListLatLon, error) {
 	var input struct {
-		XMLName        struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl LatLonListSquareRequest"`
-		CenterPointLat float64  `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl centerPointLat"`
-		CenterPointLon float64  `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl centerPointLon"`
-		DistanceLat    float64  `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl distanceLat"`
-		DistanceLon    float64  `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl distanceLon"`
-		Resolution     float64  `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl resolution"`
+		XMLName struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl LatLonListSquare"`
+		Args    struct {
+			CenterPointLat float64 `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl centerPointLat"`
+			CenterPointLon float64 `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl centerPointLon"`
+			DistanceLat    float64 `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl distanceLat"`
+			DistanceLon    float64 `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl distanceLon"`
+			Resolution     float64 `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl resolution"`
+		} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl LatLonListSquareRequest"`
 	}
-	input.CenterPointLat = float64(v.CenterPointLat)
-	input.CenterPointLon = float64(v.CenterPointLon)
-	input.DistanceLat = float64(v.DistanceLat)
-	input.DistanceLon = float64(v.DistanceLon)
-	input.Resolution = float64(v.Resolution)
+	input.Args.CenterPointLat = float64(v.CenterPointLat)
+	input.Args.CenterPointLon = float64(v.CenterPointLon)
+	input.Args.DistanceLat = float64(v.DistanceLat)
+	input.Args.DistanceLon = float64(v.DistanceLon)
+	input.Args.Resolution = float64(v.Resolution)
 	var output struct {
-		XMLName       struct{}   `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl LatLonListSquareResponse"`
-		ListLatLonOut ListLatLon `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl listLatLonOut"`
+		XMLName struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl LatLonListSquare"`
+		Args    struct {
+			ListLatLonOut ListLatLon `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl listLatLonOut"`
+		} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl LatLonListSquareResponse"`
 	}
-	err := c.do("POST", "http://graphical.weather.gov/xml/SOAP_server/ndfdXMLserver.php", &input, &output)
-	return ListLatLon(output.ListLatLonOut), err
+	err := c.do("POST", "http://graphical.weather.gov/xml/SOAP_server/ndfdXMLserver.php", "http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl#LatLonListSquare", &input, &output)
+	return ListLatLon(output.Args.ListLatLonOut), err
 }
 
 // Returns four latitude and longitude pairs for corners of an NDFD grid and the minimum resolution that will return the entire grid
 func (c *Client) CornerPoints(sector Sector) (ListLatLon, error) {
 	var input struct {
-		XMLName struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl CornerPointsRequest"`
-		Sector  Sector   `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl sector"`
+		XMLName struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl CornerPoints"`
+		Args    struct {
+			Sector Sector `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl sector"`
+		} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl CornerPointsRequest"`
 	}
-	input.Sector = Sector(sector)
+	input.Args.Sector = Sector(sector)
 	var output struct {
-		XMLName       struct{}   `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl CornerPointsResponse"`
-		ListLatLonOut ListLatLon `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl listLatLonOut"`
+		XMLName struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl CornerPoints"`
+		Args    struct {
+			ListLatLonOut ListLatLon `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl listLatLonOut"`
+		} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl CornerPointsResponse"`
 	}
-	err := c.do("POST", "http://graphical.weather.gov/xml/SOAP_server/ndfdXMLserver.php", &input, &output)
-	return ListLatLon(output.ListLatLonOut), err
+	err := c.do("POST", "http://graphical.weather.gov/xml/SOAP_server/ndfdXMLserver.php", "http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl#CornerPoints", &input, &output)
+	return ListLatLon(output.Args.ListLatLonOut), err
 }
 
 // Returns a list of latitude and longitude pairs paired with the city names they correspond to
 func (c *Client) LatLonListCityNames(displayLevel DisplayLevel) (ListCityNames, error) {
 	var input struct {
-		XMLName      struct{}     `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl LatLonListCityNamesRequest"`
-		DisplayLevel DisplayLevel `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl displayLevel"`
+		XMLName struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl LatLonListCityNames"`
+		Args    struct {
+			DisplayLevel DisplayLevel `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl displayLevel"`
+		} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl LatLonListCityNamesRequest"`
 	}
-	input.DisplayLevel = DisplayLevel(displayLevel)
+	input.Args.DisplayLevel = DisplayLevel(displayLevel)
 	var output struct {
-		XMLName          struct{}      `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl LatLonListCityNamesResponse"`
-		ListCityNamesOut ListCityNames `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl listCityNamesOut"`
+		XMLName struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl LatLonListCityNames"`
+		Args    struct {
+			ListCityNamesOut ListCityNames `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl listCityNamesOut"`
+		} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl LatLonListCityNamesResponse"`
 	}
-	err := c.do("POST", "http://graphical.weather.gov/xml/SOAP_server/ndfdXMLserver.php", &input, &output)
-	return ListCityNames(output.ListCityNamesOut), err
+	err := c.do("POST", "http://graphical.weather.gov/xml/SOAP_server/ndfdXMLserver.php", "http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl#LatLonListCityNames", &input, &output)
+	return ListCityNames(output.Args.ListCityNamesOut), err
 }
