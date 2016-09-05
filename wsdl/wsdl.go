@@ -182,8 +182,14 @@ func parseOperations(targetNS string, root, port *xmltree.Element) []Operation {
 				for _, output := range op.Search(wsdlNS, "output") {
 					oper.Output = output.Resolve(output.Attr("", "message"))
 				}
-				for _, soapOp := range op.Search(soapNS, "operation") {
-					oper.SOAPAction = soapOp.Attr("", "soapAction")
+				bindingSearch := func(el *xmltree.Element) bool {
+					return el.Name == op.Name &&
+						el.Attr("", "name") == op.Attr("", "name")
+				}
+				for _, el := range bind.SearchFunc(bindingSearch) {
+					for _, soapOp := range el.Search(soapNS, "operation") {
+						oper.SOAPAction = soapOp.Attr("", "soapAction")
+					}
 				}
 				ops = append(ops, oper)
 			}
