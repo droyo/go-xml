@@ -286,7 +286,7 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type)) xsd.Type {
 		// is useful enough for its own Go type. Our threshold for "useful enough"
 		// is pretty low; if we can attach a godoc comment to it describing how it
 		// should be used, that's good enough.
-		if t.List {
+		if t.List || len(t.Union) > 0 {
 			return t
 		}
 		if len(t.Restriction.Enum) > 0 {
@@ -305,7 +305,7 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type)) xsd.Type {
 			t.Doc = "Must be at least " + strconv.Itoa(t.Restriction.MinLength) + " items long"
 			return t
 		}
-		return nil
+		return t.Base
 	case *xsd.ComplexType:
 		// We can "unpack" a struct if it is extending a simple
 		// or built-in type and we are ignoring all of its attributes.
@@ -330,11 +330,6 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type)) xsd.Type {
 		// need additional methods for unmarshalling.
 		for i, el := range t.Elements {
 			el.Type = cfg.flatten1(el.Type, push)
-			if b, ok := el.Type.(*xsd.SimpleType); ok {
-				if !b.List && len(b.Union) == 0 {
-					el.Type = xsd.Base(el.Type)
-				}
-			}
 			t.Elements[i] = el
 			push(el.Type)
 			cfg.debugf("%T(%s): %v", t, xsd.XMLName(t).Local,
@@ -342,11 +337,6 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type)) xsd.Type {
 		}
 		for i, attr := range t.Attributes {
 			attr.Type = cfg.flatten1(attr.Type, push)
-			if b, ok := attr.Type.(*xsd.SimpleType); ok {
-				if !b.List && len(b.Union) == 0 {
-					attr.Type = xsd.Base(attr.Type)
-				}
-			}
 			t.Attributes[i] = attr
 		}
 		cfg.debugf("%T(%s) -> %T(%s)", t, xsd.XMLName(t).Local,
