@@ -24,7 +24,9 @@ func TestUSTreasureSDN(t *testing.T) {
 func TestSoap(t *testing.T) {
 	testGen(t, "http://schemas.xmlsoap.org/soap/encoding/", "testdata/soap11.xsd")
 }
-
+func TestSimpleStruct(t *testing.T) {
+	testGen(t, "http://example.org/ns", "testdata/simple-struct.xsd")
+}
 func testGen(t *testing.T, ns string, files ...string) {
 	file, err := ioutil.TempFile("", "xsdgen")
 	if err != nil {
