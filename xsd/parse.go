@@ -117,6 +117,7 @@ func Parse(docs ...[]byte) ([]Schema, error) {
 		if err := s.addElementTypeAliases(schema[s.TargetNS], types); err != nil {
 			return nil, err
 		}
+		s.propagateMixedAttr()
 		result = append(result, s)
 	}
 	result = append(result, standardSchema)
@@ -390,6 +391,57 @@ func (s *Schema) addElementTypeAliases(root *xmltree.Element, types map[xml.Name
 	return nil
 }
 
+// Propagate the "mixed" attribute of a type appropriately to
+// all types derived from it.  For the propagation rules, see
+// https://www.w3.org/TR/xmlschema-1/#coss-ct. That Definition is written
+// for a computer, so I've translated the relevant portion into plain
+// English. My translation may be incorrect; check the reference if you
+// think so. The rules are as follows:
+//
+// 	- When extending a complex type, the derived type *must* be mixed iff
+//    the base type is mixed.
+// 	- When restricting a complex type, the derived type *may* be mixed iff
+//    the base type is mixed.
+// 	- The builtin "xs:anyType" is mixed.
+//
+// This package extends the concept of "Mixed" to apply to complex types
+// with simpleContent. This is done because Mixed is used as an indicator
+// that the user should care about the chardata content in a type.
+func (s *Schema) propagateMixedAttr() {
+	for _, t := range s.Types {
+		propagateMixedAttr(t, Base(t), 0)
+	}
+}
+
+func propagateMixedAttr(t, b Type, depth int) {
+	const maxDepth = 1000
+	if b == nil || depth > maxDepth {
+		return
+	}
+	// Mixed attr needs to "bubble up" from the bottom, so we
+	// recurse to do this backwards.
+	propagateMixedAttr(b, Base(b), depth+1)
+
+	c, ok := t.(*ComplexType)
+	if !ok || c.Mixed {
+		return
+	}
+	switch b := b.(type) {
+	case Builtin:
+		if b == AnyType {
+			c.Mixed = c.Mixed || c.Extends
+		}
+	case *ComplexType:
+		if c.Extends {
+			c.Mixed = b.Mixed
+		}
+	case *SimpleType:
+		c.Mixed = true
+	default:
+		panic(fmt.Sprintf("unexpected %T", b))
+	}
+}
+
 func (s *Schema) parse(root *xmltree.Element, extra map[string]*xmltree.Element) error {
 	unpackTopElements(root)
 	expandComplexShorthand(root)
@@ -423,6 +475,8 @@ func (s *Schema) parseComplexType(root *xmltree.Element) *ComplexType {
 	var doc annotation
 	t.Name = root.ResolveDefault(root.Attr("", "name"), s.TargetNS)
 	t.Abstract = parseBool(root.Attr("", "abstract"))
+	t.Mixed = parseBool(root.Attr("", "mixed"))
+
 	// We set this special attribute in a pre-processing step.
 	t.Anonymous = (root.Attr("", "_isAnonymous") == "true")
 
@@ -446,6 +500,8 @@ func (s *Schema) parseComplexType(root *xmltree.Element) *ComplexType {
 // contains only character data and no elements
 func (t *ComplexType) parseSimpleContent(ns string, root *xmltree.Element) {
 	var doc annotation
+
+	t.Mixed = true
 	walk(root, func(el *xmltree.Element) {
 		switch el.Name.Local {
 		case "annotation":
@@ -467,7 +523,9 @@ func (t *ComplexType) parseSimpleContent(ns string, root *xmltree.Element) {
 // the content model of a complex type.
 func (t *ComplexType) parseComplexContent(ns string, root *xmltree.Element) {
 	var doc annotation
-
+	if mixed := root.Attr("", "mixed"); mixed != "" {
+		t.Mixed = parseBool(mixed)
+	}
 	walk(root, func(el *xmltree.Element) {
 		switch el.Name.Local {
 		case "extension":
