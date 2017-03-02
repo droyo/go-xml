@@ -393,17 +393,27 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 	var result []spec
 	var fields []ast.Expr
 
-	if t.Extends {
-		base, err := cfg.expr(t.Base)
+	if t.Mixed {
+		// For complex types with mixed content models, we must drill
+		// down to the base simple or builtin type to determine the
+		// ",chardata" struct field.
+		base := xsd.Base(t)
+		for xsd.Base(base) != nil {
+			if _, ok := base.(*xsd.SimpleType); ok {
+				break
+			}
+			base = xsd.Base(base)
+		}
+		expr, err := cfg.expr(base)
 		if err != nil {
 			return nil, fmt.Errorf("%s base type %s: %v",
 				t.Name.Local, xsd.XMLName(t.Base).Local, err)
 		}
-		switch b := t.Base.(type) {
+		switch b := base.(type) {
 		case *xsd.SimpleType:
 			cfg.debugf("complexType %[1]s extends simpleType %[2]s. Naming"+
 				" the chardata struct field after %[2]s", t.Name.Local, b.Name.Local)
-			fields = append(fields, base, base, gen.String(`xml:",chardata"`))
+			fields = append(fields, expr, expr, gen.String(`xml:",chardata"`))
 		case xsd.Builtin:
 			if b == xsd.AnyType {
 				// extending anyType doesn't really make sense, but
@@ -415,12 +425,22 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 			// Name the field after the xsd type name.
 			cfg.debugf("complexType %[1]s extends %[2]s, naming chardata struct field %[2]s",
 				t.Name.Local, b)
-			fields = append(fields, ast.NewIdent(b.String()), base, gen.String(`xml:",chardata"`))
-		case *xsd.ComplexType:
+			fields = append(fields, ast.NewIdent("Value"), expr, gen.String(`xml:",chardata"`))
+		default:
+			panic(fmt.Sprintf("%s does not derive from a builtin type", t.Name.Local))
+		}
+	}
+	if t.Extends {
+		expr, err := cfg.expr(t.Base)
+		if err != nil {
+			return nil, fmt.Errorf("%s base type %s: %v",
+				t.Name.Local, xsd.XMLName(t.Base).Local, err)
+		}
+		if b, ok := t.Base.(*xsd.ComplexType); ok {
 			// Use struct embedding when extending a complex type
 			cfg.debugf("complexType %s extends %s, embedding struct",
 				t.Name.Local, b.Name.Local)
-			fields = append(fields, nil, base, nil)
+			fields = append(fields, nil, expr, nil)
 		}
 	} else {
 		// When restricting a complex type, all attributes are "inherited" from

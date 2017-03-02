@@ -1,0 +1,72 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" 
+           xmlns="http://example.net"
+           targetNamespace="http://example.net">
+  <!-- in the following schema, (almost) all types have a mixed content type. -->
+
+  <!-- explicit mixed=true on complexType -->
+  <xs:complexType name="MIXED_explicit" mixed="true">
+    <xs:element name="value" type="xs:decimal"/>
+  </xs:complexType>
+
+  <!-- explicit mixed=true on complexContent -->
+  <xs:complexType name="MIXED_explicitComplexContent">
+    <xs:complexContent mixed="true">
+      <xs:extension base="xs:anyType">
+        <xs:element name="value" type="xs:decimal"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <!-- implicit mixed by extending anyType -->
+  <xs:complexType name="MIXED_extendAnyType">
+    <xs:complexContent>
+      <xs:extension base="xs:anyType">
+        <xs:element name="value" type="xs:decimal"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <!-- implicit mixed by extending a simple type (this is our
+       own interpretation of the spec) -->
+  <xs:complexType name="MIXED_extendSimpleType">
+    <xs:simpleContent>
+      <xs:extension base="xs:decimal">
+        <xs:attribute name="precision" type="xs:int"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <!-- implicit mixed by restricting a simple type (see above comment) -->
+  <xs:complexType name="MIXED_restrictSimpleType">
+    <xs:simpleContent>
+      <xs:restriction base="xs:decimal">
+        <xs:minInclusive value="100"/>
+      </xs:restriction>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <!-- implicit mixed by extending a mixed complexType -->
+  <xs:complexType name="MIXED_extendMixedComplexType">
+    <xs:complexContent>
+      <xs:extension base="MIXED_explicit">
+        <xs:element name="geo" type="xs:string"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <!-- NOT MIXED: restricting a mixed type (explicit) -->
+  <xs:complexType name="NOTMIXED_explicitRestrictMixedType" mixed="false">
+    <xs:complexContent>
+      <xs:restriction base="MIXED_explicit">
+      </xs:restriction>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <!-- NOT MIXED: restricting a mixed type (implicit) -->
+  <xs:complexType name="NOTMIXED_implicitRestrictMixedType">
+    <xs:complexContent>
+      <xs:restriction base="MIXED_explicit">
+      </xs:restriction>
+  </xs:complexContent>
+  </xs:complexType>
+</xs:schema>

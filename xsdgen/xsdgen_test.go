@@ -3,10 +3,19 @@ package xsdgen
 import (
 	"io/ioutil"
 	"os"
+	"regexp"
 	"testing"
 )
 
 type testLogger testing.T
+
+func grep(pattern, data string) bool {
+	matched, err := regexp.MatchString(pattern, data)
+	if err != nil {
+		panic(err)
+	}
+	return matched
+}
 
 func (t *testLogger) Printf(format string, v ...interface{}) {
 	t.Logf(format, v...)
@@ -27,7 +36,7 @@ func TestSoap(t *testing.T) {
 func TestSimpleStruct(t *testing.T) {
 	testGen(t, "http://example.org/ns", "testdata/simple-struct.xsd")
 }
-func testGen(t *testing.T, ns string, files ...string) {
+func testGen(t *testing.T, ns string, files ...string) string {
 	file, err := ioutil.TempFile("", "xsdgen")
 	if err != nil {
 		t.Fatal(err)
@@ -43,9 +52,18 @@ func testGen(t *testing.T, ns string, files ...string) {
 	if err != nil {
 		t.Error(err)
 	}
-	if data, err := ioutil.ReadFile(file.Name()); err != nil {
-		t.Error(err)
+	data, err := ioutil.ReadFile(file.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data)
+}
+
+func TestMixedType(t *testing.T) {
+	data := testGen(t, "http://example.org", "testdata/mixed-complex.xsd")
+	if !grep(`PositiveNumber[^}]*,chardata`, data) {
+		t.Errorf("type decl for PositiveNumber did not contain chardata, got \n%s", data)
 	} else {
-		t.Logf("\n%s\n", data)
+		t.Logf("got \n%s", data)
 	}
 }

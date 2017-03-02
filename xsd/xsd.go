@@ -165,6 +165,9 @@ type ComplexType struct {
 	// this type is derived by restricting the set of elements and
 	// attributes allowed in Base.
 	Extends bool
+	// If true, this type is allowed to contain character data that is
+	// not part of any sub-element.
+	Mixed bool
 }
 
 func (*ComplexType) isType() {}

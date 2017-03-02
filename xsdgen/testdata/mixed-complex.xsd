@@ -1,0 +1,20 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:ns="http://example.org" targetNamespace="http://example.org">
+
+  <xs:complexType name="Number">
+    <xs:simpleContent>
+      <xs:extension base="xs:double">
+        <xs:attribute name="precision" type="xs:int"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="PositiveNumber">
+    <xs:simpleContent>
+      <xs:restriction base="ns:Number">
+        <xs:minInclusive value="1"/>
+      </xs:restriction>
+    </xs:simpleContent>
+  </xs:complexType>
+
+</xs:schema>
+
