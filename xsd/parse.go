@@ -310,7 +310,10 @@ Into
 */
 func unpackTopElements(root *xmltree.Element) {
 	for _, el := range root.Children {
-		if (el.Name != xml.Name{schemaNS, "element"}) {
+		if el.Name.Space != schemaNS {
+			continue
+		}
+		if name := el.Name.Local; name != "element" && name != "attribute" {
 			continue
 		}
 		childTypes := el.SearchFunc(isType)
@@ -322,6 +325,46 @@ func unpackTopElements(root *xmltree.Element) {
 			continue
 		}
 		child.SetAttr("", "name", el.Attr("", "name"))
+	}
+}
+
+// a complex type defined without any simpleContent or
+// complexContent is interpreted as shorthand for complex
+// content that restricts anyType.
+func expandComplexShorthand(root *xmltree.Element) {
+	isComplexType := isElem(schemaNS, "complexType")
+
+Loop:
+	for _, el := range root.SearchFunc(isComplexType) {
+		for _, child := range el.Children {
+			switch {
+			case child.Name.Space != schemaNS:
+				continue
+			case child.Name.Local == "simpleContent",
+				child.Name.Local == "complexContent",
+				child.Name.Local == "annotation":
+				continue
+			}
+			restrict := xmltree.Element{
+				Scope:    el.Scope,
+				Content:  el.Content,
+				Children: el.Children,
+			}
+			restrict.Name.Space = schemaNS
+			restrict.Name.Local = "restriction"
+			restrict.SetAttr("", "base", restrict.Prefix(AnyType.Name()))
+
+			content := xmltree.Element{
+				Scope:    el.Scope,
+				Children: []xmltree.Element{restrict},
+			}
+			content.Name.Space = schemaNS
+			content.Name.Local = "complexContent"
+
+			el.Content = nil
+			el.Children = []xmltree.Element{content}
+			continue Loop
+		}
 	}
 }
 
@@ -349,6 +392,7 @@ func (s *Schema) addElementTypeAliases(root *xmltree.Element, types map[xml.Name
 
 func (s *Schema) parse(root *xmltree.Element, extra map[string]*xmltree.Element) error {
 	unpackTopElements(root)
+	expandComplexShorthand(root)
 	if err := nameAnonymousTypes(root, s.TargetNS); err != nil {
 		return err
 	}
@@ -391,27 +435,7 @@ func (s *Schema) parseComplexType(root *xmltree.Element) *ComplexType {
 		case "complexContent":
 			t.parseComplexContent(s.TargetNS, el)
 		default:
-			// a complex type defined without any simpleContent or
-			// complexContent is interpreted as shorthand for complex
-			// content that restricts anyType.
-			children := root.Children
-			root.Children = nil
-
-			restrict := *root
-			restrict.StartElement = xml.StartElement{
-				Name: xml.Name{schemaNS, "restriction"},
-			}
-			restrict.SetAttr("", "base", restrict.Prefix(AnyType.Name()))
-			restrict.Children = children
-
-			content := *root
-			content.StartElement = xml.StartElement{
-				Name: xml.Name{schemaNS, "complexContent"},
-			}
-			content.Children = []xmltree.Element{restrict}
-			root.Children = []xmltree.Element{content}
-
-			t.parseComplexContent(s.TargetNS, &content)
+			stop("unexpected element " + el.Name.Local)
 		}
 	})
 	t.Doc += string(doc)
