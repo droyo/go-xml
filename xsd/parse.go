@@ -552,6 +552,7 @@ func (t *ComplexType) parseComplexContent(ns string, root *xmltree.Element) {
 }
 
 func parseInt(s string) int {
+	s = strings.TrimSpace(s)
 	switch s {
 	case "":
 		return 0
@@ -559,6 +560,20 @@ func parseInt(s string) int {
 		return -1
 	}
 	n, err := strconv.Atoi(s)
+	if err != nil {
+		stop(err.Error())
+	}
+	return n
+}
+
+// https://www.w3.org/TR/xmlschema-2/#decimal
+func parseDecimal(s string) float64 {
+	s = strings.TrimSpace(s)
+	switch s {
+	case "":
+		return 0
+	}
+	n, err := strconv.ParseFloat(s, 64)
 	if err != nil {
 		stop(err.Error())
 	}
@@ -692,17 +707,13 @@ func parseSimpleRestriction(root *xmltree.Element) Restriction {
 		switch el.Name.Local {
 		case "enumeration":
 			r.Enum = append(r.Enum, el.Attr("", "value"))
-		case "minExclusive":
+		case "minExclusive", "minInclusive":
 			// NOTE(droyo) min/max is also valid in XSD for
 			// dateTime elements. Currently, such an XSD will
 			// cause an error here.
-			r.Min = parseInt(el.Attr("", "value"))
-		case "minInclusive":
-			r.Min = parseInt(el.Attr("", "value")) - 1
-		case "maxExclusive":
-			r.Max = parseInt(el.Attr("", "value"))
-		case "maxInclusive":
-			r.Max = parseInt(el.Attr("", "value")) + 1
+			r.Min = parseDecimal(el.Attr("", "value"))
+		case "maxExclusive", "maxInclusive":
+			r.Max = parseDecimal(el.Attr("", "value"))
 		case "length":
 			r.MaxLength = parseInt(el.Attr("", "value"))
 		case "minLength":

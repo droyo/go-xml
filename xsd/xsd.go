@@ -223,7 +223,7 @@ type Restriction struct {
 	Enum []string
 	// The minimum and maximum (exclusive) value of this type, if
 	// numeric
-	Min, Max int
+	Min, Max float64
 	// Maximum and minimum length (in characters) of this type
 	MinLength, MaxLength int
 	// Regular expression that values of this type must match
