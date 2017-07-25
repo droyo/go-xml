@@ -44,7 +44,7 @@ func TestNationalWeatherForecast(t *testing.T) {
 	testGen(t, "../testdata/ndfdXML.wsdl")
 }
 
-func testGlobalWeather(t *testing.T) {
+func TestGlobalWeather(t *testing.T) {
 	testGen(t, "../testdata/webservicex-globalweather-ws.wsdl")
 }
 
