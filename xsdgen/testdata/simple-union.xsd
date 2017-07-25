@@ -1,0 +1,6 @@
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    targetNamespace="http://example.org/">
+  <xs:simpleType name="ConditionalUintType">
+    <xs:union memberTypes="xs:unsignedInt xs:boolean"/>
+  </xs:simpleType>
+</xs:schema>
