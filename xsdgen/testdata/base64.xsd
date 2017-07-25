@@ -1,0 +1,16 @@
+<schema xmlns="http://www.w3.org/2001/XMLSchema" targetNamespace="http://example.org/">
+  <simpleType name="data">
+    <restriction base="base64Binary">
+      <length value="10" />
+    </restriction>
+  </simpleType>
+
+  <complexType name="Content">
+    <simpleContent>
+      <extension base="base64Binary">
+        <attribute name="length" type="int"/>
+      </extension>
+    </simpleContent>
+  </complexType>
+</schema>
+

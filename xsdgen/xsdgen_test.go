@@ -67,3 +67,7 @@ func TestMixedType(t *testing.T) {
 		t.Logf("got \n%s", data)
 	}
 }
+
+func TestBase64Binary(t *testing.T) {
+	t.Logf("%s\n", testGen(t, "http://example.org/", "testdata/base64.xsd"))
+}
