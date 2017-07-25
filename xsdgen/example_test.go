@@ -293,8 +293,8 @@ func ExampleUseFieldNames() {
 	// func (t *xsdDate) UnmarshalText(text []byte) error {
 	// 	return _unmarshalTime(text, (*time.Time)(t), "2006-01-02")
 	// }
-	// func (t *xsdDate) MarshalText() ([]byte, error) {
-	// 	return []byte((*time.Time)(t).Format("2006-01-02")), nil
+	// func (t xsdDate) MarshalText() ([]byte, error) {
+	// 	return []byte((time.Time)(t).Format("2006-01-02")), nil
 	// }
 	// func _unmarshalTime(text []byte, t *time.Time, format string) (err error) {
 	// 	s := string(bytes.TrimSpace(text))

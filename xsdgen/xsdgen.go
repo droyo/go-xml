@@ -613,10 +613,10 @@ func (cfg *Config) genTimeSpec(t xsd.Builtin) ([]spec, error) {
 		return nil, fmt.Errorf("could not generate unmarshal function for %s: %v", s.name, err)
 	}
 	marshal, err := gen.Func("MarshalText").
-		Receiver("t *"+s.name).
+		Receiver("t "+s.name).
 		Returns("[]byte", "error").
 		Body(`
-			return []byte((*time.Time)(t).Format(%q)), nil
+			return []byte((time.Time)(t).Format(%q)), nil
 		`, timespec).Decl()
 	if err != nil {
 		return nil, fmt.Errorf("could not generate marshal function for %s: %v", s.name, err)
