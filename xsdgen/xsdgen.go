@@ -276,8 +276,11 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type)) xsd.Type {
 			}
 		}
 		t.Base = builtin
-		cfg.debugf("%T(%s) -> %T(%s)", t, xsd.XMLName(t).Local,
-			t.Base, xsd.XMLName(t.Base).Local)
+
+		if t.Base != nil {
+			cfg.debugf("%T(%s) -> %T(%s)", t, xsd.XMLName(t).Local,
+				t.Base, xsd.XMLName(t.Base).Local)
+		}
 
 		// NOTE(droyo) if a simpleType does not impose any(many?) restrictions
 		// on a builtin type, and does not require its own XML marshal/unmarshal
