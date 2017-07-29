@@ -2,6 +2,8 @@ package xmltree
 
 import (
 	"encoding/xml"
+	"io/ioutil"
+	"strings"
 	"testing"
 )
 
@@ -146,6 +148,14 @@ func parseDoc(t *testing.T, document []byte) *Element {
 	return root
 }
 
+func parseFile(t *testing.T, filename string) *Element {
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return parseDoc(t, data)
+}
+
 func TestParse(t *testing.T) {
 	var buf struct {
 		Data []byte `xml:",innerxml"`
@@ -283,4 +293,31 @@ func TestUnmarshal(t *testing.T) {
 		t.Errorf("modification to <item> URL field was not respected: %s != %s", v.URL, changedURL)
 	}
 	t.Logf("%#v", v)
+}
+
+func TestCharset(t *testing.T) {
+	const term = "äventyrs"
+	root := parseFile(t, "testdata/iso8859-1.xsd")
+	result := root.SearchFunc(func(el *Element) bool {
+		return el.Attr("", "genre") == term
+	})
+	for _, el := range result {
+		t.Logf("found %s value=%s", el.Name.Local,
+			el.Attr("", "value"))
+	}
+	if len(result) == 0 {
+		doc := root.Flatten()
+		items := make([]string, 0, len(doc))
+		for _, el := range doc {
+			s := el.Name.Local
+			for _, attr := range el.StartElement.Attr {
+				s += " " + attr.Name.Local + "=" + attr.Value
+			}
+			items = append(items, s)
+		}
+		t.Errorf("could not find %q in \n%s", term, strings.Join(items, "\n"))
+	} else {
+		out := MarshalIndent(root, "", "  ")
+		t.Logf("%s\n", out)
+	}
 }
