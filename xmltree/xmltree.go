@@ -152,15 +152,16 @@ func (scope *Scope) Prefix(name xml.Name) (qname string) {
 	return qname
 }
 
-func (scope *Scope) pushNS(tag xml.StartElement) {
+func (scope *Scope) pushNS(tag xml.StartElement) []xml.Attr {
 	var ns []xml.Name
+	var newAttrs []xml.Attr
 	for _, attr := range tag.Attr {
 		if attr.Name.Space == "xmlns" {
 			ns = append(ns, xml.Name{attr.Value, attr.Name.Local})
 		} else if attr.Name.Local == "xmlns" {
 			ns = append(ns, xml.Name{attr.Value, ""})
 		} else {
-			continue
+			newAttrs = append(newAttrs, attr)
 		}
 	}
 	if len(ns) > 0 {
@@ -170,6 +171,7 @@ func (scope *Scope) pushNS(tag xml.StartElement) {
 		// being clobbered during parsing.
 		scope.ns = scope.ns[:len(scope.ns):len(scope.ns)]
 	}
+	return newAttrs
 }
 
 // Save some typing when scanning xml
@@ -239,7 +241,7 @@ func (el *Element) parse(scanner *scanner, data []byte, depth int) error {
 	if depth > recursionLimit {
 		return errDeepXML
 	}
-	el.pushNS(el.StartElement)
+	el.StartElement.Attr = el.pushNS(el.StartElement)
 
 	begin := scanner.InputOffset()
 	end := begin

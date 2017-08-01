@@ -321,3 +321,22 @@ func TestCharset(t *testing.T) {
 		t.Logf("%s\n", out)
 	}
 }
+
+func TestExistingNSAttrs(t *testing.T) {
+	root := parseDoc(t, exampleDoc)
+
+	// marshal it to duplicate the scope ns into the existing attrs
+	out := Marshal(root)
+
+	// Parse that again so we can inspect the results
+	root = parseDoc(t, out)
+
+	// Check for any duplicate attributes
+	found := map[xml.Name]bool{}
+	for _, attr := range root.StartElement.Attr {
+		if found[attr.Name] {
+			t.Fatalf("Found duplicate attribute: %v", attr)
+		}
+		found[attr.Name] = true
+	}
+}
