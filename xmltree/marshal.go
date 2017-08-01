@@ -23,12 +23,13 @@ var tagTmpl = template.Must(template.New("Marshal XML tags").Parse(
 	{{define "end" -}}
 	</{{.Prefix .Name}}>{{end}}`))
 
-// Marshal produces the XML encoding of an Element
-// as a self-contained document. The xmltree package
-// may adjust the declarations of XML namespaces if
-// the Element has been modified, or is part of a larger
-// scope, such that the document produced by Marshal
-// is a valid XML document.
+// Marshal produces the XML encoding of an Element as a self-contained
+// document. The xmltree package may adjust the declarations of XML
+// namespaces if the Element has been modified, or is part of a larger scope,
+// such that the document produced by Marshal is a valid XML document.
+//
+// The return value of Marshal will use the utf-8 encoding regardless of
+// the original encoding of the source document.
 func Marshal(el *Element) []byte {
 	var buf bytes.Buffer
 	if err := Encode(&buf, el); err != nil {
