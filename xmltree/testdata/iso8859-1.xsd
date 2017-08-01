@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<catalog>
+   <book id="bk101" genre="Computer">
+      <author>Gambardella, Matthew</author>
+      <title>XML Developer's Guide</title>
+      <genre>Computer</genre>
+      <price>44.95</price>
+      <publish_date>2000-10-01</publish_date>
+      <description>An in-depth look at creating applications 
+      with XML.</description>
+   </book>
+   <book id="bk102" genre="äventyrs">
+      <author>Astrid Lindgren</author>
+      <title>Bröderna Lejonhjärta</title>
+      <price>46.27</price>
+      <publish_date>1973</publish_date>
+      <description> Nangijala upplever bröderna äventyr och tillsammans med andra motståndskämpar för de kampen mot den ondskefulle Tengils förtryck och draken Katla. Boken är illustrerad av Ilon Wikland och översatt till 46 språk</description>
+   </book>
+   <book id="bk103" genre="Fantasy">
+      <author>Corets, Eva</author>
+      <title>Maeve Ascendant</title>
+      <genre>Fantasy</genre>
+      <price>5.95</price>
+      <publish_date>2000-11-17</publish_date>
+      <description>After the collapse of a nanotechnology 
+      society in England, the young survivors lay the 
+      foundation for a new society.</description>
+   </book>
+</catalog>
