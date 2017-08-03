@@ -292,6 +292,15 @@ func (fn *Function) Decl() (*ast.FuncDecl, error) {
 	}, nil
 }
 
+// MustDecl is like Decl, but panics if an error is returned.
+func (fn *Function) MustDecl() *ast.FuncDecl {
+	decl, err := fn.Decl()
+	if err != nil {
+		panic(err)
+	}
+	return decl
+}
+
 // Body sets the body of a function. The body should not include
 // enclosing braces.
 func (fn *Function) Body(format string, v ...interface{}) *Function {

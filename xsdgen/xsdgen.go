@@ -80,7 +80,7 @@ func (c *Code) NameOf(name xml.Name) string {
 		return "NOTFOUND" + name.Local
 	}
 
-	switch b := c.cfg.flatten1(t, func(xsd.Type) {}).(type) {
+	switch b := c.cfg.flatten1(t, func(xsd.Type) {}, 0).(type) {
 	case xsd.Builtin:
 		return c.NameOf(b.Name())
 	}
@@ -169,6 +169,21 @@ func (cfg *Config) gen(primaries, deps []xsd.Schema) (*Code, error) {
 		}
 	}
 
+	for t, s := range code.decls {
+		for _, dep := range s.helperTypes {
+			if h, ok := cfg.helperTypes[dep]; ok {
+				code.decls[h.name] = h
+				delete(cfg.helperTypes, dep)
+			}
+		}
+		for _, dep := range s.helperFuncs {
+			if h, ok := cfg.helperFuncs[dep]; ok {
+				s.methods = append(s.methods, h)
+				code.decls[t] = s
+				delete(code.decls, dep)
+			}
+		}
+	}
 	return code, nil
 }
 
@@ -213,11 +228,22 @@ type spec struct {
 	private   bool
 	methods   []*ast.FuncDecl
 	xsdType   xsd.Type
+	helperTypes []xml.Name
+	helperFuncs []string
 }
 
-// Flatten out our tree of dependent types. If a type is marked as
-// private by a user filter and not used as a struct field or embedded
-// struct, it is ommitted from the output.
+// To reduce the size of the Go source generated, all intermediate types
+// are "squashed"; every type should be based on a Builtin or another
+// type that the user wants included in the Go source. In affect, what we
+// want to do is take the linked list:
+//
+// 	t1 -> t2 -> t3 -> builtin
+//
+// And produce a set of tuples:
+//
+// 	t1 -> builtin, t2 -> builtin, t3 -> builtin
+//
+// This is a heuristic that tends to generate better-looking Go code.
 func (cfg *Config) flatten(types map[xml.Name]xsd.Type) []xsd.Type {
 	var result []xsd.Type
 	push := func(t xsd.Type) {
@@ -233,28 +259,29 @@ func (cfg *Config) flatten(types map[xml.Name]xsd.Type) []xsd.Type {
 				continue
 			}
 		}
-		if t := cfg.flatten1(t, push); t != nil {
+		if t := cfg.flatten1(t, push, 0); t != nil {
 			result = append(result, t)
 		}
 	}
-	// Remove duplicates
-	seen := make(map[xml.Name]bool)
-	var a []xsd.Type
-	for _, v := range result {
-		name := xsd.XMLName(v)
-		if _, ok := seen[name]; !ok {
-			seen[name] = true
-			a = append(a, v)
-		}
-	}
-	cfg.debugf("discovered %d types", len(a))
-	return a
+	return dedup(result)
 }
 
-// To reduce the size of the Go source generated, all intermediate types
-// are "squashed"; every type should be based on a Builtin or another
-// type that the user wants included in the Go source.
-func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type)) xsd.Type {
+func dedup(types []xsd.Type) (unique []xsd.Type) {
+	seen := make(map[xml.Name]bool)
+	for _, v := range types {
+		if name := xsd.XMLName(v); !seen[name] {
+			seen[name] = true
+			unique = append(unique, v)
+		}
+	}
+	return unique
+}
+
+func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type), depth int) xsd.Type {
+	const maxDepth = 1000
+	if depth > maxDepth {
+		return t
+	}
 	switch t := t.(type) {
 	case *xsd.SimpleType:
 		var (
@@ -292,6 +319,9 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type)) xsd.Type {
 		if t.List || len(t.Union) > 0 {
 			return t
 		}
+		if nonTrivialBuiltin(t.Base) {
+			return t
+		}
 		if len(t.Restriction.Enum) > 0 {
 			t.Doc = "May be one of " + strings.Join(t.Restriction.Enum, ", ")
 			return t
@@ -325,39 +355,27 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type)) xsd.Type {
 				case xsd.Builtin:
 					return b
 				case *xsd.SimpleType:
-					return cfg.flatten1(t.Base, push)
+					return cfg.flatten1(t.Base, push, depth+1)
 				}
 			}
 		}
 		// We can flatten a struct field if its type does not
 		// need additional methods for unmarshalling.
 		for i, el := range t.Elements {
-			el.Type = cfg.flatten1(el.Type, push)
+			el.Type = cfg.flatten1(el.Type, push, depth+1)
 			t.Elements[i] = el
 			push(el.Type)
 			cfg.debugf("%T(%s): %v", t, xsd.XMLName(t).Local,
 				xsd.XMLName(el.Type))
 		}
 		for i, attr := range t.Attributes {
-			attr.Type = cfg.flatten1(attr.Type, push)
+			attr.Type = cfg.flatten1(attr.Type, push, depth+1)
 			t.Attributes[i] = attr
 		}
 		cfg.debugf("%T(%s) -> %T(%s)", t, xsd.XMLName(t).Local,
 			t.Base, xsd.XMLName(t.Base).Local)
 		return t
 	case xsd.Builtin:
-		// There are a few built-ins that do not map directly to Go types.
-		// for these, we will declare them in the Go source.
-		switch t {
-		case xsd.ENTITIES, xsd.IDREFS, xsd.NMTOKENS:
-			push(t)
-		case xsd.Base64Binary, xsd.HexBinary:
-			push(t)
-		case xsd.Date, xsd.Time, xsd.DateTime:
-			push(t)
-		case xsd.GDay, xsd.GMonth, xsd.GMonthDay, xsd.GYear, xsd.GYearMonth:
-			push(t)
-		}
 		return t
 	}
 	panic(fmt.Sprintf("unexpected %T(%s %s)", t, xsd.XMLName(t).Space, xsd.XMLName(t).Local))
@@ -373,16 +391,7 @@ func (cfg *Config) genTypeSpec(t xsd.Type) (result []spec, err error) {
 	case *xsd.ComplexType:
 		s, err = cfg.genComplexType(t)
 	case xsd.Builtin:
-		// Some built-ins, though built-in, require marshal/unmarshal methods
-		// to be able to use them with the encoding/xml package.
-		switch t {
-		case xsd.Date, xsd.Time, xsd.DateTime, xsd.GDay, xsd.GMonth, xsd.GMonthDay, xsd.GYear, xsd.GYearMonth:
-			s, err = cfg.genTimeSpec(t)
-		case xsd.HexBinary, xsd.Base64Binary:
-			s, err = cfg.genBinarySpec(t)
-		case xsd.ENTITIES, xsd.IDREFS, xsd.NMTOKENS:
-			s, err = cfg.genTokenListSpec(t)
-		}
+		// pass
 	default:
 		cfg.logf("unexpected %T %s", t, xsd.XMLName(t).Local)
 	}
@@ -392,9 +401,17 @@ func (cfg *Config) genTypeSpec(t xsd.Type) (result []spec, err error) {
 	return append(result, s...), nil
 }
 
+type fieldOverride struct {
+	Name, Value, TypeName string
+	XMLName               xml.Name
+	Type                  xsd.Type
+	Tag string
+}
+
 func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 	var result []spec
 	var fields []ast.Expr
+	var overrides []fieldOverride
 
 	if t.Mixed {
 		// For complex types with mixed content models, we must drill
@@ -428,7 +445,22 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 			// Name the field after the xsd type name.
 			cfg.debugf("complexType %[1]s extends %[2]s, naming chardata struct field %[2]s",
 				t.Name.Local, b)
-			fields = append(fields, ast.NewIdent("Value"), expr, gen.String(`xml:",chardata"`))
+			name := "Value"
+			tag := `xml:",chardata"`
+			if nonTrivialBuiltin(b) {
+				helper, ok := cfg.helperTypes[xsd.XMLName(b)]
+				if !ok {
+					return nil, fmt.Errorf("missing helper type for %v", b)
+				}
+				overrides = append(overrides, fieldOverride{
+					Name: name,
+					TypeName: helper.name,
+					XMLName: xsd.XMLName(b),
+					Type: b,
+					Tag: tag,
+				})
+			}
+			fields = append(fields, ast.NewIdent(name), expr, gen.String(tag))
 		default:
 			panic(fmt.Sprintf("%s does not derive from a builtin type", t.Name.Local))
 		}
@@ -474,18 +506,34 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 	attributes, elements := cfg.filterFields(t)
 	cfg.debugf("complexType %s: generating struct fields for %d elements and %d attributes",
 		xsd.XMLName(t).Local, len(elements), len(attributes))
-	hasDefault := false
+
 	for _, attr := range attributes {
-		hasDefault = hasDefault || (attr.Default != "")
 		tag := fmt.Sprintf(`xml:"%s,attr"`, attr.Name.Local)
 		base, err := cfg.expr(attr.Type)
 		if err != nil {
 			return nil, fmt.Errorf("%s attribute %s: %v", t.Name.Local, attr.Name.Local, err)
 		}
 		fields = append(fields, ast.NewIdent(cfg.public(attr.Name)), base, gen.String(tag))
+		if attr.Default != "" || nonTrivialBuiltin(attr.Type) {
+			typeName := cfg.public(xsd.XMLName(attr.Type))
+			if nonTrivialBuiltin(attr.Type) {
+				h, ok := cfg.helperTypes[xsd.XMLName(attr.Type)]
+				if !ok {
+					return nil, fmt.Errorf("no helper type for type %v attribute %v", t.Name, attr.Name)
+				}
+				typeName = h.name
+			}
+			overrides = append(overrides, fieldOverride{
+				Name:     cfg.public(attr.Name),
+				Value:    attr.Default,
+				Type:     attr.Type,
+				Tag:      tag,
+				XMLName:  attr.Name,
+				TypeName: typeName,
+			})
+		}
 	}
 	for _, el := range elements {
-		hasDefault = hasDefault || (el.Default != "")
 		options := ""
 		if el.Nillable {
 			options = ",omitempty"
@@ -512,6 +560,24 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 			base = &ast.ArrayType{Elt: base}
 		}
 		fields = append(fields, name, base, gen.String(tag))
+		if el.Default != "" || nonTrivialBuiltin(el.Type) {
+			typeName := cfg.public(xsd.XMLName(el.Type))
+			if nonTrivialBuiltin(el.Type) {
+				h, ok := cfg.helperTypes[xsd.XMLName(el.Type)]
+				if !ok {
+					return nil, fmt.Errorf("no helper type for type %v element %v", t.Name, el.Name)
+				}
+				typeName = h.name
+			}
+			overrides = append(overrides, fieldOverride{
+				Name:     cfg.public(el.Name),
+				Value:    el.Default,
+				Type:     el.Type,
+				Tag:      tag,
+				TypeName: typeName,
+				XMLName:  el.Name,
+			})
+		}
 	}
 	expr := gen.Struct(fields...)
 	s := spec{
@@ -520,10 +586,9 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 		expr:    expr,
 		xsdType: t,
 	}
-	if hasDefault {
-		unmarshal, marshal, err := cfg.genMarshalComplexType(t)
+	if len(overrides) > 0 {
+		unmarshal, marshal, err := cfg.genComplexTypeMethods(t, overrides)
 		if err != nil {
-			//NOTE(droyo) may want to log this instead of stopping the generator
 			return result, err
 		} else {
 			if unmarshal != nil {
@@ -538,9 +603,77 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 	return result, nil
 }
 
-func (cfg *Config) genMarshalComplexType(t *xsd.ComplexType) (marshal, unmarshal *ast.FuncDecl, err error) {
-	// TODO(droyo): this one is a lot of work
-	return nil, nil, nil
+func (cfg *Config) genComplexTypeMethods(t *xsd.ComplexType, overrides []fieldOverride) (marshal, unmarshal *ast.FuncDecl, err error) {
+	var data struct {
+		Overrides []fieldOverride
+		Type      string
+	}
+	data.Overrides = overrides
+	data.Type = cfg.public(t.Name)
+
+	unmarshal, err = gen.Func("UnmarshalXML").
+		Receiver("t *"+data.Type).
+		Args("d *xml.Decoder", "start xml.StartElement").
+		Returns("error").
+		BodyTmpl(`
+			type T {{.Type}}
+			var overlay struct{
+				*T
+				{{range .Overrides}}
+				{{.Name}} {{.TypeName}} `+"`{{.Tag}}`"+`
+				{{end}}
+			}
+			overlay.T = (*T)(t)
+			{{range .Overrides}}
+			{{if .Value}}// overlay.{{.Name}} = {{.Value}}{{end}}
+			{{end}}
+
+			if err := d.Decode(&overlay, &start); err != nil {
+				return err
+			}
+			{{range .Overrides}}
+			overlay.T.{{.Name}} = overlay.{{.Name}}
+			{{end}}
+			return nil
+		`, data).Decl()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// We don't set defaults in MarshalXML; there's no way to distinguish
+	// an intentional zero value from "no value", and the consumer of the
+	// XML should know what the default is from the XSD.
+	nonDefaultOverrides := make([]fieldOverride, 0, len(overrides))
+	for _, v := range overrides {
+		if nonTrivialBuiltin(v.Type) {
+			nonDefaultOverrides = append(nonDefaultOverrides, v)
+		}
+	}
+	if len(nonDefaultOverrides) == 0 {
+		return nil, unmarshal, nil
+	}
+
+	data.Overrides = nonDefaultOverrides
+	marshal, err = gen.Func("MarshalXML").
+		Receiver("t *"+data.Type).
+		Args("e *xml.Encoder", "start xml.StartElement").
+		Returns("error").
+		BodyTmpl(`
+			type T {{.Type}}
+			var layout struct{
+				*T
+				{{- range .Overrides}}
+				{{.Name}} {{.TypeName}}` + "`{{.Tag}}`" + `
+				{{end -}}
+			}
+			layout.T = (*T)(t)
+			{{- range .Overrides}}
+			layout.{{.Name}} = {{.TypeName}}(layout.T.{{.Name}})
+			{{end -}}
+
+			return e.EncodeElement(layout, start)
+		`, data).Decl()
+	return marshal, unmarshal, err
 }
 
 func (cfg *Config) genSimpleType(t *xsd.SimpleType) ([]spec, error) {
@@ -551,7 +684,7 @@ func (cfg *Config) genSimpleType(t *xsd.SimpleType) ([]spec, error) {
 	if len(t.Union) > 0 {
 		// We don't support unions because the code that needs
 		// to be generated to check which of the member types
-		// the value would be is too complex. Need a use case
+		// the value would be too complex. Need a use case
 		// first.
 		result = append(result, spec{
 			doc:     t.Doc,
@@ -566,130 +699,54 @@ func (cfg *Config) genSimpleType(t *xsd.SimpleType) ([]spec, error) {
 		return nil, fmt.Errorf("simpleType %s: base type %s: %v",
 			t.Name.Local, xsd.XMLName(t.Base).Local, err)
 	}
-	result = append(result, spec{
+
+	spec, err := cfg.addSpecMethods(spec{
 		doc:     t.Doc,
 		name:    cfg.public(t.Name),
 		expr:    base,
 		xsdType: t,
 	})
-	return result, nil
+	if err != nil {
+		return result, err
+	}
+	return append(result, spec), nil
 }
 
-// Generate a type declaration for the built-in time values, along with
-// marshal/unmarshal methods for them.
-func (cfg *Config) genTimeSpec(t xsd.Builtin) ([]spec, error) {
-	var timespec string
-	cfg.debugf("generating Go source for time type %q", xsd.XMLName(t).Local)
-
-	s := spec{
-		expr:    ast.NewIdent("time.Time"),
-		name:    builtinExpr(t).(*ast.Ident).Name,
-		xsdType: t,
+// Attach Marshal/Unmarshal methods to a simple type, if necessary.
+func (cfg *Config) addSpecMethods(s spec) (spec, error) {
+	t, ok := s.xsdType.(*xsd.SimpleType)
+	if !ok || !nonTrivialBuiltin(t.Base) {
+		return s, nil
 	}
 
-	switch t {
-	case xsd.GDay:
-		timespec = "---02"
-	case xsd.GMonth:
-		timespec = "--01"
-	case xsd.GMonthDay:
-		timespec = "--01-02"
-	case xsd.GYear:
-		timespec = "2006"
-	case xsd.GYearMonth:
-		timespec = "2006-01"
-	case xsd.Time:
-		timespec = "15:04:05.999999999"
-	case xsd.Date:
-		timespec = "2006-01-02"
-	case xsd.DateTime:
-		timespec = "2006-01-02T15:04:05.999999999"
+	helper, ok := cfg.helperTypes[xsd.XMLName(t.Base)]
+	if !ok {
+		return s, fmt.Errorf("no helper type for %v", t.Base)
 	}
-	unmarshal, err := gen.Func("UnmarshalText").
-		Receiver("t *"+s.name).
+	
+	s.helperTypes = append(s.helperTypes,
+		xsd.XMLName(helper.xsdType))
+
+	s.methods = append(s.methods, gen.Func("UnmarshalText").
+		Receiver("t *" + s.name).
 		Args("text []byte").
 		Returns("error").
-		Body(`
-			return _unmarshalTime(text, (*time.Time)(t), %q)
-		`, timespec).Decl()
-	if err != nil {
-		return nil, fmt.Errorf("could not generate unmarshal function for %s: %v", s.name, err)
-	}
-	marshal, err := gen.Func("MarshalText").
-		Receiver("t "+s.name).
+		Body(`return (*%s)(t).UnmarshalText(text)`, helper.name).
+		MustDecl())
+
+	s.methods = append(s.methods, gen.Func("MarshalText").
+		Receiver("t " + s.name).
 		Returns("[]byte", "error").
-		Body(`
-			return []byte((time.Time)(t).Format(%q)), nil
-		`, timespec).Decl()
-	if err != nil {
-		return nil, fmt.Errorf("could not generate marshal function for %s: %v", s.name, err)
-	}
-	s.methods = append(s.methods, unmarshal, marshal)
-	if helper := cfg.helper("_unmarshalTime"); helper != nil {
-		s.methods = append(s.methods, helper)
-	}
-	return []spec{s}, nil
-}
+		Body(`return %s(t).MarshalText()`, helper.name).
+		MustDecl())
 
-// Generate a type declaration for the built-in binary values, along with
-// marshal/unmarshal methods for them.
-func (cfg *Config) genBinarySpec(t xsd.Builtin) ([]spec, error) {
-	cfg.debugf("generating Go source for binary type %q", xsd.XMLName(t).Local)
-	s := spec{
-		expr:    builtinExpr(t),
-		name:    xsd.XMLName(t).Local,
-		xsdType: t,
-	}
-	marshal := gen.Func("MarshalText").Receiver("b "+s.name).Returns("[]byte", "error")
-	unmarshal := gen.Func("UnmarshalText").Receiver("b " + s.name).Args("text []byte").
-		Returns("err error")
-
-	switch t {
-	case xsd.HexBinary:
-		unmarshal.Body(`
-			*b, err = hex.DecodeString(string(text))
-			return err
-		`)
-		marshal.Body(`
-			n := hex.EncodedLen([]byte(b))
-			buf := make([]byte, n)
-			hex.Encode(buf, []byte(b))
-			return buf, nil
-		`)
-	case xsd.Base64Binary:
-		unmarshal.Body(`
-			*b, err = base64.StdEncoding.DecodeString(string(text))
-			return err
-		`)
-		marshal.Body(`
-			var buf bytes.Buffer
-			enc := base64.NewEncoder(base64.StdEncoding, &buf)
-			enc.Write([]byte(b))
-			enc.Close()
-			return buf.Bytes()
-		`)
-	}
-	marshalFn, err := marshal.Decl()
-	if err != nil {
-		return nil, fmt.Errorf("MarshalText %s: %v", s.name, err)
-	}
-	unmarshalFn, err := unmarshal.Decl()
-	if err != nil {
-		return nil, fmt.Errorf("UnmarshalText %s: %v", s.name, err)
-	}
-	s.methods = append(s.methods, unmarshalFn, marshalFn)
-	return []spec{s}, nil
+	return s, nil
 }
 
 // Generate a type declaration for the bult-in list values, along with
 // marshal/unmarshal methods
-func (cfg *Config) genTokenListSpec(t xsd.Builtin) ([]spec, error) {
-	cfg.debugf("generating Go source for token list %q", xsd.XMLName(t).Local)
-	s := spec{
-		name:    strings.ToLower(t.String()),
-		expr:    builtinExpr(t),
-		xsdType: t,
-	}
+func (cfg *Config) addTokenListMethods(s spec, t *xsd.SimpleType) (spec, error) {
+	cfg.debugf("generating Go source for token list %q", s.name)
 	marshal, err := gen.Func("MarshalText").
 		Receiver("x *"+s.name).
 		Returns("[]byte", "error").
@@ -698,7 +755,7 @@ func (cfg *Config) genTokenListSpec(t xsd.Builtin) ([]spec, error) {
 		`).Decl()
 
 	if err != nil {
-		return nil, fmt.Errorf("MarshalText %s: %v", s.name, err)
+		return spec{}, fmt.Errorf("MarshalText %s: %v", s.name, err)
 	}
 
 	unmarshal, err := gen.Func("UnmarshalText").
@@ -711,11 +768,11 @@ func (cfg *Config) genTokenListSpec(t xsd.Builtin) ([]spec, error) {
 		`).Decl()
 
 	if err != nil {
-		return nil, fmt.Errorf("UnmarshalText %s: %v", s.name, err)
+		return spec{}, fmt.Errorf("UnmarshalText %s: %v", s.name, err)
 	}
 
 	s.methods = append(s.methods, marshal, unmarshal)
-	return []spec{s}, nil
+	return s, nil
 }
 
 // Generate a type declaration for a <list> type, along with marshal/unmarshal

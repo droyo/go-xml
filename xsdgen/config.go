@@ -21,7 +21,8 @@ type Config struct {
 	preprocessType  typeTransform
 	postprocessType specTransform
 	// Helper functions
-	helpers map[string]*ast.FuncDecl
+	helperFuncs map[string]*ast.FuncDecl
+	helperTypes map[xml.Name]spec
 	// Attributes for which this returns true won't be a part
 	// of any complex types.
 	filterAttributes propertyFilter
@@ -37,12 +38,6 @@ type Config struct {
 	// if populated, only types that are true in this map
 	// will be selected.
 	allowTypes map[xml.Name]bool
-}
-
-func (cfg *Config) helper(name string) *ast.FuncDecl {
-	// So we add helpers at most once
-	defer delete(cfg.helpers, name)
-	return cfg.helpers[name]
 }
 
 type typeTransform func(xsd.Schema, xsd.Type) xsd.Type
@@ -425,7 +420,7 @@ func (cfg *Config) filterFields(t *xsd.ComplexType) ([]xsd.Attribute, []xsd.Elem
 	return attributes, elements
 }
 
-// Return the identifier for non-builtin types, and the Go expression
+// Return the identifier for non-builtin types, or the Go expression
 // mapped to the built-in type.
 func (cfg *Config) expr(t xsd.Type) (ast.Expr, error) {
 	if t, ok := t.(xsd.Builtin); ok {
@@ -566,7 +561,7 @@ Loop:
 }
 
 func (cfg *Config) addStandardHelpers() {
-	cfg.helpers = make(map[string]*ast.FuncDecl)
+	cfg.helperFuncs = make(map[string]*ast.FuncDecl)
 	fns := []*gen.Function{
 		gen.Func("_unmarshalTime").
 			Args("text []byte", "t *time.Time", "format string").
@@ -587,7 +582,94 @@ func (cfg *Config) addStandardHelpers() {
 			// should never fail to parse
 			panic("failed to create helper function: " + err.Error())
 		}
-		cfg.helpers[fn.Name()] = x
+		cfg.helperFuncs[fn.Name()] = x
+	}
+
+	cfg.helperTypes = make(map[xml.Name]spec)
+	timeTypes := map[xsd.Builtin]string {
+ 		xsd.Date: "2006-01-02",
+		xsd.DateTime: "2006-01-02T15:04:05.999999999",
+		xsd.GDay: "---02",
+ 		xsd.GMonth: "--01",
+ 		xsd.GMonthDay: "--01-02",
+ 		xsd.GYear: "2006",
+		xsd.GYearMonth: "2006-01",
+		xsd.Time: "15:04:05.999999999",
+	}
+	
+	for timeType, timeSpec := range timeTypes {
+		name := "xsd" + timeType.String()
+		cfg.helperTypes[xsd.XMLName(timeType)] = spec{
+			name: name,
+			expr: builtinExpr(timeType),
+			private: true,
+			xsdType: timeType,
+			methods: []*ast.FuncDecl{
+				gen.Func("UnmarshalText").
+					Receiver("t *" + name).
+					Args("text []byte").
+					Returns("error").
+					Body(`return _unmarshalTime(text, (*time.Time)(t), %q)`, timeSpec).
+					MustDecl(),
+				gen.Func("UnmarshalText").
+					Receiver("t " + name).
+					Returns("[]byte", "error").
+					Body(`return []byte((time.Time)(t).Format(%q)), nil`, timeSpec).
+					MustDecl(),
+				},
+			helperFuncs: []string{"_unmarshalTime"},
+		}
+	}
+						
+	cfg.helperTypes[xsd.XMLName(xsd.HexBinary)] = spec{
+		name: "xsd" + xsd.HexBinary.String(),
+		expr: builtinExpr(xsd.HexBinary),
+		private: true,
+		xsdType: xsd.HexBinary,
+		methods: []*ast.FuncDecl{
+			gen.Func("UnmarshalText").
+				Receiver("b *xsd" + xsd.HexBinary.String()).
+				Returns("err error").
+				Body(`
+					*b, err = hex.DecodeString(string(text))
+					return
+				`).MustDecl(),
+			gen.Func("MarshalText").
+				Receiver("b xsd" + xsd.HexBinary.String()).
+				Returns("[]byte", "error").
+				Body(`
+					n := hex.EncodedLen([]byte(b))
+					buf := make([]byte, n)
+					hex.Encode(buf, []byte(b))
+					return buf, nil
+				`).MustDecl(),
+		},
+	}
+	
+	cfg.helperTypes[xsd.XMLName(xsd.Base64Binary)] = spec{
+		name: "xsd" + xsd.Base64Binary.String(),
+		expr: builtinExpr(xsd.Base64Binary),
+		private: true,
+		xsdType: xsd.Base64Binary,
+		methods: []*ast.FuncDecl{
+			gen.Func("UnmarshalText").
+				Receiver("b *xsd" + xsd.Base64Binary.String()).
+				Returns("err error").
+				Body(`
+					*b, err = base64.StdEncoding.DecodeString(string(text))
+					return
+				`).MustDecl(),
+			gen.Func("MarshalText").
+				Receiver("b xsd" + xsd.Base64Binary.String()).
+				Returns("[]byte", "error").
+				Body(`
+					var buf bytes.Buffer
+					enc := base64.NewEncoder(base64.StdEncoding, &buf)
+					enc.Write([]byte(b))
+					enc.Close()
+					return buf.Bytes(), nil
+				`).MustDecl(),
+		},
 	}
 }
 
@@ -721,8 +803,6 @@ func (cfg *Config) soapArrayToSlice(s spec) spec {
 	s.expr = slice
 	s.methods = append(s.methods, marshal)
 	s.methods = append(s.methods, unmarshal)
-	if helper := cfg.helper("_unmarshalArray"); helper != nil {
-		s.methods = append(s.methods, helper)
-	}
+	s.helperFuncs = append(s.helperFuncs, "_unmarshalArray")
 	return s
 }
