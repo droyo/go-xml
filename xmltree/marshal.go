@@ -14,9 +14,7 @@ import (
 var tagTmpl = template.Must(template.New("Marshal XML tags").Parse(
 	`{{define "start" -}}
 	<{{.Scope.Prefix .Name -}}
-	{{range .StartElement.Attr}} {{if .Name.Space -}}
-		{{.Name.Space}}:{{.Name.Local}}{{else}}{{.Name.Local -}}
-	{{end -}}="{{.Value}}"{{end -}}
+	{{range .StartElement.Attr}} {{$.Scope.Prefix .Name -}}="{{.Value}}"{{end -}}
 	{{range .NS }} xmlns{{ if .Local }}:{{ .Local }}{{end}}="{{ .Space }}"{{end}}>
 	{{- end}}
 	
