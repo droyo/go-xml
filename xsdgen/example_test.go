@@ -272,20 +272,69 @@ func ExampleUseFieldNames() {
 	//
 	// import (
 	// 	"bytes"
+	// 	"encoding/xml"
 	// 	"time"
 	// )
 	//
 	// type Book struct {
-	// 	Title     string  `xml:"http://www.example.com/ title"`
-	// 	Published xsdDate `xml:"http://www.example.com/ published"`
-	// 	Author    string  `xml:"http://www.example.com/ author"`
+	// 	Title     string    `xml:"http://www.example.com/ title"`
+	// 	Published time.Time `xml:"http://www.example.com/ published"`
+	// 	Author    string    `xml:"http://www.example.com/ author"`
+	// }
+	//
+	// func (t *Book) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	// 	type T Book
+	// 	var layout struct {
+	// 		*T
+	// 		Published xsdDate `xml:"http://www.example.com/ published"`
+	// 	}
+	// 	layout.T = (*T)(t)
+	// 	layout.Published = xsdDate(layout.T.Published)
+	// 	return e.EncodeElement(layout, start)
+	// }
+	// func (t *Book) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	// 	type T Book
+	// 	var overlay struct {
+	// 		*T
+	// 		Published xsdDate `xml:"http://www.example.com/ published"`
+	// 	}
+	// 	overlay.T = (*T)(t)
+	// 	if err := d.Decode(&overlay, &start); err != nil {
+	// 		return err
+	// 	}
+	// 	overlay.T.Published = overlay.Published
+	// 	return nil
 	// }
 	//
 	// type Library struct {
-	// 	Book      []Book  `xml:"http://www.example.com/ book"`
-	// 	Title     string  `xml:"http://www.example.com/ title"`
-	// 	Published xsdDate `xml:"http://www.example.com/ published"`
-	// 	Author    string  `xml:"http://www.example.com/ author"`
+	// 	Book      []Book    `xml:"http://www.example.com/ book"`
+	// 	Title     string    `xml:"http://www.example.com/ title"`
+	// 	Published time.Time `xml:"http://www.example.com/ published"`
+	// 	Author    string    `xml:"http://www.example.com/ author"`
+	// }
+	//
+	// func (t *Library) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	// 	type T Library
+	// 	var layout struct {
+	// 		*T
+	// 		Published xsdDate `xml:"http://www.example.com/ published"`
+	// 	}
+	// 	layout.T = (*T)(t)
+	// 	layout.Published = xsdDate(layout.T.Published)
+	// 	return e.EncodeElement(layout, start)
+	// }
+	// func (t *Library) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
+	// 	type T Library
+	// 	var overlay struct {
+	// 		*T
+	// 		Published xsdDate `xml:"http://www.example.com/ published"`
+	// 	}
+	// 	overlay.T = (*T)(t)
+	// 	if err := d.Decode(&overlay, &start); err != nil {
+	// 		return err
+	// 	}
+	// 	overlay.T.Published = overlay.Published
+	// 	return nil
 	// }
 	//
 	// type xsdDate time.Time
@@ -293,7 +342,7 @@ func ExampleUseFieldNames() {
 	// func (t *xsdDate) UnmarshalText(text []byte) error {
 	// 	return _unmarshalTime(text, (*time.Time)(t), "2006-01-02")
 	// }
-	// func (t xsdDate) MarshalText() ([]byte, error) {
+	// func (t xsdDate) UnmarshalText() ([]byte, error) {
 	// 	return []byte((time.Time)(t).Format("2006-01-02")), nil
 	// }
 	// func _unmarshalTime(text []byte, t *time.Time, format string) (err error) {
@@ -304,4 +353,5 @@ func ExampleUseFieldNames() {
 	// 	}
 	// 	return err
 	// }
+
 }
