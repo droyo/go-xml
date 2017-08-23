@@ -412,6 +412,7 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 	var result []spec
 	var fields []ast.Expr
 	var overrides []fieldOverride
+	var helperTypes []xml.Name
 
 	if t.Mixed {
 		// For complex types with mixed content models, we must drill
@@ -448,13 +449,14 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 			name := "Value"
 			tag := `xml:",chardata"`
 			if nonTrivialBuiltin(b) {
-				helper, ok := cfg.helperTypes[xsd.XMLName(b)]
+				h, ok := cfg.helperTypes[xsd.XMLName(b)]
 				if !ok {
 					return nil, fmt.Errorf("missing helper type for %v", b)
 				}
+				helperTypes = append(helperTypes, xsd.XMLName(h.xsdType))
 				overrides = append(overrides, fieldOverride{
 					Name: name,
-					TypeName: helper.name,
+					TypeName: h.name,
 					XMLName: xsd.XMLName(b),
 					Type: b,
 					Tag: tag,
@@ -522,6 +524,7 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 					return nil, fmt.Errorf("no helper type for type %v attribute %v", t.Name, attr.Name)
 				}
 				typeName = h.name
+				helperTypes = append(helperTypes, xsd.XMLName(attr.Type))
 			}
 			overrides = append(overrides, fieldOverride{
 				Name:     cfg.public(attr.Name),
@@ -567,6 +570,7 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 				if !ok {
 					return nil, fmt.Errorf("no helper type for type %v element %v", t.Name, el.Name)
 				}
+				helperTypes = append(helperTypes, xsd.XMLName(h.xsdType))
 				typeName = h.name
 			}
 			overrides = append(overrides, fieldOverride{
@@ -585,6 +589,7 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 		name:    cfg.public(t.Name),
 		expr:    expr,
 		xsdType: t,
+		helperTypes: helperTypes,
 	}
 	if len(overrides) > 0 {
 		unmarshal, marshal, err := cfg.genComplexTypeMethods(t, overrides)
