@@ -576,13 +576,7 @@ func (cfg *Config) addStandardHelpers() {
 			`),
 	}
 	for _, fn := range fns {
-		x, err := fn.Decl()
-		if err != nil {
-			// These functions are all bundled with the program, and
-			// should never fail to parse
-			panic("failed to create helper function: " + err.Error())
-		}
-		cfg.helperFuncs[fn.Name()] = x
+		cfg.helperFuncs[fn.Name()] = fn.MustDecl()
 	}
 
 	cfg.helperTypes = make(map[xml.Name]spec)
