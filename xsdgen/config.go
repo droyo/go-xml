@@ -803,6 +803,5 @@ func (cfg *Config) soapArrayToSlice(s spec) spec {
 	s.expr = slice
 	s.methods = append(s.methods, marshal)
 	s.methods = append(s.methods, unmarshal)
-	s.helperFuncs = append(s.helperFuncs, "_unmarshalArray")
 	return s
 }

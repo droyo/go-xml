@@ -21,8 +21,7 @@ func nonTrivialBuiltin(t xsd.Type) bool {
 		return false
 	}
 	switch b {
-	case xsd.ENTITIES, xsd.IDREFS, xsd.NMTOKENS,
-		xsd.Base64Binary, xsd.HexBinary,
+	case xsd.Base64Binary, xsd.HexBinary,
 		xsd.Date, xsd.Time, xsd.DateTime,
 		xsd.GDay, xsd.GMonth, xsd.GMonthDay, xsd.GYear, xsd.GYearMonth:
 		return true
