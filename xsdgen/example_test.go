@@ -299,10 +299,10 @@ func ExampleUseFieldNames() {
 	// 		Published xsdDate `xml:"http://www.example.com/ published"`
 	// 	}
 	// 	overlay.T = (*T)(t)
-	// 	if err := d.Decode(&overlay, &start); err != nil {
+	// 	if err := d.DecodeElement(&overlay, &start); err != nil {
 	// 		return err
 	// 	}
-	// 	overlay.T.Published = overlay.Published
+	// 	overlay.T.Published = time.Time(overlay.Published)
 	// 	return nil
 	// }
 	//
@@ -330,10 +330,10 @@ func ExampleUseFieldNames() {
 	// 		Published xsdDate `xml:"http://www.example.com/ published"`
 	// 	}
 	// 	overlay.T = (*T)(t)
-	// 	if err := d.Decode(&overlay, &start); err != nil {
+	// 	if err := d.DecodeElement(&overlay, &start); err != nil {
 	// 		return err
 	// 	}
-	// 	overlay.T.Published = overlay.Published
+	// 	overlay.T.Published = time.Time(overlay.Published)
 	// 	return nil
 	// }
 	//
@@ -342,7 +342,7 @@ func ExampleUseFieldNames() {
 	// func (t *xsdDate) UnmarshalText(text []byte) error {
 	// 	return _unmarshalTime(text, (*time.Time)(t), "2006-01-02")
 	// }
-	// func (t xsdDate) UnmarshalText() ([]byte, error) {
+	// func (t xsdDate) MarshalText() ([]byte, error) {
 	// 	return []byte((time.Time)(t).Format("2006-01-02")), nil
 	// }
 	// func _unmarshalTime(text []byte, t *time.Time, format string) (err error) {
