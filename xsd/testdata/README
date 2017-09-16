@@ -1,0 +1,14 @@
+This directory consists of pairs of test cases (an XSD file) and expected
+output (a JSON file). For every pair, xsd.Parse is called on a document
+containing the fragments. The resulting type set is compared with the json
+file using the following rules:
+
+* Every member in the top-level JSON object is the name of a type (xmlns
+  omitted).
+* The value of each member is a partial JSON encoding of the xsd.Type.
+* Each type in the top-level JSON *must* be in the xsd.Schema.
+* Types may be omitted from the top-level JSON.
+* If a field is present in the JSON value for a type member, it must match the
+  field in the parsed xsd.Type.
+* If a field is not present in the JSON value, it is not checked on the
+  xsd.Type.

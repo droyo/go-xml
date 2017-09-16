@@ -1,0 +1,10 @@
+{
+  "explicitComplexContent":    { "Mixed": true },
+  "explicit":                  { "Mixed": true },
+  "explicitRestrictMixedType": { "Mixed": false },
+  "extendAnyType":             { "Mixed": true },
+  "extendMixedComplexType":    { "Mixed": true },
+  "extendSimpleType":          { "Mixed": true },
+  "implicitRestrictMixedType": { "Mixed": false },
+  "restrictSimpleType":        { "Mixed": true }
+}

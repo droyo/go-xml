@@ -1,0 +1,22 @@
+<complexType name='CustomerType'>
+  <sequence>
+    <element name='CompanyName' type='string'/>
+    <element name='ContactName' type='string'/>
+    <element name='ContactTitle' type='string'/>
+    <element name='Phone' type='string'/>
+    <element name='Fax' minOccurs='0' type='string'/>
+    <element name='FullAddress' type='tns:AddressType'/>
+  </sequence>
+  <attribute name='CustomerID' type='token'/>
+</complexType>
+
+<complexType name='AddressType'>
+  <sequence>
+    <element name='Address' type='string'/>
+    <element name='City' type='string'/>
+    <element name='Region' type='string'/>
+    <element name='PostalCode' type='string' />
+    <element name='Country' type='string'/>
+  </sequence>
+  <attribute name='CustomerID' type='token'/>
+</complexType>

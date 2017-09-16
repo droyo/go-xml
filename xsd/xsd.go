@@ -43,7 +43,7 @@ type Type interface {
 //
 // http://www.w3.org/TR/2004/REC-xmlschema-1-20041028/structures.html#element-element
 type Element struct {
-	// Anottations for this element
+	// Annotations for this element
 	Doc string
 	// The canonical name of this element
 	Name xml.Name

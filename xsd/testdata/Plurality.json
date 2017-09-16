@@ -1,0 +1,11 @@
+{
+  "myType": {
+    "Elements": [
+      {"Name": {"Local": "singular"}, "Plural": false},
+      {"Name": {"Local": "pluralMax"}, "Plural": true},
+      {"Name": {"Local": "pluralMin"}, "Plural": true}
+    ]
+  }
+}
+
+  

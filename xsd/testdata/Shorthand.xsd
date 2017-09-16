@@ -1,0 +1,12 @@
+<!-- 
+
+When the <complexType> source declaration has neither <simpleContent>
+nor <complexContent> as a child, it is taken as shorthand for complex
+content restricting ·xs:anyType·.
+
+See https://www.w3.org/TR/xmlschema11-1/#dcl.ctd.ctcc.implicit 
+-->
+<complexType name="internationalPrice">
+  <attribute name="currency" type="string"/>
+  <attribute name="value"    type="decimal"/>
+</complexType>

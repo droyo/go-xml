@@ -1,0 +1,5 @@
+<simpleType name="SKU">
+  <restriction base="string">
+    <pattern value="\d{3}-[A-Z]{2}"/>
+  </restriction>
+</simpleType>

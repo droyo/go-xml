@@ -1,0 +1,8 @@
+<!-- It's easier to work with XSD if every type has a name, so the
+  xsd package generates names for unnamed types. -->
+<element name="someElement">
+  <complexType>
+    <element minOccurs="0" maxOccurs="1" name="Field1" type="string"/>
+    <attribute name="Attr1" type="int"/>
+  </complexType>
+</element>

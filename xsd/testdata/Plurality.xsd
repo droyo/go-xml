@@ -1,0 +1,8 @@
+<!-- The xsd package considers an element as singular if it may occur >1 times
+     in a document. -->
+     
+<complexType name="myType">
+  <element name="singular" maxOccurs="1" type="int" />
+  <element name="pluralMax" maxOccurs="unbounded" type="int" />
+  <element name="pluralMin" minOccurs="2" type="int" />
+</complexType>

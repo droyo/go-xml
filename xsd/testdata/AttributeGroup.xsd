@@ -1,0 +1,12 @@
+<!-- 
+  The xsd package flattens all references. So a type that references an attributeGroup
+  is represented as a type that contains all the attributes in said group.
+-->
+<attributeGroup name="myAttributeGroup">
+    <attribute name="someattribute1" type="integer"/>
+    <attribute name="someattribute2" type="string"/>
+</attributeGroup>
+
+<complexType name="myElementType">
+    <attributeGroup ref="tns:myAttributeGroup"/>
+</complexType>

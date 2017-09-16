@@ -1,0 +1,63 @@
+<!-- explicit mixed=true on complexType -->
+<complexType name="explicit" mixed="true">
+  <element name="value" type="decimal"/>
+</complexType>
+
+<!-- explicit mixed=true on complexContent -->
+<complexType name="explicitComplexContent">
+  <complexContent mixed="true">
+    <extension base="anyType">
+      <element name="value" type="decimal"/>
+    </extension>
+  </complexContent>
+</complexType>
+
+<!-- implicit mixed by extending anyType -->
+<complexType name="extendAnyType">
+  <complexContent>
+    <extension base="anyType">
+      <element name="value" type="decimal"/>
+    </extension>
+  </complexContent>
+</complexType>
+
+<!-- implicit mixed by extending a simple type (this is our own interpretation
+     of the spec) -->
+<complexType name="extendSimpleType">
+  <simpleContent>
+    <extension base="decimal">
+      <attribute name="precision" type="int"/>
+    </extension>
+  </simpleContent>
+</complexType>
+
+<!-- implicit mixed by restricting a simple type (same as extending) -->
+<complexType name="restrictSimpleType">
+  <simpleContent>
+    <restriction base="decimal">
+      <minInclusive value="100"/>
+    </restriction>
+  </simpleContent>
+</complexType>
+
+<!-- implicit mixed by extending a mixed complexType -->
+<complexType name="extendMixedComplexType">
+  <complexContent>
+    <extension base="tns:explicit">
+      <element name="geo" type="string"/>
+    </extension>
+  </complexContent>
+</complexType>
+
+<!-- NOT MIXED: restricting a mixed type (explicit) -->
+<complexType name="explicitRestrictMixedType" mixed="false">
+  <complexContent>
+    <restriction base="tns:explicit">
+    </restriction>
+  </complexContent>
+</complexType>
+
+<!-- NOT MIXED: restricting a mixed type (implicit) -->
+<complexType name="implicitRestrictMixedType">
+    <restriction base="tns:explicit"/>
+</complexType>

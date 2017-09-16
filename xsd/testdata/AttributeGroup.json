@@ -1,0 +1,8 @@
+{
+  "myElementType": {
+    "Attributes": [
+      {"Name": {"Local": "someattribute1"}, "Type": 29},
+      {"Name": {"Local": "someattribute2"}, "Type": 38}
+    ]
+  }
+}
