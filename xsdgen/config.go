@@ -1,9 +1,11 @@
 package xsdgen
 
 import (
+	"bytes"
 	"encoding/xml"
 	"fmt"
 	"go/ast"
+	"go/format"
 	"regexp"
 	"strings"
 
@@ -433,6 +435,20 @@ func (cfg *Config) expr(t xsd.Type) (ast.Expr, error) {
 	return ast.NewIdent(cfg.public(xsd.XMLName(t))), nil
 }
 
+func (cfg *Config) exprString(t xsd.Type) string {
+	var buf bytes.Buffer
+	expr, err := cfg.expr(t)
+	if err != nil {
+		return ""
+	}
+	if err := format.Node(&buf, nil, expr); err != nil {
+		// This should never happen, cfg.expr should always return a
+		// valid expression if err != nil
+		panic(fmt.Errorf("Error formatting node expression %#v: %v", expr, err))
+	}
+	return buf.String()
+}
+
 // NameOf converts a canonical XML name to a Go identifier,
 // applying any user-provided filters.
 func (cfg *Config) NameOf(name xml.Name) string {
@@ -580,56 +596,57 @@ func (cfg *Config) addStandardHelpers() {
 	}
 
 	cfg.helperTypes = make(map[xml.Name]spec)
-	timeTypes := map[xsd.Builtin]string {
- 		xsd.Date: "2006-01-02",
-		xsd.DateTime: "2006-01-02T15:04:05.999999999",
-		xsd.GDay: "---02",
- 		xsd.GMonth: "--01",
- 		xsd.GMonthDay: "--01-02",
- 		xsd.GYear: "2006",
+	timeTypes := map[xsd.Builtin]string{
+		xsd.Date:       "2006-01-02",
+		xsd.DateTime:   "2006-01-02T15:04:05.999999999",
+		xsd.GDay:       "---02",
+		xsd.GMonth:     "--01",
+		xsd.GMonthDay:  "--01-02",
+		xsd.GYear:      "2006",
 		xsd.GYearMonth: "2006-01",
-		xsd.Time: "15:04:05.999999999",
+		xsd.Time:       "15:04:05.999999999",
 	}
-	
+
 	for timeType, timeSpec := range timeTypes {
 		name := "xsd" + timeType.String()
 		cfg.helperTypes[xsd.XMLName(timeType)] = spec{
-			name: name,
-			expr: builtinExpr(timeType),
+			name:    name,
+			expr:    builtinExpr(timeType),
 			private: true,
 			xsdType: timeType,
 			methods: []*ast.FuncDecl{
 				gen.Func("UnmarshalText").
-					Receiver("t *" + name).
+					Receiver("t *"+name).
 					Args("text []byte").
 					Returns("error").
 					Body(`return _unmarshalTime(text, (*time.Time)(t), %q)`, timeSpec).
 					MustDecl(),
-				gen.Func("UnmarshalText").
-					Receiver("t " + name).
+				gen.Func("MarshalText").
+					Receiver("t "+name).
 					Returns("[]byte", "error").
 					Body(`return []byte((time.Time)(t).Format(%q)), nil`, timeSpec).
 					MustDecl(),
-				},
+			},
 			helperFuncs: []string{"_unmarshalTime"},
 		}
 	}
-						
+
 	cfg.helperTypes[xsd.XMLName(xsd.HexBinary)] = spec{
-		name: "xsd" + xsd.HexBinary.String(),
-		expr: builtinExpr(xsd.HexBinary),
+		name:    "xsd" + xsd.HexBinary.String(),
+		expr:    builtinExpr(xsd.HexBinary),
 		private: true,
 		xsdType: xsd.HexBinary,
 		methods: []*ast.FuncDecl{
 			gen.Func("UnmarshalText").
 				Receiver("b *xsd" + xsd.HexBinary.String()).
+				Args("text []byte").
 				Returns("err error").
 				Body(`
 					*b, err = hex.DecodeString(string(text))
 					return
 				`).MustDecl(),
 			gen.Func("MarshalText").
-				Receiver("b xsd" + xsd.HexBinary.String()).
+				Receiver("b xsd"+xsd.HexBinary.String()).
 				Returns("[]byte", "error").
 				Body(`
 					n := hex.EncodedLen([]byte(b))
@@ -639,22 +656,23 @@ func (cfg *Config) addStandardHelpers() {
 				`).MustDecl(),
 		},
 	}
-	
+
 	cfg.helperTypes[xsd.XMLName(xsd.Base64Binary)] = spec{
-		name: "xsd" + xsd.Base64Binary.String(),
-		expr: builtinExpr(xsd.Base64Binary),
+		name:    "xsd" + xsd.Base64Binary.String(),
+		expr:    builtinExpr(xsd.Base64Binary),
 		private: true,
 		xsdType: xsd.Base64Binary,
 		methods: []*ast.FuncDecl{
 			gen.Func("UnmarshalText").
 				Receiver("b *xsd" + xsd.Base64Binary.String()).
+				Args("text []byte").
 				Returns("err error").
 				Body(`
 					*b, err = base64.StdEncoding.DecodeString(string(text))
 					return
 				`).MustDecl(),
 			gen.Func("MarshalText").
-				Receiver("b xsd" + xsd.Base64Binary.String()).
+				Receiver("b xsd"+xsd.Base64Binary.String()).
 				Returns("[]byte", "error").
 				Body(`
 					var buf bytes.Buffer

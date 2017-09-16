@@ -16,6 +16,18 @@ import (
 	"aqwari.net/xml/xsd"
 )
 
+type orderedStringMap interface {
+	keys() []string
+}
+
+func rangeMap(m orderedStringMap, fn func(string)) {
+	keys := m.keys()
+	sort.Strings(keys)
+	for _, key := range keys {
+		fn(key)
+	}
+}
+
 type errorList []error
 
 func (l errorList) Error() string {
@@ -47,13 +59,22 @@ func lookupTargetNS(data ...[]byte) []string {
 	return result
 }
 
+type specListing map[string]spec
+
+func (m specListing) keys() (result []string) {
+	for k := range m {
+		result = append(result, k)
+	}
+	return result
+}
+
 // Code is the intermediate representation used by the xsdgen
 // package. It can be used to generate a Go source file, and to
 // lookup identifiers and attributes for a given type.
 type Code struct {
 	cfg   *Config
 	names map[xml.Name]string
-	decls map[string]spec
+	decls specListing
 	types map[xml.Name]xsd.Type
 }
 
@@ -107,7 +128,7 @@ func (cfg *Config) gen(primaries, deps []xsd.Schema) (*Code, error) {
 	code := &Code{
 		cfg:   cfg,
 		names: make(map[xml.Name]string),
-		decls: make(map[string]spec),
+		decls: make(specListing),
 	}
 
 	all := make(map[xml.Name]xsd.Type)
@@ -170,20 +191,25 @@ func (cfg *Config) gen(primaries, deps []xsd.Schema) (*Code, error) {
 	}
 
 	for t, s := range code.decls {
+		cfg.debugf("processing dependencies for type %v", t)
 		for _, dep := range s.helperTypes {
 			if h, ok := cfg.helperTypes[dep]; ok {
 				code.decls[h.name] = h
 				delete(cfg.helperTypes, dep)
 			}
 		}
+	}
+	rangeMap(code.decls, func(t string) {
+		s := code.decls[t]
 		for _, dep := range s.helperFuncs {
 			if h, ok := cfg.helperFuncs[dep]; ok {
+				cfg.debugf("adding helper function %v for type %v", dep, t)
 				s.methods = append(s.methods, h)
 				code.decls[t] = s
-				delete(code.decls, dep)
+				delete(cfg.helperFuncs, dep)
 			}
 		}
-	}
+	})
 	return code, nil
 }
 
@@ -223,11 +249,11 @@ func (code *Code) GenAST() (*ast.File, error) {
 }
 
 type spec struct {
-	name, doc string
-	expr      ast.Expr
-	private   bool
-	methods   []*ast.FuncDecl
-	xsdType   xsd.Type
+	name, doc   string
+	expr        ast.Expr
+	private     bool
+	methods     []*ast.FuncDecl
+	xsdType     xsd.Type
 	helperTypes []xml.Name
 	helperFuncs []string
 }
@@ -402,10 +428,11 @@ func (cfg *Config) genTypeSpec(t xsd.Type) (result []spec, err error) {
 }
 
 type fieldOverride struct {
-	Name, Value, TypeName string
-	XMLName               xml.Name
-	Type                  xsd.Type
-	Tag string
+	FieldName        string
+	FromType, ToType string
+	DefaultValue     string
+	Type             xsd.Type
+	Tag              string
 }
 
 func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
@@ -455,11 +482,11 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 				}
 				helperTypes = append(helperTypes, xsd.XMLName(h.xsdType))
 				overrides = append(overrides, fieldOverride{
-					Name: name,
-					TypeName: h.name,
-					XMLName: xsd.XMLName(b),
-					Type: b,
-					Tag: tag,
+					FieldName: name,
+					FromType:  cfg.exprString(b),
+					Tag:       tag,
+					ToType:    h.name,
+					Type:      b,
 				})
 			}
 			fields = append(fields, ast.NewIdent(name), expr, gen.String(tag))
@@ -527,12 +554,12 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 				helperTypes = append(helperTypes, xsd.XMLName(attr.Type))
 			}
 			overrides = append(overrides, fieldOverride{
-				Name:     cfg.public(attr.Name),
-				Value:    attr.Default,
-				Type:     attr.Type,
-				Tag:      tag,
-				XMLName:  attr.Name,
-				TypeName: typeName,
+				DefaultValue: attr.Default,
+				FieldName:    cfg.public(attr.Name),
+				FromType:     cfg.exprString(attr.Type),
+				Tag:          tag,
+				ToType:       typeName,
+				Type:         attr.Type,
 			})
 		}
 	}
@@ -574,21 +601,21 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 				typeName = h.name
 			}
 			overrides = append(overrides, fieldOverride{
-				Name:     cfg.public(el.Name),
-				Value:    el.Default,
-				Type:     el.Type,
-				Tag:      tag,
-				TypeName: typeName,
-				XMLName:  el.Name,
+				DefaultValue: el.Default,
+				FieldName:    cfg.public(el.Name),
+				FromType:     cfg.exprString(el.Type),
+				Tag:          tag,
+				ToType:       typeName,
+				Type:         el.Type,
 			})
 		}
 	}
 	expr := gen.Struct(fields...)
 	s := spec{
-		doc:     t.Doc,
-		name:    cfg.public(t.Name),
-		expr:    expr,
-		xsdType: t,
+		doc:         t.Doc,
+		name:        cfg.public(t.Name),
+		expr:        expr,
+		xsdType:     t,
 		helperTypes: helperTypes,
 	}
 	if len(overrides) > 0 {
@@ -625,19 +652,21 @@ func (cfg *Config) genComplexTypeMethods(t *xsd.ComplexType, overrides []fieldOv
 			var overlay struct{
 				*T
 				{{range .Overrides}}
-				{{.Name}} {{.TypeName}} `+"`{{.Tag}}`"+`
+				{{.FieldName}} {{.ToType}} `+"`{{.Tag}}`"+`
 				{{end}}
 			}
 			overlay.T = (*T)(t)
 			{{range .Overrides}}
-			{{if .Value}}// overlay.{{.Name}} = {{.Value}}{{end}}
+			{{if .DefaultValue -}}
+			// overlay.{{.FieldName}} = {{.DefaultValue}}
+			{{end -}}
 			{{end}}
 
-			if err := d.Decode(&overlay, &start); err != nil {
+			if err := d.DecodeElement(&overlay, &start); err != nil {
 				return err
 			}
 			{{range .Overrides}}
-			overlay.T.{{.Name}} = overlay.{{.Name}}
+			overlay.T.{{.FieldName}} = {{.FromType}}(overlay.{{.FieldName}})
 			{{end}}
 			return nil
 		`, data).Decl()
@@ -668,12 +697,12 @@ func (cfg *Config) genComplexTypeMethods(t *xsd.ComplexType, overrides []fieldOv
 			var layout struct{
 				*T
 				{{- range .Overrides}}
-				{{.Name}} {{.TypeName}}` + "`{{.Tag}}`" + `
+				{{.FieldName}} {{.ToType}}`+"`{{.Tag}}`"+`
 				{{end -}}
 			}
 			layout.T = (*T)(t)
 			{{- range .Overrides}}
-			layout.{{.Name}} = {{.TypeName}}(layout.T.{{.Name}})
+			layout.{{.FieldName}} = {{.ToType}}(layout.T.{{.FieldName}})
 			{{end -}}
 
 			return e.EncodeElement(layout, start)
@@ -728,19 +757,19 @@ func (cfg *Config) addSpecMethods(s spec) (spec, error) {
 	if !ok {
 		return s, fmt.Errorf("no helper type for %v", t.Base)
 	}
-	
+
 	s.helperTypes = append(s.helperTypes,
 		xsd.XMLName(helper.xsdType))
 
 	s.methods = append(s.methods, gen.Func("UnmarshalText").
-		Receiver("t *" + s.name).
+		Receiver("t *"+s.name).
 		Args("text []byte").
 		Returns("error").
 		Body(`return (*%s)(t).UnmarshalText(text)`, helper.name).
 		MustDecl())
 
 	s.methods = append(s.methods, gen.Func("MarshalText").
-		Receiver("t " + s.name).
+		Receiver("t "+s.name).
 		Returns("[]byte", "error").
 		Body(`return %s(t).MarshalText()`, helper.name).
 		MustDecl())
