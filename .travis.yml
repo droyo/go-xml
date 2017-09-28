@@ -1,7 +1,7 @@
 language: go
 go_import_path: aqwari.net/xml
 go:
-  - 1.6
+  - 1.7
 
 notifications:
   email:
