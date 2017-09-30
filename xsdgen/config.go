@@ -649,7 +649,7 @@ func (cfg *Config) addStandardHelpers() {
 				Receiver("b xsd"+xsd.HexBinary.String()).
 				Returns("[]byte", "error").
 				Body(`
-					n := hex.EncodedLen([]byte(b))
+					n := hex.EncodedLen(len(b))
 					buf := make([]byte, n)
 					hex.Encode(buf, []byte(b))
 					return buf, nil
