@@ -45,7 +45,7 @@ func main() {
 			log.Print(err)
 			continue
 		}
-		tests, err := genTests(cfg, data, stem+".xml")
+		tests, err := genTests(*cfg, data, stem+".xml")
 		if err != nil {
 			log.Print(stem, ":", err)
 			continue
@@ -70,7 +70,7 @@ func main() {
 //   the document described in the XML schema.
 // - Marshal the resulting file back into an XML document.
 // - Compare the two documents for equality.
-func genTests(cfg *xsdgen.Config, data []byte, dataFile string) (*ast.File, error) {
+func genTests(cfg xsdgen.Config, data []byte, dataFile string) (*ast.File, error) {
 	base := filepath.Base(dataFile)
 	base = base[:len(base)-len(filepath.Ext(base))]
 
