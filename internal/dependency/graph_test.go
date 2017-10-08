@@ -2,6 +2,7 @@ package dependency
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -17,26 +18,6 @@ var flattenTests = [...]struct {
 			"mygame -> main.o",
 			"mygame -> player.o",
 			"player.o -> player.c",
-		},
-		ordered: []string{
-			"enemy.c",
-			"enemy.o",
-			"main.c",
-			"main.o",
-			"player.c",
-			"player.o",
-			"mygame",
-		},
-	},
-	{
-		// Order shouldn't matter
-		edges: []string{
-			"player.o -> player.c",
-			"enemy.o -> enemy.c",
-			"mygame -> main.o",
-			"main.o -> main.c",
-			"mygame -> player.o",
-			"mygame -> enemy.o",
 		},
 		ordered: []string{
 			"enemy.c",
@@ -71,25 +52,41 @@ var flattenTests = [...]struct {
 func TestFlatten(t *testing.T) {
 	for _, tt := range flattenTests {
 		var graph Graph
+
+		counter := 0
+		index := make(map[string]int)
+		rindex := make(map[int]string)
+
+		t.Log(strings.Join(tt.edges, "\n"))
 		for _, edge := range tt.edges {
-			var target string
-			var dep string
+			var target, dep string
 			if _, err := fmt.Sscanf(edge, "%s -> %s", &target, &dep); err != nil {
 				panic("bad test edge " + edge)
 			}
-			graph.Add(target, dep)
+			if _, ok := index[target]; !ok {
+				index[target] = counter
+				rindex[counter] = target
+				counter++
+			}
+			if _, ok := index[dep]; !ok {
+				index[dep] = counter
+				rindex[counter] = dep
+				counter++
+			}
+			graph.Add(index[target], index[dep])
 		}
 		var i int
-		graph.Flatten(func(vertex string) {
+		graph.Flatten(func(vertex int) {
 			if i >= len(tt.ordered) {
-				t.Fatalf("advanced past expected output with %s", vertex)
+				t.Fatalf("advanced past expected output with %s", rindex[vertex])
 			}
-			if tt.ordered[i] != vertex {
-				t.Errorf("got %q, wanted %q", vertex, tt.ordered[i])
+			if index[tt.ordered[i]] != vertex {
+				t.Errorf("got %q, wanted %q", rindex[vertex], tt.ordered[i])
 			} else {
-				t.Log(vertex)
+				t.Log(rindex[vertex])
 			}
 			i++
 		})
+		t.Log("")
 	}
 }
