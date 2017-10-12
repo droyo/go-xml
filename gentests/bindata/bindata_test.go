@@ -51,17 +51,17 @@ func TestBindata(t *testing.T) {
 }
 
 type Bindata struct {
-	HexData  []byte `xml:"tns hexData"`
-	B64Data  []byte `xml:"tns b64Data"`
-	Filename string `xml:"tns filename"`
+	HexData  []byte `xml:"tns hexData,omitempty"`
+	B64Data  []byte `xml:"tns b64Data,omitempty"`
+	Filename string `xml:"tns filename,omitempty"`
 }
 
 func (t *Bindata) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 	type T Bindata
 	var layout struct {
 		*T
-		HexData xsdHexBinary    `xml:"tns hexData"`
-		B64Data xsdBase64Binary `xml:"tns b64Data"`
+		HexData xsdHexBinary    `xml:"tns hexData,omitempty"`
+		B64Data xsdBase64Binary `xml:"tns b64Data,omitempty"`
 	}
 	layout.T = (*T)(t)
 	layout.HexData = xsdHexBinary(layout.T.HexData)
@@ -72,8 +72,8 @@ func (t *Bindata) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	type T Bindata
 	var overlay struct {
 		*T
-		HexData xsdHexBinary    `xml:"tns hexData"`
-		B64Data xsdBase64Binary `xml:"tns b64Data"`
+		HexData xsdHexBinary    `xml:"tns hexData,omitempty"`
+		B64Data xsdBase64Binary `xml:"tns b64Data,omitempty"`
 	}
 	overlay.T = (*T)(t)
 	if err := d.DecodeElement(&overlay, &start); err != nil {

@@ -569,7 +569,7 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 	}
 	for _, el := range elements {
 		options := ""
-		if el.Nillable {
+		if el.Nillable || el.Optional {
 			options = ",omitempty"
 		}
 		tag := fmt.Sprintf(`xml:"%s %s%s"`, el.Name.Space, el.Name.Local, options)

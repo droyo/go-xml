@@ -629,7 +629,7 @@ func parseElement(ns string, el *xmltree.Element) Element {
 		Default:  el.Attr("", "default"),
 		Abstract: parseBool(el.Attr("", "abstract")),
 		Nillable: parseBool(el.Attr("", "nillable")),
-		Optional: (el.Attr("", "use") == "optional"),
+		Optional: (el.Attr("", "use") != "required"),
 		Plural:   parsePlural(el),
 		Scope:    el.Scope,
 	}
