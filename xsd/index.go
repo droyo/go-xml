@@ -3,7 +3,6 @@ package xsd
 import (
 	"encoding/xml"
 
-	"aqwari.net/xml/internal/ordered"
 	"aqwari.net/xml/xmltree"
 )
 
@@ -33,21 +32,22 @@ func (idx *schemaIndex) ElementID(name, typ xml.Name) (int, bool) {
 	return id, ok
 }
 
-func indexSchema(schema map[string]*xmltree.Element) *schemaIndex {
+func indexSchema(schema []*xmltree.Element) *schemaIndex {
 	counter := 0
 	index := &schemaIndex{
 		eltByID:  make(map[int]*xmltree.Element),
 		idByName: make(map[elementKey]int),
 	}
-	ordered.RangeStrings(schema, func(targetNS string) {
-		for _, el := range schema[targetNS].Flatten() {
+	for _, root := range schema {
+		tns := root.Attr("", "targetNamespace")
+		for _, el := range root.Flatten() {
 			index.eltByID[counter] = el
 			if name := el.Attr("", "name"); name != "" {
-				xmlname := el.ResolveDefault(name, targetNS)
+				xmlname := el.ResolveDefault(name, tns)
 				index.idByName[elementKey{xmlname, el.Name}] = counter
 			}
 			counter++
 		}
-	})
+	}
 	return index
 }

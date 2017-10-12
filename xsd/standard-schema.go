@@ -1139,13 +1139,13 @@ var xmlnsxsd = []byte(`<?xml version='1.0'?>
 </xs:schema>
 `)
 
-var standardSchema = Schema{
+var builtinSchema = Schema{
 	TargetNS: schemaNS,
 }
 
 func init() {
-	standardSchema.Types = make(map[xml.Name]Type, int(UnsignedShort))
+	builtinSchema.Types = make(map[xml.Name]Type, int(UnsignedShort))
 	for i := AnyType; i < UnsignedShort; i++ {
-		standardSchema.Types[i.Name()] = i
+		builtinSchema.Types[i.Name()] = i
 	}
 }

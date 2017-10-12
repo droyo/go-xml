@@ -74,60 +74,70 @@ func Imports(data []byte) ([]Ref, error) {
 	return result, nil
 }
 
+// Normalize reads XML schema documents and returns xml trees
+// for each schema with the following properties:
+//
+// * various XSD shorthand, such as omitting <complexContent>,
+//   are expanded into their canonical forms.
+// * all links are dereferenced by merging the linked element.
+// * all types have names. For anonymous types, unique (per
+//   namespace) names of the form "_anon1", "_anon2", etc are
+//   generated, and the attribute "_isAnonymous" is set to
+//   "true".
+//
+// Because one document may contain more than one schema, the
+// number of trees returned by Normalize may not equal the
+// number of arguments.
+func Normalize(docs ...[]byte) ([]*xmltree.Element, error) {
+	docs = append(docs, StandardSchema...)
+	result := make([]*xmltree.Element, 0, len(docs))
+
+	for _, data := range docs {
+		root, err := xmltree.Parse(data)
+		if err != nil {
+			return nil, err
+		}
+		if (root.Name == xml.Name{schemaNS, "schema"}) {
+			result = append(result, root)
+		} else {
+			result = append(result, root.Search(schemaNS, "schema")...)
+		}
+	}
+	for _, root := range result {
+		if err := nameAnonymousTypes(root); err != nil {
+			return nil, err
+		}
+	}
+	for _, root := range result {
+		expandComplexShorthand(root)
+	}
+	if err := flattenRef(result); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
 // Parse reads XML documents containing one or more <schema>
 // elements. The returned slice has one Schema for every <schema>
 // element in the documents. Parse will not fetch schema used in
 // <import> or <include> statements; use the Imports function to
 // find any additional schema documents required for a schema.
 func Parse(docs ...[]byte) ([]Schema, error) {
-	docs = append(docs, StandardSchema...)
 	var (
 		result = make([]Schema, 0, len(docs))
-		schema = make(map[string]*xmltree.Element, len(docs))
 		parsed = make(map[string]Schema, len(docs))
 		types  = make(map[xml.Name]Type)
 	)
 
-	for _, data := range docs {
-		var add []*xmltree.Element
-		root, err := xmltree.Parse(data)
-		if err != nil {
-			return nil, err
-		}
-		if (root.Name == xml.Name{schemaNS, "schema"}) {
-			add = []*xmltree.Element{root}
-		} else {
-			add = root.Search(schemaNS, "schema")
-		}
-
-		// We don't explicitly handle <include> declarations.
-		// however, by merging documents with the same target
-		// namespace together. This saves us some code, but
-		// to properly handle <redefine> declarations and
-		// schema without target namespaces, we would have to
-		// do it another way.
-		for _, s := range add {
-			ns := s.Attr("", "targetNamespace")
-			if v, ok := schema[ns]; !ok {
-				schema[ns] = s
-			} else {
-				s.Children = append(s.Children, v.Children...)
-				schema[ns] = s
-			}
-		}
-	}
-
-	for tns, root := range schema {
-		if err := nameAnonymousTypes(root, tns); err != nil {
-			return nil, err
-		}
-	}
-	if err := flattenRef(schema); err != nil {
+	schema, err := Normalize(docs...)
+	if err != nil {
 		return nil, err
 	}
-	for tns, root := range schema {
+
+	for _, root := range schema {
+		tns := root.Attr("", "targetNamespace")
 		s := Schema{TargetNS: tns, Types: make(map[xml.Name]Type)}
-		if err := s.parse(root, schema); err != nil {
+		if err := s.parse(root); err != nil {
 			return nil, err
 		}
 		parsed[tns] = s
@@ -138,17 +148,20 @@ func Parse(docs ...[]byte) ([]Schema, error) {
 			types[XMLName(t)] = t
 		}
 	}
-	for _, s := range parsed {
+
+	for _, root := range schema {
+		s := parsed[root.Attr("", "targetNamespace")]
 		if err := s.resolvePartialTypes(types); err != nil {
 			return nil, err
 		}
-		if err := s.addElementTypeAliases(schema[s.TargetNS], types); err != nil {
+		err := s.addElementTypeAliases(root, types)
+		if err != nil {
 			return nil, err
 		}
 		s.propagateMixedAttr()
 		result = append(result, s)
 	}
-	result = append(result, standardSchema)
+	result = append(result, builtinSchema)
 	return result, nil
 }
 
@@ -189,12 +202,13 @@ to
     </xs:sequence>
   </xs:complexType>
 */
-func nameAnonymousTypes(root *xmltree.Element, targetNS string) error {
+func nameAnonymousTypes(root *xmltree.Element) error {
 	var (
 		typeCounter int
 		updateAttr  string
 		accum       bool
 	)
+	targetNS := root.Attr("", "targetNamespace")
 	for _, el := range root.SearchFunc(hasAnonymousType) {
 		if el.Name.Space != schemaNS {
 			continue
@@ -256,7 +270,7 @@ becomes
   </complexType>
 
 */
-func flattenRef(schema map[string]*xmltree.Element) error {
+func flattenRef(schema []*xmltree.Element) error {
 	var (
 		depends = new(dependency.Graph)
 		index   = indexSchema(schema)
@@ -444,8 +458,7 @@ func propagateMixedAttr(t, b Type, depth int) {
 	}
 }
 
-func (s *Schema) parse(root *xmltree.Element, extra map[string]*xmltree.Element) error {
-	expandComplexShorthand(root)
+func (s *Schema) parse(root *xmltree.Element) error {
 	return s.parseTypes(root)
 }
 
