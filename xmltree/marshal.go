@@ -86,41 +86,39 @@ func (e *encoder) encode(el, parent *Element, visited map[*Element]struct{}) err
 	}
 	if _, ok := visited[el]; ok {
 		// We have a cycle. Leave a comment, but no error
-		io.WriteString(e.w, "<!-- cycle detected -->")
+		e.WriteContent([]byte("<!-- cycle detected -->"), len(visited)+1)
 		return nil
-	} else {
-		visited[el] = struct{}{}
-		defer delete(visited, el)
-	}
-	if e.pretty {
-		io.WriteString(e.w, e.prefix)
-		if len(visited) > 0 {
-			io.WriteString(e.w, "\n")
-		}
-		for i := 0; i < len(visited); i++ {
-			io.WriteString(e.w, e.indent)
-		}
 	}
 	scope := diffScope(parent, el)
-	if err := e.encodeOpenTag(el, scope); err != nil {
+	if err := e.encodeOpenTag(el, scope, len(visited)); err != nil {
 		return err
 	}
 	if len(el.Children) == 0 && len(el.Content) > 0 {
-		e.w.Write(el.Content)
+		e.WriteContent(el.Content, len(visited)+1)
 	}
 	for i := range el.Children {
+		visited[el] = struct{}{}
 		if err := e.encode(&el.Children[i], el, visited); err != nil {
 			return err
 		}
+		delete(visited, el)
 	}
+	if err := e.encodeCloseTag(el, len(visited)); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (e *encoder) WriteContent(content []byte, depth int) error {
 	if e.pretty {
-		io.WriteString(e.w, "\n")
-		for i := 0; i < len(visited); i++ {
+		io.WriteString(e.w, e.prefix)
+		for i := 0; i < depth; i++ {
 			io.WriteString(e.w, e.indent)
 		}
 	}
-	if err := e.encodeCloseTag(el); err != nil {
-		return err
+	e.w.Write(content)
+	if e.pretty && !bytes.HasSuffix(content, []byte("\n")) {
+		io.WriteString(e.w, "\n")
 	}
 	return nil
 }
@@ -143,14 +141,36 @@ func diffScope(parent, child *Element) Scope {
 	return childScope
 }
 
-func (e *encoder) encodeOpenTag(el *Element, scope Scope) error {
+func (e *encoder) encodeOpenTag(el *Element, scope Scope, depth int) error {
+	if e.pretty {
+		for i := 0; i < depth; i++ {
+			io.WriteString(e.w, e.indent)
+		}
+	}
 	var tag = struct {
 		*Element
 		NS []xml.Name
 	}{Element: el, NS: scope.ns}
-	return tagTmpl.ExecuteTemplate(e.w, "start", tag)
+	if err := tagTmpl.ExecuteTemplate(e.w, "start", tag); err != nil {
+		return err
+	}
+	if e.pretty {
+		io.WriteString(e.w, "\n")
+	}
+	return nil
 }
 
-func (e *encoder) encodeCloseTag(el *Element) error {
-	return tagTmpl.ExecuteTemplate(e.w, "end", el)
+func (e *encoder) encodeCloseTag(el *Element, depth int) error {
+	if e.pretty {
+		for i := 0; i < depth; i++ {
+			io.WriteString(e.w, e.indent)
+		}
+	}
+	if err := tagTmpl.ExecuteTemplate(e.w, "end", el); err != nil {
+		return err
+	}
+	if e.pretty {
+		io.WriteString(e.w, "\n")
+	}
+	return nil
 }
