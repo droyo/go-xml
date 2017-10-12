@@ -49,7 +49,7 @@ func MarshalIndent(el *Element, prefix, indent string) []byte {
 		indent: indent,
 		pretty: true,
 	}
-	if err := enc.encode(el, nil, 0); err != nil {
+	if err := enc.encode(el, nil, make(map[*Element]struct{})); err != nil {
 		panic(err)
 	}
 	return buf.Bytes()
@@ -59,7 +59,7 @@ func MarshalIndent(el *Element, prefix, indent string) []byte {
 // Encode returns any errors encountered writing to w.
 func Encode(w io.Writer, el *Element) error {
 	enc := encoder{w: w}
-	return enc.encode(el, nil, 0)
+	return enc.encode(el, nil, make(map[*Element]struct{}))
 }
 
 // String returns the XML encoding of an Element
@@ -74,45 +74,50 @@ type encoder struct {
 	pretty         bool
 }
 
-// This could be used to print a subset of an XML document,
-// or a document that has been modified. In such an event,
-// namespace declarations must be "pulled" in, so they can
-// be resolved properly. This is trickier than just defining
-// everything at the top level because there may be conflicts
+// This could be used to print a subset of an XML document, or a document
+// that has been modified. In such an event, namespace declarations must
+// be "pulled" in, so they can be resolved properly. This is trickier than
+// just defining everything at the top level because there may be conflicts
 // introduced by the modifications.
-func (e *encoder) encode(el, parent *Element, depth int) error {
-	if depth > recursionLimit {
+func (e *encoder) encode(el, parent *Element, visited map[*Element]struct{}) error {
+	if len(visited) > recursionLimit {
 		// We only return I/O errors
 		return nil
 	}
+	if _, ok := visited[el]; ok {
+		// We have a cycle. Leave a comment, but no error
+		io.WriteString(e.w, "<!-- cycle detected -->")
+		return nil
+	} else {
+		visited[el] = struct{}{}
+		defer delete(visited, el)
+	}
 	if e.pretty {
 		io.WriteString(e.w, e.prefix)
-		if depth > 0 {
+		if len(visited) > 0 {
 			io.WriteString(e.w, "\n")
-			for i := 0; i < depth; i++ {
-				io.WriteString(e.w, e.indent)
-			}
+		}
+		for i := 0; i < len(visited); i++ {
+			io.WriteString(e.w, e.indent)
 		}
 	}
 	scope := diffScope(parent, el)
 	if err := e.encodeOpenTag(el, scope); err != nil {
 		return err
 	}
-	if len(el.Children) == 0 {
-		if len(el.Content) > 0 {
-			if _, err := e.w.Write(el.Content); err != nil {
-				return err
-			}
-		}
+	if len(el.Children) == 0 && len(el.Content) > 0 {
+		e.w.Write(el.Content)
 	}
-	for _, child := range el.Children {
-		if err := e.encode(&child, el, depth+1); err != nil {
+	for i := range el.Children {
+		if err := e.encode(&el.Children[i], el, visited); err != nil {
 			return err
 		}
 	}
-	if e.pretty && depth == 0 {
+	if e.pretty {
 		io.WriteString(e.w, "\n")
-		io.WriteString(e.w, e.prefix)
+		for i := 0; i < len(visited); i++ {
+			io.WriteString(e.w, e.indent)
+		}
 	}
 	if err := e.encodeCloseTag(el); err != nil {
 		return err
