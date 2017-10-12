@@ -7,8 +7,28 @@ import (
 	"strconv"
 	"strings"
 
+	"aqwari.net/xml/internal/dependency"
 	"aqwari.net/xml/xmltree"
 )
+
+func hasCycle(root *xmltree.Element, visited map[*xmltree.Element]struct{}) bool {
+	if visited == nil {
+		visited = make(map[*xmltree.Element]struct{})
+	}
+	visited[root] = struct{}{}
+	for i := range root.Children {
+		el := &root.Children[i]
+		if _, ok := visited[el]; ok {
+			return true
+		}
+		visited[el] = struct{}{}
+		if hasCycle(el, visited) {
+			return true
+		}
+	}
+	delete(visited, root)
+	return false
+}
 
 // A Ref contains the canonical namespace of a schema document, and
 // possibly a URI to retrieve the document from. It is not required
@@ -97,6 +117,14 @@ func Parse(docs ...[]byte) ([]Schema, error) {
 		}
 	}
 
+	for tns, root := range schema {
+		if err := nameAnonymousTypes(root, tns); err != nil {
+			return nil, err
+		}
+	}
+	if err := flattenRef(schema); err != nil {
+		return nil, err
+	}
 	for tns, root := range schema {
 		s := Schema{TargetNS: tns, Types: make(map[xml.Name]Type)}
 		if err := s.parse(root, schema); err != nil {
@@ -188,8 +216,13 @@ func nameAnonymousTypes(root *xmltree.Element, targetNS string) error {
 			return fmt.Errorf("Did not expect <%s> to have an anonymous type",
 				el.Prefix(el.Name))
 		}
-		for _, t := range el.SearchFunc(isType) {
+		for i := range el.Children {
+			t := &el.Children[i]
+			if !isAnonymousType(t) {
+				continue
+			}
 			typeCounter++
+
 			name := anonTypeName(typeCounter, targetNS)
 			qname := el.Prefix(name)
 
@@ -208,124 +241,93 @@ func nameAnonymousTypes(root *xmltree.Element, targetNS string) error {
 }
 
 /*
-Convert
 
-  <xs:attributeGroup name="commonAttributes" >
-    <xs:attribute name="id" type="xs:ID" />
-    <xs:attribute name="href" type="xs:anyURI" />
-    <xs:anyAttribute namespace="##other" processContents="lax" />
-  </xs:attributeGroup>
-  <xs:attributeGroup name="arrayAttributes" >
-    <xs:attribute ref="tns:arrayType" />
-    <xs:attribute ref="tns:offset" />
-  </xs:attributeGroup>
-  <xs:group name="Array" >
-    <xs:sequence>
-      <xs:any namespace="##any" minOccurs="0" maxOccurs="unbounded" processContents="lax" />
-    </xs:sequence>
-  </xs:group>
-  <xs:complexType name="Array" >
-    <xs:group ref="tns:Array" minOccurs="0" />
-    <xs:attributeGroup ref="tns:arrayAttributes" />
-    <xs:attributeGroup ref="tns:commonAttributes" />
-  </xs:complexType>
+Dereference all ref= links within a document.
 
-to
+  <attribute name="id" type="xsd:ID" />
+  <complexType name="MyType">
+    <attribute ref="tns:id" />
+  </complexType>
 
-  <xs:complexType name="Array" >
-    <xs:sequence>
-      <xs:any namespace="##any" minOccurs="0" maxOccurs="unbounded" processContents="lax" />
-    </xs:sequence>
-    <xs:attribute ref="tns:arrayType" />
-    <xs:attribute ref="tns:offset" />
-    <xs:attribute name="id" type="xs:ID" />
-    <xs:attribute name="href" type="xs:anyURI" />
-    <xs:anyAttribute namespace="##other" processContents="lax" />
-  </xs:complexType>
+becomes
+
+  <complexType name="MyType">
+    <attribute name="id" type="xsd:ID" />
+  </complexType>
 
 */
-func derefGroupAttrEl(root *xmltree.Element, targetNS string, extra map[string]*xmltree.Element) error {
-	for _, el := range root.SearchFunc(hasAttr("", "ref")) {
-		var found bool
-		if el.Name.Space != schemaNS {
+func flattenRef(schema map[string]*xmltree.Element) error {
+	var (
+		depends = new(dependency.Graph)
+		index   = indexSchema(schema)
+	)
+	for id, el := range index.eltByID {
+		if el.Attr("", "ref") == "" {
 			continue
 		}
-		sameType := and(isElem(el.Name.Space, el.Name.Local), hasAttr("", "name"))
-		ref := el.Resolve(el.Attr("", "ref"))
-		for ns, doc := range extra {
-			for _, real := range doc.SearchFunc(sameType) {
-				name := real.ResolveDefault(real.Attr("", "name"), ns)
-				if name == ref {
-					extraAttr := el.StartElement.Attr
-					el.Content = real.Content
-					el.StartElement = real.StartElement
-					el.Children = real.Children
-					el.Scope = *real.JoinScope(&el.Scope)
-					// In XML Schema, it is valid to
-					// reference another element and at
-					// the same time add attributes to
-					// it. We handle this by merging
-					// the attributes of elements and
-					// their references.
-					for _, attr := range extraAttr {
-						if attr.Name.Local == "ref" {
-							continue
-						}
-						el.SetAttr(attr.Name.Space, attr.Name.Local, attr.Value)
-					}
-					found = true
-					break
-				}
-			}
+		name := el.Resolve(el.Attr("", "ref"))
+		if dep, ok := index.ElementID(name, el.Name); !ok {
+			return fmt.Errorf("could not find ref %s in %s",
+				el.Attr("", "ref"), el)
+		} else {
+			depends.Add(id, dep)
 		}
-		if !found {
-			return fmt.Errorf("could not dereference %v", el.StartElement)
+	}
+	depends.Flatten(func(id int) {
+		el := index.eltByID[id]
+		if el.Attr("", "ref") == "" {
+			return
+		}
+		ref := el.Resolve(el.Attr("", "ref"))
+		real, ok := index.ByName(ref, el.Name)
+		if !ok {
+			panic("bug building dep tree; missing " + el.Attr("", "ref"))
+		}
+		*el = *deref(el, real)
+	})
+	for ns, doc := range schema {
+		unpackGroups(doc)
+		if hasCycle(doc, nil) {
+			return fmt.Errorf("cycle detected after flattening references "+
+				"in schema %s:\n%s\n", ns, xmltree.MarshalIndent(doc, "", "  "))
 		}
 	}
 	return nil
 }
 
-/*
-Convert a form such as
-  <s:schema elementFormDefault="qualified" targetNamespace="http://www.sci-grupo.com.mx/">
-    <s:element name="RecibeCFD">
-      <s:complexType>
-        <s:sequence>
-          <s:element minOccurs="0" maxOccurs="1" name="XMLCFD" type="s:string" />
-        </s:sequence>
-      </s:complexType>
-    </s:element>
-  </s:schema>
+// Dereference a pointer to an XML element, returning
+// the full XML object. It's OK to modify ref.
+func deref(ref, real *xmltree.Element) *xmltree.Element {
+	attrs := ref.StartElement.Attr
+	ref.Content = real.Content
+	ref.StartElement = real.StartElement
+	ref.Children = append([]xmltree.Element{}, real.Children...)
+	ref.Scope = *real.JoinScope(&ref.Scope)
+	for _, attr := range attrs {
+		if attr.Name.Local == "ref" {
+			continue
+		}
+		ref.SetAttr(attr.Name.Space, attr.Name.Local, attr.Value)
+	}
+	return ref
+}
 
-Into
+// After dereferencing groups and attributeGroups, we need to
+// unpack them within their parent elements.
+func unpackGroups(doc *xmltree.Element) {
+	isGroup := or(isElem(schemaNS, "group"), isElem(schemaNS, "attributeGroup"))
+	hasGroups := hasChild(isGroup)
 
-  <s:schema elementFormDefault="qualified" targetNamespace="http://www.sci-grupo.com.mx/">
-    <s:element name="RecibeCFD">
-      <s:complexType name="RecibeCFD">
-        <s:sequence>
-          <s:element minOccurs="0" maxOccurs="1" name="XMLCFD" type="s:string" />
-        </s:sequence>
-      </s:complexType>
-    </s:element>
-  </s:schema>
-*/
-func unpackTopElements(root *xmltree.Element) {
-	for _, el := range root.Children {
-		if el.Name.Space != schemaNS {
-			continue
+	for _, el := range doc.SearchFunc(hasGroups) {
+		children := make([]xmltree.Element, 0, len(el.Children))
+		for _, c := range el.Children {
+			if isGroup(&c) {
+				children = append(children, c.Children...)
+			} else {
+				children = append(children, c)
+			}
 		}
-		if name := el.Name.Local; name != "element" && name != "attribute" {
-			continue
-		}
-		childTypes := el.SearchFunc(isType)
-		if len(childTypes) != 1 {
-			continue
-		}
-		child := *childTypes[0]
-		if child.Attr("", "name") != "" {
-			continue
-		}
-		child.SetAttr("", "name", el.Attr("", "name"))
+		el.Children = children
 	}
 }
 
@@ -443,14 +445,7 @@ func propagateMixedAttr(t, b Type, depth int) {
 }
 
 func (s *Schema) parse(root *xmltree.Element, extra map[string]*xmltree.Element) error {
-	unpackTopElements(root)
 	expandComplexShorthand(root)
-	if err := nameAnonymousTypes(root, s.TargetNS); err != nil {
-		return err
-	}
-	if err := derefGroupAttrEl(root, s.TargetNS, extra); err != nil {
-		return err
-	}
 	return s.parseTypes(root)
 }
 
