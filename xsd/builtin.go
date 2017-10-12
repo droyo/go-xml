@@ -67,6 +67,7 @@ const (
 	XMLSpace // xml:space
 	XMLBase  // xml:base
 	XMLId    // xml:id
+	AnySimpleType
 )
 
 // Name returns the canonical name of the built-in type. All

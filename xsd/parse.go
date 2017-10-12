@@ -679,6 +679,7 @@ func (s *Schema) parseSimpleType(root *xmltree.Element) *SimpleType {
 			for _, name := range strings.Fields(el.Attr("", "memberTypes")) {
 				type_ := parseType(el.Resolve(name))
 				t.Union = append(t.Union, type_)
+				t.Base = AnySimpleType
 			}
 		case "annotation":
 			doc = doc.append(parseAnnotation(el))
