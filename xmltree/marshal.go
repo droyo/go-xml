@@ -120,11 +120,10 @@ func (e *encoder) encode(el, parent *Element, depth int) error {
 	return nil
 }
 
+// diffScope returns the Scope of the child element, minus any
+// identical namespace declaration in the parent's scope.
 func diffScope(parent, child *Element) Scope {
 	if parent == nil { // root element
-		return child.Scope
-	}
-	if len(child.Scope.ns) == 0 {
 		return child.Scope
 	}
 	childScope := child.Scope
@@ -134,6 +133,7 @@ func diffScope(parent, child *Element) Scope {
 			childScope.ns = childScope.ns[1:]
 			parentScope.ns = parentScope.ns[1:]
 		}
+		break
 	}
 	return childScope
 }
