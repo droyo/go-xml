@@ -317,4 +317,5 @@ var StandardSchema = [][]byte{
 	soapenc11xsd, // http://schemas.xmlsoap.org/soap/encoding/
 	xmlnsxsd,     // http://www.w3.org/XML/1998/namespace
 	wsdl2003xsd,  // http://schemas.xmlsoap.org/wsdl/
+	xlinkxsd,     // http://www.w3.org/1999/xlink
 }
