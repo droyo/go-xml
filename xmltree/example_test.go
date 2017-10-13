@@ -218,9 +218,17 @@ func ExampleMarshal() {
 
 	// Output:
 	// <toc>
-	//   <chapter>Civilizing Huck.Miss Watson.Tom Sawyer Waits.</chapter>
-	//   <chapter>The Boys Escape Jim.Torn Sawyer's Gang.Deep-laid Plans.</chapter>
-	//   <chapter>A Good Going-over.Grace Triumphant."One of Tom Sawyers's Lies".</chapter>
-	//   <chapter>Huck and the Judge.Superstition.</chapter>
+	//   <chapter>
+	//     Civilizing Huck.Miss Watson.Tom Sawyer Waits.
+	//   </chapter>
+	//   <chapter>
+	//     The Boys Escape Jim.Torn Sawyer's Gang.Deep-laid Plans.
+	//   </chapter>
+	//   <chapter>
+	//     A Good Going-over.Grace Triumphant."One of Tom Sawyers's Lies".
+	//   </chapter>
+	//   <chapter>
+	//     Huck and the Judge.Superstition.
+	//   </chapter>
 	// </toc>
 }
