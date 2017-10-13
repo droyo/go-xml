@@ -391,12 +391,15 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type), depth int) xsd.Type
 			el.Type = cfg.flatten1(el.Type, push, depth+1)
 			t.Elements[i] = el
 			push(el.Type)
-			cfg.debugf("%T(%s): %v", t, xsd.XMLName(t).Local,
-				xsd.XMLName(el.Type))
+			cfg.debugf("element %s %T(%s): %v", el.Name.Local, t,
+				xsd.XMLName(t).Local, xsd.XMLName(el.Type))
 		}
 		for i, attr := range t.Attributes {
 			attr.Type = cfg.flatten1(attr.Type, push, depth+1)
 			t.Attributes[i] = attr
+			push(attr.Type)
+			cfg.debugf("attribute %s %T(%s): %v", attr.Name.Local, t,
+				xsd.XMLName(t).Local, xsd.XMLName(attr.Type))
 		}
 		cfg.debugf("%T(%s) -> %T(%s)", t, xsd.XMLName(t).Local,
 			t.Base, xsd.XMLName(t.Base).Local)
