@@ -54,6 +54,12 @@ func main() {
 		if err := ioutil.WriteFile(filename, source, 0666); err != nil {
 			log.Print(dir, ":", err)
 		}
+
+		// This is needed so 'go build' works and automated CI doesn't complain.
+		err = ioutil.WriteFile(filepath.Join(dir, dir+".go"), []byte("package "+dir+"\n"), 0666)
+		if err != nil {
+			log.Print(err)
+		}
 	}
 }
 
