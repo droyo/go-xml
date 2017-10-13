@@ -4,12 +4,10 @@ package main
 
 import (
 	"encoding/xml"
-	"flag"
 	"fmt"
 	"go/ast"
 	"io/ioutil"
 	"log"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -18,46 +16,43 @@ import (
 	"aqwari.net/xml/xsdgen"
 )
 
-var (
-	output = flag.String("o", "gen_test.go", "test filename ending")
-	pkg    = flag.String("pkg", "", "name of test's package")
-)
+func glob(pat string) string {
+	f, err := filepath.Glob(pat)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if len(f) < 1 {
+		log.Fatal("no files match ", pat)
+	}
+	return f[0]
+}
 
 func main() {
 	cfg := new(xsdgen.Config)
-
-	flag.Parse()
-	if flag.NArg() != 1 {
-		log.Fatal("usage: testgen [-o outfile] dir")
-	}
-	if *pkg == "" {
-		*pkg = os.Getenv("GOPACKAGE")
-	}
-	cases := findTestCases(flag.Arg(0))
+	cases := findTestCases()
 
 	cfg.Option(xsdgen.DefaultOptions...)
-	cfg.Option(
-		xsdgen.PackageName(*pkg),
-	)
-	for _, stem := range cases {
-		data, err := ioutil.ReadFile(stem + ".xsd")
+	for _, dir := range cases {
+		data, err := ioutil.ReadFile(glob(filepath.Join(dir, "*.xsd")))
 		if err != nil {
 			log.Print(err)
 			continue
 		}
-		tests, err := genTests(*cfg, data, stem+".xml")
+		tests, err := genTests(*cfg, data, dir)
 		if err != nil {
-			log.Print(stem, ":", err)
+			log.Print(dir, ":", err)
 			continue
+		} else {
+			log.Printf("generated tests for %s", dir)
 		}
 		source, err := gen.FormattedSource(tests)
 		if err != nil {
-			log.Print(stem, ":", err)
+			log.Print(dir, ":", err)
 			continue
 		}
-		filename := filepath.Base(stem) + "_" + *output
+		filename := filepath.Join(dir, dir+"_test.go")
 		if err := ioutil.WriteFile(filename, source, 0666); err != nil {
-			log.Print(stem, ":", err)
+			log.Print(dir, ":", err)
 		}
 	}
 }
@@ -70,10 +65,8 @@ func main() {
 //   the document described in the XML schema.
 // - Marshal the resulting file back into an XML document.
 // - Compare the two documents for equality.
-func genTests(cfg xsdgen.Config, data []byte, dataFile string) (*ast.File, error) {
-	base := filepath.Base(dataFile)
-	base = base[:len(base)-len(filepath.Ext(base))]
-
+func genTests(cfg xsdgen.Config, data []byte, dir string) (*ast.File, error) {
+	cfg.Option(xsdgen.PackageName(dir))
 	code, err := cfg.GenCode(data)
 	if err != nil {
 		return nil, err
@@ -105,16 +98,24 @@ func genTests(cfg xsdgen.Config, data []byte, dataFile string) (*ast.File, error
 
 	var params struct {
 		DocStruct string
-		DataFile  string
+		Dir       string
 	}
 	params.DocStruct = expr
-	params.DataFile = dataFile
-	fn, err := gen.Func("Test"+strings.Title(base)).
+	params.Dir = dir
+	fn, err := gen.Func("Test"+strings.Title(dir)).
 		Args("t *testing.T").
 		BodyTmpl(`
 			type Document {{.DocStruct}}
 			var document Document
-			input, err := ioutil.ReadFile("{{.DataFile}}")
+			samples, err := filepath.Glob(filepath.Join("*.xml"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(samples) != 1 {
+				t.Fatal("expected one sample file, found ", samples)
+			}
+			
+			input, err := ioutil.ReadFile(samples[0])
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -130,7 +131,7 @@ func genTests(cfg xsdgen.Config, data []byte, dataFile string) (*ast.File, error
 			
 			inputTree, err := xmltree.Parse(input)
 			if err != nil {
-				t.Fatal("{{.DataFile}}: ", err)
+				t.Fatal("{{.Dir}}: ", err)
 			}
 			
 			outputTree, err := xmltree.Parse(output)
@@ -145,6 +146,9 @@ func genTests(cfg xsdgen.Config, data []byte, dataFile string) (*ast.File, error
 			}
 			`, params).Decl()
 
+	if err != nil {
+		return nil, err
+	}
 	// Test goes at the top
 	file.Decls = append([]ast.Decl{fn}, file.Decls...)
 	return file, nil
@@ -174,27 +178,17 @@ func topLevelElements(root *xmltree.Element) []Element {
 	return result
 }
 
-// Looks for pairs of (xml, xsd) files in a directory, that
-// should contain xml data and the schema that describes
-// it, respectively. Returns slice of file names with extension
-// removed.
-func findTestCases(dir string) []string {
-	filenames, err := filepath.Glob(filepath.Join(dir, "*.xml"))
+// Looks for subdirectories containing pairs of (xml, xsd) files
+// that should contain an xml document and the schema it conforms to,
+// respectively. Returns slice of the directory names
+func findTestCases() []string {
+	filenames, err := filepath.Glob("*/*.xsd")
 	if err != nil {
 		return nil
 	}
-	testCases := make([]string, 0, len(filenames))
-	for _, xmlfile := range filenames {
-		ext := filepath.Ext(xmlfile)
-		if len(ext) == len(xmlfile) {
-			continue
-		}
-		base := xmlfile[:len(xmlfile)-len(ext)]
-		schemafile := base + ".xsd"
-		if _, err := os.Stat(schemafile); err != nil {
-			continue
-		}
-		testCases = append(testCases, base)
+	result := make([]string, 0, len(filenames))
+	for _, xsdfile := range filenames {
+		result = append(result, filepath.Base(filepath.Dir(xsdfile)))
 	}
-	return testCases
+	return result
 }

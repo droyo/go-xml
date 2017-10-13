@@ -1,4 +1,4 @@
-package xsdgen
+package bindata
 
 import (
 	"bytes"
@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/xml"
 	"io/ioutil"
+	"path/filepath"
 	"testing"
 
 	"aqwari.net/xml/xmltree"
@@ -16,7 +17,14 @@ func TestBindata(t *testing.T) {
 		Bindata Bindata `xml:"tns bindata"`
 	}
 	var document Document
-	input, err := ioutil.ReadFile("testdata/bindata.xml")
+	samples, err := filepath.Glob(filepath.Join("*.xml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(samples) != 1 {
+		t.Fatal("expected one sample file, found ", samples)
+	}
+	input, err := ioutil.ReadFile(samples[0])
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -31,7 +39,7 @@ func TestBindata(t *testing.T) {
 	}
 	inputTree, err := xmltree.Parse(input)
 	if err != nil {
-		t.Fatal("testdata/bindata.xml: ", err)
+		t.Fatal("bindata: ", err)
 	}
 	outputTree, err := xmltree.Parse(output)
 	if err != nil {

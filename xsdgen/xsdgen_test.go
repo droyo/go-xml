@@ -7,9 +7,6 @@ import (
 	"testing"
 )
 
-//go:generate -command testgen go run _testgen/testgen.go
-//go:generate testgen testdata
-
 type testLogger testing.T
 
 func grep(pattern, data string) bool {
