@@ -178,7 +178,6 @@ func topLevelElements(root *xmltree.Element) []Element {
 					Type: el.Resolve(el.Attr("", "type")),
 				})
 			}
-			break
 		}
 	}
 	return result
