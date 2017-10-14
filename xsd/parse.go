@@ -656,6 +656,7 @@ func parseAttribute(ns string, el *xmltree.Element) Attribute {
 	a.Type = parseType(el.Resolve(el.Attr("", "type")))
 	a.Default = el.Attr("", "default")
 	a.Scope = el.Scope
+	a.Optional = el.Attr("", "use") != "required"
 
 	walk(el, func(el *xmltree.Element) {
 		if el.Name.Local == "annotation" {
