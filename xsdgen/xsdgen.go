@@ -545,9 +545,10 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%s attribute %s: %v", t.Name.Local, attr.Name.Local, err)
 		}
+		cfg.debugf("adding %s attribute %s as %v", t.Name.Local, attr.Name.Local, base)
 		fields = append(fields, ast.NewIdent(cfg.public(attr.Name)), base, gen.String(tag))
 		if attr.Default != "" || nonTrivialBuiltin(attr.Type) {
-			typeName := cfg.public(xsd.XMLName(attr.Type))
+			typeName := cfg.exprString(attr.Type)
 			if nonTrivialBuiltin(attr.Type) {
 				h, ok := cfg.helperTypes[xsd.XMLName(attr.Type)]
 				if !ok {
@@ -594,7 +595,7 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 		}
 		fields = append(fields, name, base, gen.String(tag))
 		if el.Default != "" || nonTrivialBuiltin(el.Type) {
-			typeName := cfg.public(xsd.XMLName(el.Type))
+			typeName := cfg.exprString(el.Type)
 			if nonTrivialBuiltin(el.Type) {
 				h, ok := cfg.helperTypes[xsd.XMLName(el.Type)]
 				if !ok {
@@ -820,6 +821,7 @@ func (cfg *Config) genSimpleListSpec(t *xsd.SimpleType) ([]spec, error) {
 	if err != nil {
 		return nil, err
 	}
+	expr = &ast.ArrayType{Elt: expr}
 	s := spec{
 		name:    cfg.public(t.Name),
 		expr:    expr,
@@ -847,7 +849,7 @@ func (cfg *Config) genSimpleListSpec(t *xsd.SimpleType) ([]spec, error) {
 			}
 			return bytes.Join(result, []byte(" ")), nil
 		`)
-		unmarshalFn = marshalFn.Body(`
+		unmarshalFn = unmarshalFn.Body(`
 			for _, v := range bytes.Fields(text) {
 				*x = append(*x, string(v))
 			}
@@ -933,13 +935,13 @@ func (cfg *Config) genSimpleListSpec(t *xsd.SimpleType) ([]spec, error) {
 		marshalFn = marshalFn.Body(`
 			result := make([][]byte, 0, len(*x))
 			for _, v := range *x {
-				result = append(result, []byte(strconv.FormatUInt(uint64(v), 10)))
+				result = append(result, []byte(strconv.FormatUint(uint64(v), 10)))
 			}
 			return bytes.Join(result, []byte(" ")), nil
 		`)
 		unmarshalFn = unmarshalFn.Body(`
 			for _, v := range strings.Fields(string(text)) {
-				if i, err := strconv.ParseUInt(v, 10, 32); err != nil {
+				if i, err := strconv.ParseUint(v, 10, 32); err != nil {
 					return err
 				} else {
 					*x = append(*x, uint(i))
