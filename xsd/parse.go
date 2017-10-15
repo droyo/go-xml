@@ -633,7 +633,9 @@ func parseElement(ns string, el *xmltree.Element) Element {
 		Plural:   parsePlural(el),
 		Scope:    el.Scope,
 	}
-
+	if x := el.Attr("", "minOccurs"); x != "" && parseInt(x) == 0 {
+		e.Optional = true
+	}
 	walk(el, func(el *xmltree.Element) {
 		if el.Name.Local == "annotation" {
 			doc = doc.append(parseAnnotation(el))

@@ -50,20 +50,20 @@ func TestBooks(t *testing.T) {
 }
 
 type BookForm struct {
-	Name    string    `xml:"name,attr"`
-	Author  string    `xml:"urn:books author"`
-	Title   string    `xml:"urn:books title"`
-	Genre   string    `xml:"urn:books genre"`
-	Price   float32   `xml:"urn:books price"`
-	Pubdate time.Time `xml:"urn:books pub_date"`
-	Review  string    `xml:"urn:books review"`
+	Name    string    `xml:"name,attr,omitempty"`
+	Author  string    `xml:"urn:books author,omitempty"`
+	Title   string    `xml:"urn:books title,omitempty"`
+	Genre   string    `xml:"urn:books genre,omitempty"`
+	Price   float32   `xml:"urn:books price,omitempty"`
+	Pubdate time.Time `xml:"urn:books pub_date,omitempty"`
+	Review  string    `xml:"urn:books review,omitempty"`
 }
 
 func (t *BookForm) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 	type T BookForm
 	var layout struct {
 		*T
-		Pubdate xsdDate `xml:"urn:books pub_date"`
+		Pubdate xsdDate `xml:"urn:books pub_date,omitempty"`
 	}
 	layout.T = (*T)(t)
 	layout.Pubdate = xsdDate(layout.T.Pubdate)
@@ -73,7 +73,7 @@ func (t *BookForm) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	type T BookForm
 	var overlay struct {
 		*T
-		Pubdate xsdDate `xml:"urn:books pub_date"`
+		Pubdate xsdDate `xml:"urn:books pub_date,omitempty"`
 	}
 	overlay.T = (*T)(t)
 	if err := d.DecodeElement(&overlay, &start); err != nil {
@@ -84,7 +84,7 @@ func (t *BookForm) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 }
 
 type BooksForm struct {
-	Book []BookForm `xml:"urn:books book"`
+	Book []BookForm `xml:"urn:books book,omitempty"`
 }
 
 type xsdDate time.Time
