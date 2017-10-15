@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 
 	"golang.org/x/net/html/charset"
@@ -22,6 +23,14 @@ const (
 	xmlLangURI      = "http://www.w3.org/XML/1998/namespace"
 	recursionLimit  = 3000
 )
+
+type byXMLName []xml.Name
+
+func (x byXMLName) Len() int { return len(x) }
+func (x byXMLName) Less(i, j int) bool {
+	return x[i].Space+x[i].Local < x[j].Space+x[j].Local
+}
+func (x byXMLName) Swap(i, j int) { x[i], x[j] = x[j], x[i] }
 
 var errDeepXML = errors.New("xmltree: xml document too deeply nested")
 
@@ -164,6 +173,10 @@ func (scope *Scope) pushNS(tag xml.StartElement) []xml.Attr {
 			newAttrs = append(newAttrs, attr)
 		}
 	}
+	// Within a single tag, all ns declarations are sorted. This reduces
+	// differences between xmlns declarations between tags when
+	// modifying the xml tree.
+	sort.Sort(byXMLName(ns))
 	if len(ns) > 0 {
 		scope.ns = append(scope.ns, ns...)
 		// Ensure that future additions to the scope create

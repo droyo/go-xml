@@ -135,8 +135,9 @@ func diffScope(parent, child *Element) Scope {
 		if childScope.ns[0] == parentScope.ns[0] {
 			childScope.ns = childScope.ns[1:]
 			parentScope.ns = parentScope.ns[1:]
+		} else {
+			break
 		}
-		break
 	}
 	return childScope
 }
