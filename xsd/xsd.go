@@ -86,6 +86,8 @@ type Attribute struct {
 	Plural bool
 	// Default overrides the zero value of this element.
 	Default string
+	// True if the attribute is not required
+	Optional bool
 	// Any additional attributes provided in the <xs:attribute> element.
 	Attr []xml.Attr
 	// Used for resolving qnames in additional attributes.

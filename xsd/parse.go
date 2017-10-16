@@ -629,11 +629,14 @@ func parseElement(ns string, el *xmltree.Element) Element {
 		Default:  el.Attr("", "default"),
 		Abstract: parseBool(el.Attr("", "abstract")),
 		Nillable: parseBool(el.Attr("", "nillable")),
-		Optional: (el.Attr("", "use") == "optional"),
 		Plural:   parsePlural(el),
 		Scope:    el.Scope,
 	}
-
+	if x := el.Attr("", "minOccurs"); x != "" && parseInt(x) == 0 {
+		e.Optional = true
+	} else if e.Default != "" {
+		e.Optional = true
+	}
 	walk(el, func(el *xmltree.Element) {
 		if el.Name.Local == "annotation" {
 			doc = doc.append(parseAnnotation(el))
@@ -656,6 +659,7 @@ func parseAttribute(ns string, el *xmltree.Element) Attribute {
 	a.Type = parseType(el.Resolve(el.Attr("", "type")))
 	a.Default = el.Attr("", "default")
 	a.Scope = el.Scope
+	a.Optional = el.Attr("", "use") != "required"
 
 	walk(el, func(el *xmltree.Element) {
 		if el.Name.Local == "annotation" {

@@ -50,7 +50,7 @@ func TestBooks(t *testing.T) {
 }
 
 type BookForm struct {
-	Name    string    `xml:"name,attr"`
+	Name    string    `xml:"name,attr,omitempty"`
 	Author  string    `xml:"urn:books author"`
 	Title   string    `xml:"urn:books title"`
 	Genre   string    `xml:"urn:books genre"`
@@ -84,7 +84,7 @@ func (t *BookForm) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 }
 
 type BooksForm struct {
-	Book []BookForm `xml:"urn:books book"`
+	Book []BookForm `xml:"urn:books book,omitempty"`
 }
 
 type xsdDate time.Time

@@ -540,7 +540,11 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 		xsd.XMLName(t).Local, len(elements), len(attributes))
 
 	for _, attr := range attributes {
-		tag := fmt.Sprintf(`xml:"%s,attr"`, attr.Name.Local)
+		options := ""
+		if attr.Optional {
+			options = ",omitempty"
+		}
+		tag := fmt.Sprintf(`xml:"%s,attr%s"`, attr.Name.Local, options)
 		base, err := cfg.expr(attr.Type)
 		if err != nil {
 			return nil, fmt.Errorf("%s attribute %s: %v", t.Name.Local, attr.Name.Local, err)
@@ -569,7 +573,7 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 	}
 	for _, el := range elements {
 		options := ""
-		if el.Nillable {
+		if el.Nillable || el.Optional {
 			options = ",omitempty"
 		}
 		tag := fmt.Sprintf(`xml:"%s %s%s"`, el.Name.Space, el.Name.Local, options)
