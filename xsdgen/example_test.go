@@ -286,24 +286,21 @@ func ExampleUseFieldNames() {
 	// 	type T Book
 	// 	var layout struct {
 	// 		*T
-	// 		Published xsdDate `xml:"http://www.example.com/ published"`
+	// 		Published *xsdDate `xml:"http://www.example.com/ published"`
 	// 	}
 	// 	layout.T = (*T)(t)
-	// 	layout.Published = xsdDate(layout.T.Published)
+	// 	layout.Published = (*xsdDate)(&layout.T.Published)
 	// 	return e.EncodeElement(layout, start)
 	// }
 	// func (t *Book) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	// 	type T Book
 	// 	var overlay struct {
 	// 		*T
-	// 		Published xsdDate `xml:"http://www.example.com/ published"`
+	// 		Published *xsdDate `xml:"http://www.example.com/ published"`
 	// 	}
 	// 	overlay.T = (*T)(t)
-	// 	if err := d.DecodeElement(&overlay, &start); err != nil {
-	// 		return err
-	// 	}
-	// 	overlay.T.Published = time.Time(overlay.Published)
-	// 	return nil
+	// 	overlay.Published = (*xsdDate)(&overlay.T.Published)
+	// 	return d.DecodeElement(&overlay, &start)
 	// }
 	//
 	// type Library struct {
@@ -317,24 +314,21 @@ func ExampleUseFieldNames() {
 	// 	type T Library
 	// 	var layout struct {
 	// 		*T
-	// 		Published xsdDate `xml:"http://www.example.com/ published"`
+	// 		Published *xsdDate `xml:"http://www.example.com/ published"`
 	// 	}
 	// 	layout.T = (*T)(t)
-	// 	layout.Published = xsdDate(layout.T.Published)
+	// 	layout.Published = (*xsdDate)(&layout.T.Published)
 	// 	return e.EncodeElement(layout, start)
 	// }
 	// func (t *Library) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	// 	type T Library
 	// 	var overlay struct {
 	// 		*T
-	// 		Published xsdDate `xml:"http://www.example.com/ published"`
+	// 		Published *xsdDate `xml:"http://www.example.com/ published"`
 	// 	}
 	// 	overlay.T = (*T)(t)
-	// 	if err := d.DecodeElement(&overlay, &start); err != nil {
-	// 		return err
-	// 	}
-	// 	overlay.T.Published = time.Time(overlay.Published)
-	// 	return nil
+	// 	overlay.Published = (*xsdDate)(&overlay.T.Published)
+	// 	return d.DecodeElement(&overlay, &start)
 	// }
 	//
 	// type xsdDate time.Time
