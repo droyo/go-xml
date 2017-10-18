@@ -60,28 +60,25 @@ func (t *Bindata) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 	type T Bindata
 	var layout struct {
 		*T
-		HexData xsdHexBinary    `xml:"tns hexData"`
-		B64Data xsdBase64Binary `xml:"tns b64Data"`
+		HexData *xsdHexBinary    `xml:"tns hexData"`
+		B64Data *xsdBase64Binary `xml:"tns b64Data"`
 	}
 	layout.T = (*T)(t)
-	layout.HexData = xsdHexBinary(layout.T.HexData)
-	layout.B64Data = xsdBase64Binary(layout.T.B64Data)
+	layout.HexData = (*xsdHexBinary)(&layout.T.HexData)
+	layout.B64Data = (*xsdBase64Binary)(&layout.T.B64Data)
 	return e.EncodeElement(layout, start)
 }
 func (t *Bindata) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	type T Bindata
 	var overlay struct {
 		*T
-		HexData xsdHexBinary    `xml:"tns hexData"`
-		B64Data xsdBase64Binary `xml:"tns b64Data"`
+		HexData *xsdHexBinary    `xml:"tns hexData"`
+		B64Data *xsdBase64Binary `xml:"tns b64Data"`
 	}
 	overlay.T = (*T)(t)
-	if err := d.DecodeElement(&overlay, &start); err != nil {
-		return err
-	}
-	overlay.T.HexData = []byte(overlay.HexData)
-	overlay.T.B64Data = []byte(overlay.B64Data)
-	return nil
+	overlay.HexData = (*xsdHexBinary)(&overlay.T.HexData)
+	overlay.B64Data = (*xsdBase64Binary)(&overlay.T.B64Data)
+	return d.DecodeElement(&overlay, &start)
 }
 
 type xsdBase64Binary []byte

@@ -660,23 +660,18 @@ func (cfg *Config) genComplexTypeMethods(t *xsd.ComplexType, overrides []fieldOv
 			var overlay struct{
 				*T
 				{{range .Overrides}}
-				{{.FieldName}} {{.ToType}} `+"`{{.Tag}}`"+`
+				{{.FieldName}} *{{.ToType}} `+"`{{.Tag}}`"+`
 				{{end}}
 			}
 			overlay.T = (*T)(t)
 			{{range .Overrides}}
+			overlay.{{.FieldName}} = (*{{.ToType}})(&overlay.T.{{.FieldName}})
 			{{if .DefaultValue -}}
 			// overlay.{{.FieldName}} = {{.DefaultValue}}
 			{{end -}}
 			{{end}}
 
-			if err := d.DecodeElement(&overlay, &start); err != nil {
-				return err
-			}
-			{{range .Overrides}}
-			overlay.T.{{.FieldName}} = {{.FromType}}(overlay.{{.FieldName}})
-			{{end}}
-			return nil
+			return d.DecodeElement(&overlay, &start)
 		`, data).Decl()
 	if err != nil {
 		return nil, nil, err
@@ -705,12 +700,12 @@ func (cfg *Config) genComplexTypeMethods(t *xsd.ComplexType, overrides []fieldOv
 			var layout struct{
 				*T
 				{{- range .Overrides}}
-				{{.FieldName}} {{.ToType}}`+"`{{.Tag}}`"+`
+				{{.FieldName}} *{{.ToType}}`+"`{{.Tag}}`"+`
 				{{end -}}
 			}
 			layout.T = (*T)(t)
 			{{- range .Overrides}}
-			layout.{{.FieldName}} = {{.ToType}}(layout.T.{{.FieldName}})
+			layout.{{.FieldName}} = (*{{.ToType}})(&layout.T.{{.FieldName}})
 			{{end -}}
 
 			return e.EncodeElement(layout, start)

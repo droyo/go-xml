@@ -63,24 +63,21 @@ func (t *BookForm) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 	type T BookForm
 	var layout struct {
 		*T
-		Pubdate xsdDate `xml:"urn:books pub_date"`
+		Pubdate *xsdDate `xml:"urn:books pub_date"`
 	}
 	layout.T = (*T)(t)
-	layout.Pubdate = xsdDate(layout.T.Pubdate)
+	layout.Pubdate = (*xsdDate)(&layout.T.Pubdate)
 	return e.EncodeElement(layout, start)
 }
 func (t *BookForm) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	type T BookForm
 	var overlay struct {
 		*T
-		Pubdate xsdDate `xml:"urn:books pub_date"`
+		Pubdate *xsdDate `xml:"urn:books pub_date"`
 	}
 	overlay.T = (*T)(t)
-	if err := d.DecodeElement(&overlay, &start); err != nil {
-		return err
-	}
-	overlay.T.Pubdate = time.Time(overlay.Pubdate)
-	return nil
+	overlay.Pubdate = (*xsdDate)(&overlay.T.Pubdate)
+	return d.DecodeElement(&overlay, &start)
 }
 
 type BooksForm struct {
