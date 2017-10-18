@@ -92,6 +92,23 @@ func (t *xsdDate) UnmarshalText(text []byte) error {
 func (t xsdDate) MarshalText() ([]byte, error) {
 	return []byte((time.Time)(t).Format("2006-01-02")), nil
 }
+func (t xsdDate) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+	if (time.Time)(t).IsZero() {
+		return nil
+	}
+	m, err := t.MarshalText()
+	if err != nil {
+		return err
+	}
+	return e.EncodeElement(m, start)
+}
+func (t xsdDate) MarshalXMLAttr(name xml.Name) (xml.Attr, error) {
+	if (time.Time)(t).IsZero() {
+		return xml.Attr{}, nil
+	}
+	m, err := t.MarshalText()
+	return xml.Attr{Name: name, Value: string(m)}, err
+}
 func _unmarshalTime(text []byte, t *time.Time, format string) (err error) {
 	s := string(bytes.TrimSpace(text))
 	*t, err = time.Parse(format, s)
