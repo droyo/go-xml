@@ -438,11 +438,52 @@ type fieldOverride struct {
 	Tag              string
 }
 
+type nameGenerator struct {
+	cfg   *Config
+	taken map[string]struct{}
+}
+
+func (gen *nameGenerator) unique(name string) ast.Expr {
+	const maxDupNames = 1000
+	if _, ok := gen.taken[name]; ok {
+		for i := 0; i < maxDupNames; i++ {
+			unique := name + strconv.Itoa(i)
+			if _, ok := gen.taken[unique]; !ok {
+				gen.taken[unique] = struct{}{}
+				return ast.NewIdent(unique)
+			}
+		}
+	} else {
+		gen.taken[name] = struct{}{}
+	}
+	return ast.NewIdent(name)
+}
+
+func (gen *nameGenerator) attribute(base xml.Name) ast.Expr {
+	name := gen.cfg.public(base)
+	if _, ok := gen.taken[name]; !ok {
+		gen.taken[name] = struct{}{}
+		return ast.NewIdent(name)
+	}
+	return gen.unique(name + "Attr")
+}
+
+func (gen *nameGenerator) element(base xml.Name) ast.Expr {
+	name := gen.cfg.public(base)
+	if _, ok := gen.taken[name]; !ok {
+		gen.taken[name] = struct{}{}
+		return ast.NewIdent(name)
+	}
+	return gen.unique(name)
+}
+
 func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 	var result []spec
 	var fields []ast.Expr
 	var overrides []fieldOverride
 	var helperTypes []xml.Name
+
+	namegen := nameGenerator{cfg, make(map[string]struct{})}
 
 	if t.Mixed {
 		// For complex types with mixed content models, we must drill
@@ -492,7 +533,7 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 					Type:      b,
 				})
 			}
-			fields = append(fields, ast.NewIdent(name), expr, gen.String(tag))
+			fields = append(fields, namegen.unique(name), expr, gen.String(tag))
 		default:
 			panic(fmt.Sprintf("%s does not derive from a builtin type", t.Name.Local))
 		}
@@ -550,7 +591,7 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 			return nil, fmt.Errorf("%s attribute %s: %v", t.Name.Local, attr.Name.Local, err)
 		}
 		cfg.debugf("adding %s attribute %s as %v", t.Name.Local, attr.Name.Local, base)
-		fields = append(fields, ast.NewIdent(cfg.public(attr.Name)), base, gen.String(tag))
+		fields = append(fields, namegen.attribute(attr.Name), base, gen.String(tag))
 		if attr.Default != "" || nonTrivialBuiltin(attr.Type) {
 			typeName := cfg.exprString(attr.Type)
 			if nonTrivialBuiltin(attr.Type) {
@@ -581,7 +622,7 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%s element %s: %v", t.Name.Local, el.Name.Local, err)
 		}
-		name := ast.NewIdent(cfg.public(el.Name))
+		name := namegen.element(el.Name)
 		if el.Wildcard {
 			tag = `xml:",any"`
 			if el.Plural {
