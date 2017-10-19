@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"aqwari.net/xml/internal/dependency"
 	"aqwari.net/xml/internal/gen"
 	"aqwari.net/xml/xmltree"
 	"aqwari.net/xml/xsd"
@@ -165,7 +166,9 @@ func (cfg *Config) gen(primaries, deps []xsd.Schema) (*Code, error) {
 
 	for _, primary := range primaries {
 		cfg.debugf("flattening type hierarchy for schema %q", primary.TargetNS)
-		for _, t := range cfg.flatten(primary.Types) {
+		types := cfg.flatten(primary.Types)
+		types = cfg.expandComplexTypes(types)
+		for _, t := range types {
 			specs, err := cfg.genTypeSpec(t)
 			if err != nil {
 				errList = append(errList, fmt.Errorf("gen type %q: %v",
@@ -256,6 +259,77 @@ type spec struct {
 	xsdType     xsd.Type
 	helperTypes []xml.Name
 	helperFuncs []string
+}
+
+// Gets rid of types that extend their parent types by merging parent
+// fields into the derived type. All complexTypes in the returned
+// should restrict anyType.
+func (cfg *Config) expandComplexTypes(types []xsd.Type) []xsd.Type {
+	index := make(map[xml.Name]int)
+	graph := new(dependency.Graph)
+
+	for i, v := range types {
+		index[xsd.XMLName(v)] = i
+	}
+
+	for i, v := range types {
+		c, ok := v.(*xsd.ComplexType)
+		if !ok || !c.Extends {
+			continue
+		}
+		if b, ok := c.Base.(*xsd.ComplexType); ok {
+			if _, ok := index[b.Name]; !ok {
+				// should never happen, flatten should put
+				// all dependent types in top-level list.
+				panic(fmt.Errorf("missing base type for %v", c.Name))
+			}
+			graph.Add(i, index[b.Name])
+		}
+	}
+
+	graph.Flatten(func(i int) {
+		c := types[i].(*xsd.ComplexType)
+		if !c.Extends {
+			// This is a leaf
+			return
+		}
+		b := c.Base.(*xsd.ComplexType)
+
+		cfg.debugf("complexType %s: expanding base %s fields",
+			c.Name.Local, b.Name.Local)
+
+		shadowedElements := make(map[xml.Name]struct{})
+		shadowedAttributes := make(map[xml.Name]struct{})
+
+		for _, el := range c.Elements {
+			shadowedElements[el.Name] = struct{}{}
+		}
+		for _, attr := range c.Attributes {
+			shadowedAttributes[attr.Name] = struct{}{}
+		}
+		for _, el := range b.Elements {
+			if _, ok := shadowedElements[el.Name]; !ok {
+				c.Elements = append(c.Elements, el)
+			} else {
+				cfg.debugf("complexType %s: extended element %s is overrided",
+					c.Name.Local, el.Name.Local)
+			}
+		}
+		for _, attr := range b.Attributes {
+			if _, ok := shadowedAttributes[attr.Name]; !ok {
+				c.Attributes = append(c.Attributes, attr)
+			} else {
+				cfg.debugf("complexType %s: extended attribute %s is overrided",
+					c.Name.Local, attr.Name.Local)
+			}
+		}
+
+		c.Base = xsd.AnyType
+		c.Extends = false
+
+		types[i] = c
+	})
+	return types
 }
 
 // To reduce the size of the Go source generated, all intermediate types
