@@ -13,6 +13,7 @@ import (
 
 	"aqwari.net/xml/internal/gen"
 	"aqwari.net/xml/xmltree"
+	"aqwari.net/xml/xsd"
 	"aqwari.net/xml/xsdgen"
 )
 
@@ -84,10 +85,14 @@ func genTests(cfg xsdgen.Config, data []byte, dir string) (*ast.File, error) {
 
 	// We look for top-level elements in the schema to determine what
 	// the example document looks like.
-	root, err := xmltree.Parse(data)
+	roots, err := xsd.Normalize(data)
 	if err != nil {
 		return nil, err
 	}
+	if len(roots) < 1 {
+		return nil, fmt.Errorf("no schema in %s", dir)
+	}
+	root := roots[0]
 	doc := topLevelElements(root)
 	fields := make([]ast.Expr, 0, len(doc)*3)
 
