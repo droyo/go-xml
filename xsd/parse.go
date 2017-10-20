@@ -104,6 +104,9 @@ func Normalize(docs ...[]byte) ([]*xmltree.Element, error) {
 		}
 	}
 	for _, root := range result {
+		copyEltNamesToAnonTypes(root)
+	}
+	for _, root := range result {
 		if err := nameAnonymousTypes(root); err != nil {
 			return nil, err
 		}
@@ -175,6 +178,54 @@ func parseType(name xml.Name) Type {
 
 func anonTypeName(n int, ns string) xml.Name {
 	return xml.Name{ns, fmt.Sprintf("_anon%d", n)}
+}
+
+/* Convert
+<element name="foo">
+  <complexType>
+  ...
+  </complexType>
+</element>
+
+to
+
+<element name="foo" type="foo">
+  <complexType name="foo">
+  ...
+  </complexType>
+</element>
+*/
+func copyEltNamesToAnonTypes(root *xmltree.Element) {
+	used := make(map[xml.Name]struct{})
+	tns := root.Attr("", "targetNamespace")
+
+	namedTypes := and(isType, hasAttr("", "name"))
+	for _, el := range root.SearchFunc(namedTypes) {
+		used[el.ResolveDefault(el.Attr("", "name"), tns)] = struct{}{}
+	}
+
+	eltWithAnonType := and(
+		or(isElem(schemaNS, "element"), isElem(schemaNS, "attribute")),
+		hasAttr("", "name"),
+		hasAnonymousType)
+
+	for _, el := range root.SearchFunc(eltWithAnonType) {
+		// Make sure we can use this element's name
+		xmlname := el.ResolveDefault(el.Attr("", "name"), tns)
+		if _, ok := used[xmlname]; ok {
+			continue
+		}
+		used[xmlname] = struct{}{}
+		for i := range el.Children {
+			t := &el.Children[i]
+			if !isAnonymousType(t) {
+				continue
+			}
+			t.SetAttr("", "name", el.Attr("", "name"))
+			el.SetAttr("", "type", el.Prefix(xmlname))
+			break
+		}
+	}
 }
 
 /*
