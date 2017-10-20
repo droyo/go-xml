@@ -612,40 +612,27 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 			panic(fmt.Sprintf("%s does not derive from a builtin type", t.Name.Local))
 		}
 	}
-	if t.Extends {
-		expr, err := cfg.expr(t.Base)
-		if err != nil {
-			return nil, fmt.Errorf("%s base type %s: %v",
-				t.Name.Local, xsd.XMLName(t.Base).Local, err)
-		}
-		if b, ok := t.Base.(*xsd.ComplexType); ok {
-			// Use struct embedding when extending a complex type
-			cfg.debugf("complexType %s extends %s, embedding struct",
-				t.Name.Local, b.Name.Local)
-			fields = append(fields, nil, expr, nil)
-		}
-	} else {
-		// When restricting a complex type, all attributes are "inherited" from
-		// the base type (but not elements!). In addition, any <xs:any> elements,
-		// while not explicitly inherited, do not disappear.
-		switch b := t.Base.(type) {
-		case *xsd.ComplexType:
-			t.Attributes = mergeAttributes(t, b)
-			hasWildcard := false
-			for _, el := range t.Elements {
-				if el.Wildcard {
-					hasWildcard = true
-					break
-				}
-			}
-			if hasWildcard {
+
+	// When restricting a complex type, all attributes are "inherited" from
+	// the base type (but not elements!). In addition, any <xs:any> elements,
+	// while not explicitly inherited, do not disappear.
+	switch b := t.Base.(type) {
+	case *xsd.ComplexType:
+		t.Attributes = mergeAttributes(t, b)
+		hasWildcard := false
+		for _, el := range t.Elements {
+			if el.Wildcard {
+				hasWildcard = true
 				break
 			}
-			for _, el := range b.Elements {
-				if el.Wildcard {
-					t.Elements = append(t.Elements, el)
-					break
-				}
+		}
+		if hasWildcard {
+			break
+		}
+		for _, el := range b.Elements {
+			if el.Wildcard {
+				t.Elements = append(t.Elements, el)
+				break
 			}
 		}
 	}
