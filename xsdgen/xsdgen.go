@@ -654,38 +654,6 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 	cfg.debugf("complexType %s: generating struct fields for %d elements and %d attributes",
 		xsd.XMLName(t).Local, len(elements), len(attributes))
 
-	for _, attr := range attributes {
-		options := ""
-		if attr.Optional {
-			options = ",omitempty"
-		}
-		tag := fmt.Sprintf(`xml:"%s,attr%s"`, attr.Name.Local, options)
-		base, err := cfg.expr(attr.Type)
-		if err != nil {
-			return nil, fmt.Errorf("%s attribute %s: %v", t.Name.Local, attr.Name.Local, err)
-		}
-		cfg.debugf("adding %s attribute %s as %v", t.Name.Local, attr.Name.Local, base)
-		fields = append(fields, namegen.attribute(attr.Name), base, gen.String(tag))
-		if attr.Default != "" || nonTrivialBuiltin(attr.Type) {
-			typeName := cfg.exprString(attr.Type)
-			if nonTrivialBuiltin(attr.Type) {
-				h, ok := cfg.helperTypes[xsd.XMLName(attr.Type)]
-				if !ok {
-					return nil, fmt.Errorf("no helper type for type %v attribute %v", t.Name, attr.Name)
-				}
-				typeName = h.name
-				helperTypes = append(helperTypes, xsd.XMLName(attr.Type))
-			}
-			overrides = append(overrides, fieldOverride{
-				DefaultValue: attr.Default,
-				FieldName:    cfg.public(attr.Name),
-				FromType:     cfg.exprString(attr.Type),
-				Tag:          tag,
-				ToType:       typeName,
-				Type:         attr.Type,
-			})
-		}
-	}
 	for _, el := range elements {
 		options := ""
 		if el.Nillable || el.Optional {
@@ -730,6 +698,38 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 				Tag:          tag,
 				ToType:       typeName,
 				Type:         el.Type,
+			})
+		}
+	}
+	for _, attr := range attributes {
+		options := ""
+		if attr.Optional {
+			options = ",omitempty"
+		}
+		tag := fmt.Sprintf(`xml:"%s,attr%s"`, attr.Name.Local, options)
+		base, err := cfg.expr(attr.Type)
+		if err != nil {
+			return nil, fmt.Errorf("%s attribute %s: %v", t.Name.Local, attr.Name.Local, err)
+		}
+		cfg.debugf("adding %s attribute %s as %v", t.Name.Local, attr.Name.Local, base)
+		fields = append(fields, namegen.attribute(attr.Name), base, gen.String(tag))
+		if attr.Default != "" || nonTrivialBuiltin(attr.Type) {
+			typeName := cfg.exprString(attr.Type)
+			if nonTrivialBuiltin(attr.Type) {
+				h, ok := cfg.helperTypes[xsd.XMLName(attr.Type)]
+				if !ok {
+					return nil, fmt.Errorf("no helper type for type %v attribute %v", t.Name, attr.Name)
+				}
+				typeName = h.name
+				helperTypes = append(helperTypes, xsd.XMLName(attr.Type))
+			}
+			overrides = append(overrides, fieldOverride{
+				DefaultValue: attr.Default,
+				FieldName:    cfg.public(attr.Name),
+				FromType:     cfg.exprString(attr.Type),
+				Tag:          tag,
+				ToType:       typeName,
+				Type:         attr.Type,
 			})
 		}
 	}

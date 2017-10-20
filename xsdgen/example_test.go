@@ -152,8 +152,8 @@ func ExampleReplace() {
 	// Output: package ws
 	//
 	// type StringArray struct {
-	// 	ArrayType string   `xml:"arrayType,attr,omitempty"`
 	// 	Items     []string `xml:",any"`
+	// 	ArrayType string   `xml:"arrayType,attr,omitempty"`
 	// }
 }
 
@@ -179,10 +179,10 @@ func ExampleHandleSOAPArrayType() {
 	// Output: package ws
 	//
 	// type BoolArray struct {
+	// 	Items  []bool          `xml:",any"`
 	// 	Offset ArrayCoordinate `xml:"offset,attr,omitempty"`
 	// 	Id     string          `xml:"id,attr,omitempty"`
 	// 	Href   string          `xml:"href,attr,omitempty"`
-	// 	Items  []bool          `xml:",any"`
 	// }
 }
 
