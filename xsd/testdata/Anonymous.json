@@ -1,5 +1,5 @@
 {
-  "_anon1": {
+  "someElement": {
     "Elements": [{"Name": {"Local": "Field1"}, "Type": 38}],
     "Attributes": [{"Name": {"Local": "Attr1"}, "Type": 28}]
   }
