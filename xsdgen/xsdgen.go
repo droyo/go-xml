@@ -680,7 +680,7 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 			}
 			overrides = append(overrides, fieldOverride{
 				DefaultValue: el.Default,
-				FieldName:    cfg.public(el.Name),
+				FieldName:    name.(*ast.Ident).Name,
 				FromType:     cfg.exprString(el.Type),
 				Tag:          tag,
 				ToType:       typeName,
@@ -699,7 +699,8 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 			return nil, fmt.Errorf("%s attribute %s: %v", t.Name.Local, attr.Name.Local, err)
 		}
 		cfg.debugf("adding %s attribute %s as %v", t.Name.Local, attr.Name.Local, base)
-		fields = append(fields, namegen.attribute(attr.Name), base, gen.String(tag))
+		name := namegen.attribute(attr.Name)
+		fields = append(fields, name, base, gen.String(tag))
 		if attr.Default != "" || nonTrivialBuiltin(attr.Type) {
 			typeName := cfg.exprString(attr.Type)
 			if nonTrivialBuiltin(attr.Type) {
@@ -712,7 +713,7 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 			}
 			overrides = append(overrides, fieldOverride{
 				DefaultValue: attr.Default,
-				FieldName:    cfg.public(attr.Name),
+				FieldName:    name.(*ast.Ident).Name,
 				FromType:     cfg.exprString(attr.Type),
 				Tag:          tag,
 				ToType:       typeName,

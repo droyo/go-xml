@@ -592,12 +592,23 @@ func (t *ComplexType) parseComplexContent(ns string, root *xmltree.Element) {
 			fallthrough
 		case "restriction":
 			t.Base = parseType(el.Resolve(el.Attr("", "base")))
+
 			for _, v := range el.Search(schemaNS, "any") {
 				t.Elements = append(t.Elements, parseAnyElement(ns, v))
+				break
 			}
+
+			usedElt := make(map[xml.Name]int)
 			for _, v := range el.Search(schemaNS, "element") {
-				t.Elements = append(t.Elements, parseElement(ns, v))
+				elt := parseElement(ns, v)
+				if existing, ok := usedElt[elt.Name]; !ok {
+					usedElt[elt.Name] = len(t.Elements)
+					t.Elements = append(t.Elements, elt)
+				} else {
+					t.Elements[existing] = joinElem(t.Elements[existing], elt)
+				}
 			}
+
 			for _, v := range el.Search(schemaNS, "attribute") {
 				t.Attributes = append(t.Attributes, parseAttribute(ns, v))
 			}
@@ -608,6 +619,23 @@ func (t *ComplexType) parseComplexContent(ns string, root *xmltree.Element) {
 		}
 	})
 	t.Doc += string(doc)
+}
+
+func joinElem(a, b Element) Element {
+	if a.Doc != "" {
+		a.Doc += "\n"
+	}
+	a.Doc += b.Doc
+	a.Abstract = a.Abstract && b.Abstract
+	a.Plural = a.Plural || b.Plural
+	a.Optional = a.Optional || b.Optional
+	a.Nillable = a.Nillable || b.Nillable
+
+	if a.Default != b.Default {
+		a.Default = ""
+	}
+
+	return a
 }
 
 func parseInt(s string) int {
