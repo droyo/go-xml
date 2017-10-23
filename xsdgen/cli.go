@@ -67,7 +67,7 @@ func (cfg *Config) GenSource(files ...string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return gen.FormattedSource(file)
+	return gen.FormattedSource(file, "fixme.go")
 }
 
 // GenCLI creates a file containing Go source generated from an XML
@@ -111,7 +111,7 @@ func (cfg *Config) GenCLI(arguments ...string) error {
 		return err
 	}
 
-	data, err := gen.FormattedSource(file)
+	data, err := gen.FormattedSource(file, *output)
 	if err != nil {
 		return err
 	}
