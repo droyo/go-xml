@@ -16,7 +16,7 @@ on XML documents.
   an XML Schema.
 - The `wsdl` package parses Web Service Definition Language (WSDL)
   files, which describe a (usually) SOAP web service.
-- The `wsdlgen` package genreates Go source code from WSDL files.
+- The `wsdlgen` package generates Go source code from WSDL files.
 - The `xsdgen` and `wsdlgen` commands generate Go code with default
   settings and are suitable for use with `go generate`.
 
