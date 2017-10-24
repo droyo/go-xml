@@ -424,7 +424,7 @@ func TagKey(field *ast.Field, key string) string {
 
 // FormattedSource converts an abstract syntax tree to
 // formatted Go source code.
-func FormattedSource(file *ast.File) ([]byte, error) {
+func FormattedSource(file *ast.File, output string) ([]byte, error) {
 	var buf bytes.Buffer
 
 	fileset := token.NewFileSet()
@@ -446,7 +446,7 @@ func FormattedSource(file *ast.File) ([]byte, error) {
 	if err := format.Node(&buf, fileset, file); err != nil {
 		return nil, err
 	}
-	out, err := imports.Process("", buf.Bytes(), nil)
+	out, err := imports.Process(output, buf.Bytes(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("%v in %s", err, buf.String())
 	}
