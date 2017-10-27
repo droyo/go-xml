@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"aqwari.net/xml/xmltree"
 )
 
 type blob map[string]interface{}
@@ -149,15 +151,19 @@ func unmarshal(t *testing.T, data []byte) blob {
 	return result
 }
 
-func parseFragment(t *testing.T, filename string) Schema {
+func parseFragment(t *testing.T, filename string) (Schema, *xmltree.Element) {
 	const tmpl = `<schema targetNamespace="tns" ` +
-		`xmlns="http://www.w3.org/2001/XMLSchema">%s</schema>`
+		`xmlns="http://www.w3.org/2001/XMLSchema" xmlns:tns="tns">%s</schema>`
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	doc := []byte(fmt.Sprintf(tmpl, data))
+	doctrees, err := Normalize(doc)
+	if err != nil {
+		t.Fatalf("Failed to load schema %q: %v", filename, err)
+	}
 
 	schema, err := Parse(doc)
 	if err != nil {
@@ -166,7 +172,11 @@ func parseFragment(t *testing.T, filename string) Schema {
 
 	for _, s := range schema {
 		if s.TargetNS == "tns" {
-			return s
+			for _, t := range doctrees {
+				if t.Attr("", "targetNamespace") == "tns" {
+					return s, t
+				}
+			}
 		}
 	}
 
@@ -196,12 +206,14 @@ func TestCases(t *testing.T) {
 
 	for _, filename := range names {
 		base := filename[:len(filename)-len(".xsd")]
-		schema := parseFragment(t, base+".xsd")
+		schema, doc := parseFragment(t, base+".xsd")
 		answer := parseAnswer(t, base+".json")
 
 		testCase := test{schema, answer}
 		if !t.Run(filepath.Base(base), testCase.Test) {
 			t.Logf("subtest in %s.json failed", base)
+			t.Logf("normalized XSD:\n%s",
+				xmltree.MarshalIndent(doc, "", "  "))
 		}
 	}
 }
