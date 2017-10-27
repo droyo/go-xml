@@ -365,7 +365,7 @@ func flattenRef(schema []*xmltree.Element) error {
 func deref(ref, real *xmltree.Element) *xmltree.Element {
 	attrs := ref.StartElement.Attr
 	ref.Content = real.Content
-	ref.StartElement = real.StartElement
+	ref.StartElement = real.StartElement.Copy()
 	ref.Children = append([]xmltree.Element{}, real.Children...)
 	ref.Scope = *real.JoinScope(&ref.Scope)
 	for _, attr := range attrs {
