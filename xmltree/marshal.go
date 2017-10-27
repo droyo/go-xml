@@ -15,9 +15,10 @@ var tagTmpl = template.Must(template.New("Marshal XML tags").Parse(
 	`{{define "start" -}}
 	<{{.Scope.Prefix .Name -}}
 	{{range .StartElement.Attr}} {{$.Scope.Prefix .Name -}}="{{.Value}}"{{end -}}
-	{{range .NS }} xmlns{{ if .Local }}:{{ .Local }}{{end}}="{{ .Space }}"{{end}}>
+	{{range .NS }} xmlns{{ if .Local }}:{{ .Local }}{{end}}="{{ .Space }}"{{end -}}
+	{{if or .Children .Content}}>{{else}} />{{end}}
 	{{- end}}
-	
+
 	{{define "end" -}}
 	</{{.Prefix .Name}}>{{end}}`))
 
@@ -93,8 +94,12 @@ func (e *encoder) encode(el, parent *Element, visited map[*Element]struct{}) err
 	if err := e.encodeOpenTag(el, scope, len(visited)); err != nil {
 		return err
 	}
-	if len(el.Children) == 0 && len(el.Content) > 0 {
-		e.WriteContent(el.Content, len(visited)+1)
+	if len(el.Children) == 0 {
+		if len(el.Content) > 0 {
+			e.WriteContent(el.Content, len(visited)+1)
+		} else {
+			return nil
+		}
 	}
 	for i := range el.Children {
 		visited[el] = struct{}{}
