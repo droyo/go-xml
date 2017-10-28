@@ -216,13 +216,16 @@ func copyEltNamesToAnonTypes(root *xmltree.Element) {
 			continue
 		}
 		used[xmlname] = struct{}{}
-		for i := range el.Children {
-			t := &el.Children[i]
-			if !isAnonymousType(t) {
+		for i, t := range el.Children {
+			if !isAnonymousType(&t) {
 				continue
 			}
 			t.SetAttr("", "name", el.Attr("", "name"))
 			el.SetAttr("", "type", el.Prefix(xmlname))
+
+			el.Children = append(el.Children[:i], el.Children[i+1:]...)
+			el.Content = nil
+			root.Children = append(root.Children, t)
 			break
 		}
 	}
@@ -281,9 +284,8 @@ func nameAnonymousTypes(root *xmltree.Element) error {
 			return fmt.Errorf("Did not expect <%s> to have an anonymous type",
 				el.Prefix(el.Name))
 		}
-		for i := range el.Children {
-			t := &el.Children[i]
-			if !isAnonymousType(t) {
+		for i, t := range el.Children {
+			if !isAnonymousType(&t) {
 				continue
 			}
 			typeCounter++
@@ -297,6 +299,9 @@ func nameAnonymousTypes(root *xmltree.Element) error {
 				qname = el.Attr("", updateAttr) + " " + qname
 			}
 			el.SetAttr("", updateAttr, qname)
+			el.Children = append(el.Children[:i], el.Children[i+1:]...)
+			el.Content = nil
+			root.Children = append(root.Children, t)
 			if !accum {
 				break
 			}

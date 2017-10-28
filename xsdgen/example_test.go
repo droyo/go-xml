@@ -304,31 +304,7 @@ func ExampleUseFieldNames() {
 	// }
 	//
 	// type Library struct {
-	// 	Book      []Book    `xml:"http://www.example.com/ book"`
-	// 	Title     string    `xml:"http://www.example.com/ title"`
-	// 	Published time.Time `xml:"http://www.example.com/ published"`
-	// 	Author    string    `xml:"http://www.example.com/ author"`
-	// }
-	//
-	// func (t *Library) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
-	// 	type T Library
-	// 	var layout struct {
-	// 		*T
-	// 		Published *xsdDate `xml:"http://www.example.com/ published"`
-	// 	}
-	// 	layout.T = (*T)(t)
-	// 	layout.Published = (*xsdDate)(&layout.T.Published)
-	// 	return e.EncodeElement(layout, start)
-	// }
-	// func (t *Library) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
-	// 	type T Library
-	// 	var overlay struct {
-	// 		*T
-	// 		Published *xsdDate `xml:"http://www.example.com/ published"`
-	// 	}
-	// 	overlay.T = (*T)(t)
-	// 	overlay.Published = (*xsdDate)(&overlay.T.Published)
-	// 	return d.DecodeElement(&overlay, &start)
+	// 	Book []Book `xml:"http://www.example.com/ book"`
 	// }
 	//
 	// type xsdDate time.Time
