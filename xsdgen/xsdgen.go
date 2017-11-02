@@ -442,7 +442,7 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type), depth int) xsd.Type
 	case *xsd.ComplexType:
 		// We can "unpack" a struct if it is extending a simple
 		// or built-in type and we are ignoring all of its attributes.
-		switch t.Base.(type) {
+		switch base := t.Base.(type) {
 		case xsd.Builtin, *xsd.SimpleType:
 			if b, ok := t.Base.(xsd.Builtin); ok && b == xsd.AnyType {
 				break
@@ -458,6 +458,15 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type), depth int) xsd.Type
 					return cfg.flatten1(t.Base, push, depth+1)
 				}
 			}
+		case *xsd.ComplexType:
+			if !t.Extends {
+				// For our purposes, restricting any complexType is no
+				// different from restricting anyType. The xsd package has
+				// already propogated the content model (mixed/element-only).
+				// extensions are squashed in a separate step.
+				t.Base = xsd.AnyType
+			}
+			push(cfg.flatten1(base, push, depth+1))
 		}
 		// We can flatten a struct field if its type does not
 		// need additional methods for unmarshalling.
