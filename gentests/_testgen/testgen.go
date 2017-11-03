@@ -46,12 +46,12 @@ func main() {
 		} else {
 			log.Printf("generated tests for %s", dir)
 		}
-		source, err := gen.FormattedSource(tests)
+		filename := filepath.Join(dir, dir+"_test.go")
+		source, err := gen.FormattedSource(tests, filename)
 		if err != nil {
 			log.Print(dir, ":", err)
 			continue
 		}
-		filename := filepath.Join(dir, dir+"_test.go")
 		if err := ioutil.WriteFile(filename, source, 0666); err != nil {
 			log.Print(dir, ":", err)
 		}
