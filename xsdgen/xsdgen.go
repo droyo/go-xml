@@ -261,9 +261,8 @@ type spec struct {
 	helperFuncs []string
 }
 
-// Gets rid of types that extend their parent types by merging parent
-// fields into the derived type. All complexTypes in the returned
-// should restrict anyType.
+// Simplifies complex types derived from other complex types by merging
+// parent fields into the derived type.
 func (cfg *Config) expandComplexTypes(types []xsd.Type) []xsd.Type {
 	index := make(map[xml.Name]int)
 	graph := new(dependency.Graph)
@@ -271,29 +270,37 @@ func (cfg *Config) expandComplexTypes(types []xsd.Type) []xsd.Type {
 	for i, v := range types {
 		index[xsd.XMLName(v)] = i
 	}
+	alltypes := types
+	for _, v := range types {
+		for base := xsd.Base(v); base != nil; base = xsd.Base(base) {
+			xmlname := xsd.XMLName(base)
+			if _, ok := index[xmlname]; !ok {
+				index[xmlname] = len(alltypes)
+				alltypes = append(alltypes, base)
+			}
+		}
+	}
 
-	for i, v := range types {
+	for i, v := range alltypes {
 		c, ok := v.(*xsd.ComplexType)
-		if !ok || !c.Extends {
+		if !ok {
 			continue
 		}
 		if b, ok := c.Base.(*xsd.ComplexType); ok {
 			if _, ok := index[b.Name]; !ok {
-				// should never happen, flatten should put
-				// all dependent types in top-level list.
-				panic(fmt.Errorf("missing base type for %v", c.Name))
+				// should never happen
+				panic(fmt.Errorf("missing base type for %v.", c.Name))
 			}
 			graph.Add(i, index[b.Name])
 		}
 	}
 
 	graph.Flatten(func(i int) {
-		c := types[i].(*xsd.ComplexType)
-		if !c.Extends {
-			// This is a leaf
+		c := alltypes[i].(*xsd.ComplexType)
+		b, ok := c.Base.(*xsd.ComplexType)
+		if !ok {
 			return
 		}
-		b := c.Base.(*xsd.ComplexType)
 
 		cfg.debugf("complexType %s: expanding base %s fields",
 			c.Name.Local, b.Name.Local)
@@ -324,10 +331,14 @@ func (cfg *Config) expandComplexTypes(types []xsd.Type) []xsd.Type {
 			}
 		}
 
-		c.Base = xsd.AnyType
+		for base := c.Base; base != nil; base = xsd.Base(base) {
+			if _, ok := base.(*xsd.ComplexType); !ok {
+				break
+			}
+		}
 		c.Extends = false
 
-		types[i] = c
+		alltypes[i] = c
 	})
 	return types
 }
@@ -442,7 +453,7 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type), depth int) xsd.Type
 	case *xsd.ComplexType:
 		// We can "unpack" a struct if it is extending a simple
 		// or built-in type and we are ignoring all of its attributes.
-		switch base := t.Base.(type) {
+		switch t.Base.(type) {
 		case xsd.Builtin, *xsd.SimpleType:
 			if b, ok := t.Base.(xsd.Builtin); ok && b == xsd.AnyType {
 				break
@@ -458,15 +469,6 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type), depth int) xsd.Type
 					return cfg.flatten1(t.Base, push, depth+1)
 				}
 			}
-		case *xsd.ComplexType:
-			if !t.Extends {
-				// For our purposes, restricting any complexType is no
-				// different from restricting anyType. The xsd package has
-				// already propogated the content model (mixed/element-only).
-				// extensions are squashed in a separate step.
-				t.Base = xsd.AnyType
-			}
-			push(cfg.flatten1(base, push, depth+1))
 		}
 		// We can flatten a struct field if its type does not
 		// need additional methods for unmarshalling.
