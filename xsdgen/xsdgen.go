@@ -371,7 +371,7 @@ func (cfg *Config) flatten(types map[xml.Name]xsd.Type) []xsd.Type {
 			}
 		}
 		if t := cfg.flatten1(t, push, 0); t != nil {
-			result = append(result, t)
+			push(t)
 		}
 	}
 	return dedup(result)
@@ -492,7 +492,7 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type), depth int) xsd.Type
 	case xsd.Builtin:
 		return t
 	}
-	panic(fmt.Sprintf("unexpected %T(%s %s)", t, xsd.XMLName(t).Space, xsd.XMLName(t).Local))
+	panic(fmt.Errorf("unexpected %T(%s %s)", t, xsd.XMLName(t).Space, xsd.XMLName(t).Local))
 }
 
 func (cfg *Config) genTypeSpec(t xsd.Type) (result []spec, err error) {
@@ -620,7 +620,7 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 			}
 			fields = append(fields, namegen.unique(name), expr, gen.String(tag))
 		default:
-			panic(fmt.Sprintf("%s does not derive from a builtin type", t.Name.Local))
+			panic(fmt.Errorf("%s does not derive from a builtin type", t.Name.Local))
 		}
 	}
 
