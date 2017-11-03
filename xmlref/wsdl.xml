@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wsdl:definitions targetNamespace="http://{{ host }}/{{ service }}"
+    xmlns:apachesoap="http://xml.apache.org/xml-soap"
+    xmlns:impl="http://{{ host }}/{{ service }}"
+    xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/"
+    xmlns:tns1="http://model.ivr.gws"
+    xmlns:tns2="http://soap.entity.commons.gws"
+    xmlns:tns6="http://location.model.ivr.gws"
+    xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:wsdlsoap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <wsdl:types>
+        <schema targetNamespace="http://soap.entity.commons.gws"
+            xmlns="http://www.w3.org/2001/XMLSchema">
+            <import namespace="http://{{ host }}/{{ service }}"/>
+            <import namespace="http://model.ivr.gws"/>
+            <import namespace="http://xml.apache.org/xml-soap"/>
+            <import namespace="http://location.model.ivr.gws"/>
+            <import namespace="http://schemas.xmlsoap.org/soap/encoding/"/>
+            <complexType name="GenericSoapRequest">
+                <sequence>
+                    <element name="languageId" nillable="true" type="xsd:string"/>
+                    <element name="maxRecords" type="xsd:int"/>
+                </sequence>
+            </complexType>
+            <complexType name="MessageError">
+                <sequence>
+                    <element name="code" nillable="true" type="xsd:string"/>
+                    <element name="description" nillable="true" type="xsd:string"/>
+                    <element name="reference" nillable="true" type="xsd:string"/>
+                    <element name="severity" nillable="true" type="xsd:string"/>
+                </sequence>
+            </complexType>
+            <complexType name="GenericSoapResponse">
+                <sequence>
+                    <element name="anyMoreRec" type="xsd:boolean"/>
+                    <element name="errors" nillable="true" type="impl:ArrayOf_tns2_MessageError"/>
+                </sequence>
+            </complexType>
+        </schema>
+        <schema targetNamespace="http://model.ivr.gws"
+            xmlns="http://www.w3.org/2001/XMLSchema">
+            <import namespace="http://{{ host }}/{{ service }}"/>
+            <import namespace="http://soap.entity.commons.gws"/>
+            <import namespace="http://xml.apache.org/xml-soap"/>
+            <import namespace="http://location.model.ivr.gws"/>
+            <import namespace="http://schemas.xmlsoap.org/soap/encoding/"/>
+            <complexType name="IVRInput">
+                <complexContent>
+                    <extension base="tns2:GenericSoapRequest">
+                        <sequence>
+                            <element name="sessionID" nillable="true" type="xsd:string"/>
+                        </sequence>
+                    </extension>
+                </complexContent>
+            </complexType>
+            <complexType name="IVROutput">
+                <complexContent>
+                    <extension base="tns2:GenericSoapResponse">
+                        <sequence>
+                            <element name="sessionID" nillable="true" type="xsd:string"/>
+                        </sequence>
+                    </extension>
+                </complexContent>
+            </complexType>
+        </schema>
+        <schema targetNamespace="http://{{ host }}/{{ service }}"
+            xmlns="http://www.w3.org/2001/XMLSchema">
+            <import namespace="http://model.ivr.gws"/>
+            <import namespace="http://soap.entity.commons.gws"/>
+            <import namespace="http://xml.apache.org/xml-soap"/>
+            <import namespace="http://location.model.ivr.gws"/>
+            <import namespace="http://schemas.xmlsoap.org/soap/encoding/"/>
+            <complexType name="ArrayOf_tns2_MessageError">
+                <complexContent>
+                    <restriction base="soapenc:Array">
+                        <attribute ref="soapenc:arrayType" wsdl:arrayType="tns2:MessageError[]"/>
+                    </restriction>
+                </complexContent>
+            </complexType>
+            <complexType name="ArrayOf_tns6_IVRGoogleMapsMarker">
+                <complexContent>
+                    <restriction base="soapenc:Array">
+                        <attribute ref="soapenc:arrayType" wsdl:arrayType="tns6:IVRGoogleMapsMarker[]"/>
+                    </restriction>
+                </complexContent>
+            </complexType>
+        </schema>
+        <schema targetNamespace="http://xml.apache.org/xml-soap"
+            xmlns="http://www.w3.org/2001/XMLSchema">
+            <import namespace="http://{{ host }}/{{ service }}"/>
+            <import namespace="http://model.ivr.gws"/>
+            <import namespace="http://soap.entity.commons.gws"/>
+            <import namespace="http://location.model.ivr.gws"/>
+            <import namespace="http://schemas.xmlsoap.org/soap/encoding/"/>
+            <complexType name="Vector">
+                <complexContent>
+                    <restriction base="soapenc:Array">
+                        <attribute ref="soapenc:arrayType" wsdl:arrayType="tns2:MessageError[]"/>
+                    </restriction>
+                </complexContent>
+            </complexType>
+        </schema>
+        <schema targetNamespace="http://location.model.ivr.gws"
+            xmlns="http://www.w3.org/2001/XMLSchema">
+            <import namespace="http://{{ host }}/{{ service }}"/>
+            <import namespace="http://model.ivr.gws"/>
+            <import namespace="http://soap.entity.commons.gws"/>
+            <import namespace="http://xml.apache.org/xml-soap"/>
+            <import namespace="http://schemas.xmlsoap.org/soap/encoding/"/>
+            <complexType name="IVRGoogleMapsMarker">
+                <sequence>
+                    <element name="id" nillable="true" type="xsd:string"/>
+                    <element name="type" nillable="true" type="xsd:string"/>
+                    <element name="title" nillable="true" type="xsd:string"/>
+                    <element name="address" nillable="true" type="xsd:string"/>
+                    <element name="information" nillable="true" type="xsd:string"/>
+                    <element name="locLat" nillable="true" type="xsd:string"/>
+                    <element name="locLng" nillable="true" type="xsd:string"/>
+                    <element name="showGPS" type="xsd:boolean"/>
+                </sequence>
+            </complexType>
+            <complexType name="IVROutputLocationMap">
+                <complexContent>
+                    <extension base="tns1:IVROutput">
+                        <sequence>
+                            <element name="markers" nillable="true" type="impl:ArrayOf_tns6_IVRGoogleMapsMarker"/>
+                        </sequence>
+                    </extension>
+                </complexContent>
+            </complexType>
+        </schema>
+    </wsdl:types>
+    <wsdl:message name="getLocationsRequest">
+        <wsdl:part name="in0" type="tns1:IVRInput"/>
+    </wsdl:message>
+    <wsdl:message name="getLocationsResponse">
+        <wsdl:part name="getLocationsReturn" type="tns6:IVROutputLocationMap"/>
+    </wsdl:message>
+    <wsdl:portType name="IVRServiceIF">
+        <wsdl:operation name="getLocations" parameterOrder="in0">
+            <wsdl:input message="impl:getLocationsRequest" name="getLocationsRequest"/>
+            <wsdl:output message="impl:getLocationsResponse" name="getLocationsResponse"/>
+        </wsdl:operation>
+    </wsdl:portType>
+    <wsdl:binding name="gws.ivr.IVRServiceSoapBinding" type="impl:IVRServiceIF">
+        <wsdlsoap:binding style="rpc" transport="http://schemas.xmlsoap.org/soap/http"/>
+        <wsdl:operation name="getLocations">
+            <wsdlsoap:operation soapAction=""/>
+            <wsdl:input name="getLocationsRequest">
+                <wsdlsoap:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="http://ivr.gws" use="encoded"/>
+            </wsdl:input>
+            <wsdl:output name="getLocationsResponse">
+                <wsdlsoap:body encodingStyle="http://schemas.xmlsoap.org/soap/encoding/" namespace="http://{{ host }}/{{ service }}" use="encoded"/>
+            </wsdl:output>
+        </wsdl:operation>
+    </wsdl:binding>
+    <wsdl:service name="IVRServiceIFService">
+        <wsdl:port binding="impl:gws.ivr.IVRServiceSoapBinding" name="gws.ivr.IVRService">
+            <wsdlsoap:address location="http://{{ host }}/{{ service }}"/>
+        </wsdl:port>
+    </wsdl:service>
+</wsdl:definitions>
