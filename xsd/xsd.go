@@ -17,6 +17,7 @@ import (
 	"bytes"
 	"encoding/xml"
 	"fmt"
+	"io"
 	"regexp"
 
 	"aqwari.net/xml/xmltree"
@@ -277,6 +278,10 @@ Loop:
 		}
 	}
 	*doc = annotation(bytes.TrimSpace(bytes.Join(buf, []byte("\n\n"))))
+
+	if err == io.EOF {
+		return nil
+	}
 	return err
 }
 

@@ -1,0 +1,16 @@
+<!-- regression test for issue #48
+    Annotation UnmarshalXML EOF Error https://github.com/droyo/go-xml/issues/48)  -->
+<complexType name="someElement">
+    <element name="Country_ISO_Code" type="string" maxOccurs="1">
+        <annotation>
+            <documentation>ISO Code identifying the country where the naming rules for this name are defined.</documentation>
+            <appinfo>
+                <Validation>
+                    <documentation>A valid instance of Country must exist for the value of Country ISO Code.</documentation>
+                    <Validation_Message>No Country with that Country Code Exists.</Validation_Message>
+                </Validation>
+            </appinfo>
+        </annotation>
+    </element>
+    <attribute name="Attr1" type="int"/>
+</complexType>
