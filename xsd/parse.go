@@ -284,7 +284,9 @@ func nameAnonymousTypes(root *xmltree.Element) error {
 			return fmt.Errorf("Did not expect <%s> to have an anonymous type",
 				el.Prefix(el.Name))
 		}
-		for i, t := range el.Children {
+		for i := 0; i < len(el.Children); i++ {
+			t := el.Children[i]
+
 			if !isAnonymousType(&t) {
 				continue
 			}
