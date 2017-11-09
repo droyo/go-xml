@@ -1,0 +1,5 @@
+{
+  "someElement": {
+    "Elements": [{ "Name": { "Local": "Country_ISO_Code" }, "Doc": "ISO Code identifying the country where the naming rules for this name are defined."}]
+  }
+}
