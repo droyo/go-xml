@@ -411,35 +411,39 @@ func expandComplexShorthand(root *xmltree.Element) {
 
 Loop:
 	for _, el := range root.SearchFunc(isComplexType) {
-		for _, child := range el.Children {
-			switch {
-			case child.Name.Space != schemaNS:
-				continue
-			case child.Name.Local == "simpleContent",
-				child.Name.Local == "complexContent",
-				child.Name.Local == "annotation":
-				continue
-			}
-			restrict := xmltree.Element{
-				Scope:    el.Scope,
-				Content:  el.Content,
-				Children: el.Children,
-			}
-			restrict.Name.Space = schemaNS
-			restrict.Name.Local = "restriction"
-			restrict.SetAttr("", "base", restrict.Prefix(AnyType.Name()))
-
-			content := xmltree.Element{
-				Scope:    el.Scope,
-				Children: []xmltree.Element{restrict},
-			}
-			content.Name.Space = schemaNS
-			content.Name.Local = "complexContent"
-
-			el.Content = nil
-			el.Children = []xmltree.Element{content}
-			continue Loop
+		newChildren := make([]xmltree.Element, 0, len(el.Children))
+		restrict := xmltree.Element{
+			Scope:    el.Scope,
+			Children: make([]xmltree.Element, 0, len(el.Children)),
 		}
+
+		for _, child := range el.Children {
+			if child.Name.Space != schemaNS {
+				newChildren = append(newChildren, child)
+				continue
+			}
+			switch child.Name.Local {
+			case "annotation":
+				newChildren = append(newChildren, child)
+				continue
+			case "simpleContent", "complexContent":
+				continue Loop
+			}
+			restrict.Children = append(restrict.Children, child)
+		}
+		restrict.Name.Space = schemaNS
+		restrict.Name.Local = "restriction"
+		restrict.SetAttr("", "base", restrict.Prefix(AnyType.Name()))
+
+		content := xmltree.Element{
+			Scope:    el.Scope,
+			Children: []xmltree.Element{restrict},
+		}
+		content.Name.Space = schemaNS
+		content.Name.Local = "complexContent"
+
+		el.Content = nil
+		el.Children = append(newChildren, content)
 	}
 }
 
