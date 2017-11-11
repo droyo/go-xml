@@ -1,0 +1,5 @@
+<complexType name="Nothingness">
+    <annotation>
+        <documentation>This is an empty type</documentation>
+    </annotation>
+</complexType>
