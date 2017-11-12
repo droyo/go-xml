@@ -19,6 +19,7 @@ import (
 
 	"aqwari.net/xml/internal/gen"
 	"aqwari.net/xml/wsdl"
+	"aqwari.net/xml/xsd"
 	"aqwari.net/xml/xsdgen"
 )
 
@@ -265,6 +266,25 @@ func exposeType(typ string) string {
 	return typ
 }
 
+func (p *printer) getPartType(part wsdl.Part) (string, error) {
+	if part.Type != (xml.Name{}) {
+		return p.code.NameOf(part.Type), nil
+	}
+	if part.Element != (xml.Name{}) {
+		doc, ok := p.code.DocType(part.Element.Space)
+		if !ok {
+			return "", fmt.Errorf("part %s: could not lookup element %v",
+				part.Name, part.Element)
+		}
+		for _, el := range doc.Elements {
+			if el.Name == part.Element {
+				return p.code.NameOf(xsd.XMLName(el.Type)), nil
+			}
+		}
+	}
+	return "", fmt.Errorf("part %s has no element or type", part.Name)
+}
+
 func (p *printer) opArgs(addr, method string, op wsdl.Operation, input, output wsdl.Message) (opArgs, error) {
 	var args opArgs
 	args.Address = addr
@@ -273,7 +293,10 @@ func (p *printer) opArgs(addr, method string, op wsdl.Operation, input, output w
 	args.MsgName = op.Name
 	args.InputName = input.Name
 	for _, part := range input.Parts {
-		typ := p.code.NameOf(part.Type)
+		typ, err := p.getPartType(part)
+		if err != nil {
+			return args, err
+		}
 		inputType := exposeType(typ)
 		vname := gen.Sanitize(part.Name)
 		if vname == typ {
@@ -297,7 +320,10 @@ func (p *printer) opArgs(addr, method string, op wsdl.Operation, input, output w
 	}
 	args.OutputName = output.Name
 	for _, part := range output.Parts {
-		typ := p.code.NameOf(part.Type)
+		typ, err := p.getPartType(part)
+		if err != nil {
+			return args, err
+		}
 		outputType := exposeType(typ)
 		args.output = append(args.output, outputType)
 		args.OutputFields = append(args.OutputFields, field{
@@ -338,7 +364,12 @@ func (cfg *Config) registerXSDTypes(def *wsdl.Definition) {
 					cfg.logf("ERROR: No message def found for %s", name.Local)
 				} else {
 					for _, part := range msg.Parts {
-						xmlns[part.Type.Space] = struct{}{}
+						if part.Type.Space != "" {
+							xmlns[part.Type.Space] = struct{}{}
+						}
+						if part.Element.Space != "" {
+							xmlns[part.Element.Space] = struct{}{}
+						}
 						cfg.xsdgen.Option(xsdgen.AllowType(part.Type))
 					}
 				}

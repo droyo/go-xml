@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"go/ast"
 	"io/ioutil"
+	"strings"
 
 	"aqwari.net/xml/internal/commandline"
 	"aqwari.net/xml/internal/gen"
@@ -17,7 +18,7 @@ import (
 // lookup identifiers and generate Go code.
 func (cfg *Config) GenCode(data ...[]byte) (*Code, error) {
 	if len(cfg.namespaces) == 0 {
-		cfg.debugf("setting namespaces to %s", cfg.namespaces)
+		cfg.debugf("setting namespaces to %q", cfg.namespaces)
 		cfg.Option(Namespaces(lookupTargetNS(data...)...))
 	}
 	deps, err := xsd.Parse(data...)
@@ -34,8 +35,17 @@ func (cfg *Config) GenCode(data ...[]byte) (*Code, error) {
 		}
 	}
 	if len(primaries) < len(cfg.namespaces) {
-		return nil, fmt.Errorf("could not find schema for all namespaces in %s",
-			cfg.namespaces)
+		missing := make([]string, 0, len(cfg.namespaces)-len(primaries))
+		have := make(map[string]bool)
+		for _, schema := range primaries {
+			have[schema.TargetNS] = true
+		}
+		for _, ns := range cfg.namespaces {
+			if !have[ns] {
+				missing = append(missing, ns)
+			}
+		}
+		return nil, fmt.Errorf("could not find schema for %q", strings.Join(missing, ", "))
 	}
 	cfg.addStandardHelpers()
 	return cfg.gen(primaries, deps)

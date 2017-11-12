@@ -79,6 +79,14 @@ type Code struct {
 	types map[xml.Name]xsd.Type
 }
 
+// DocType retrieves the complexType for the provided target
+// namespace.
+func (c *Code) DocType(targetNS string) (*xsd.ComplexType, bool) {
+	key := xml.Name{targetNS, "_self"}
+	doc, ok := c.types[key].(*xsd.ComplexType)
+	return doc, ok
+}
+
 // NameOf returns the Go identifier associated with the canonical
 // XML type.
 func (c *Code) NameOf(name xml.Name) string {
@@ -361,6 +369,9 @@ func (cfg *Config) flatten(types map[xml.Name]xsd.Type) []xsd.Type {
 		result = append(result, t)
 	}
 	for _, t := range types {
+		if xsd.XMLName(t).Local == "_self" {
+			continue
+		}
 		cfg.debugf("flattening type %T(%s)\n", t, xsd.XMLName(t).Local)
 		if cfg.filterTypes != nil && cfg.filterTypes(t) {
 			continue
