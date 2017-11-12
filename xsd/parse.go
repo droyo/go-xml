@@ -526,6 +526,7 @@ func (s *Schema) parse(root *xmltree.Element) error {
 
 func (s *Schema) parseTypes(root *xmltree.Element) (err error) {
 	defer catchParseError(&err)
+	tns := root.Attr("", "targetNamespace")
 
 	for _, el := range root.Search(schemaNS, "complexType") {
 		t := s.parseComplexType(el)
@@ -535,8 +536,25 @@ func (s *Schema) parseTypes(root *xmltree.Element) (err error) {
 		t := s.parseSimpleType(el)
 		s.Types[t.Name] = t
 	}
-
+	s.Types[xml.Name{tns, "_self"}] = s.parseSelfType(root)
 	return err
+}
+
+func (s *Schema) parseSelfType(root *xmltree.Element) *ComplexType {
+	self := *root
+	self.Content = nil
+	self.Children = nil
+	for _, el := range root.Children {
+		if (el.Name == xml.Name{schemaNS, "element"}) {
+			self.Children = append(self.Children, el)
+		}
+	}
+	newdoc := self
+	self.Name.Local = "complexType"
+	self.SetAttr("", "name", "_self")
+	newdoc.Children = []xmltree.Element{self}
+	expandComplexShorthand(&newdoc)
+	return s.parseComplexType(&newdoc.Children[0])
 }
 
 // http://www.w3.org/TR/2004/REC-xmlschema-1-20041028/structures.html#element-complexType

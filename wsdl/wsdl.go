@@ -64,8 +64,8 @@ func (m *Message) String() string {
 // A Part describes the name and type of a parameter to pass
 // to a WSDL endpoint.
 type Part struct {
-	Name string
-	Type xml.Name
+	Name          string
+	Type, Element xml.Name
 }
 
 // An Operation describes an RPC call that can be made against
@@ -104,11 +104,9 @@ func parseMessages(targetNS string, root *xmltree.Element) map[xml.Name]Message 
 		m.Name = msg.ResolveDefault(msg.Attr("", "name"), targetNS)
 		for _, part := range msg.Search(wsdlNS, "part") {
 			p := Part{
-				Name: part.Attr("", "name"),
-				Type: part.Resolve(part.Attr("", "type")),
-			}
-			if len(p.Type.Local) == 0 {
-				p.Type = part.Resolve(part.Attr("", "element"))
+				Name:    part.Attr("", "name"),
+				Type:    part.Resolve(part.Attr("", "type")),
+				Element: part.Resolve(part.Attr("", "element")),
 			}
 			m.Parts = append(m.Parts, p)
 		}
