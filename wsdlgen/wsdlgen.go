@@ -267,10 +267,10 @@ func exposeType(typ string) string {
 }
 
 func (p *printer) getPartType(part wsdl.Part) (string, error) {
-	if part.Type != (xml.Name{}) {
+	if part.Type.Local != "" {
 		return p.code.NameOf(part.Type), nil
 	}
-	if part.Element != (xml.Name{}) {
+	if part.Element.Local != "" {
 		doc, ok := p.code.DocType(part.Element.Space)
 		if !ok {
 			return "", fmt.Errorf("part %s: could not lookup element %v",
