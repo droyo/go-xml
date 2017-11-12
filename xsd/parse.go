@@ -722,6 +722,9 @@ func parseElement(ns string, el *xmltree.Element) Element {
 		Plural:   parsePlural(el),
 		Scope:    el.Scope,
 	}
+	if el.Attr("", "type") == "" {
+		e.Type = AnyType
+	}
 	if x := el.Attr("", "minOccurs"); x != "" && parseInt(x) == 0 {
 		e.Optional = true
 	} else if e.Default != "" {
