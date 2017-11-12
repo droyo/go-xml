@@ -15,7 +15,6 @@ type testLogger struct {
 func (t testLogger) Printf(format string, args ...interface{}) { t.Logf(format, args...) }
 
 func testGen(t *testing.T, files ...string) {
-	t.Helper()
 	output_file, err := ioutil.TempFile("", "wsdlgen")
 	if err != nil {
 		t.Fatal(err)
