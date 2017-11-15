@@ -19,6 +19,7 @@ import (
 
 	"aqwari.net/xml/internal/gen"
 	"aqwari.net/xml/wsdl"
+	"aqwari.net/xml/xmltree"
 	"aqwari.net/xml/xsd"
 	"aqwari.net/xml/xsdgen"
 )
@@ -112,8 +113,13 @@ func (cfg *Config) GenAST(files ...string) (*ast.File, error) {
 	if err != nil {
 		return nil, err
 	}
+	cfg.debugf("procuring top-level element types")
+	elementTypes, err := cfg.scanElementTypes(docs)
+	if err != nil {
+		return nil, err
+	}
 	cfg.verbosef("building xsd type whitelist from WSDL")
-	cfg.registerXSDTypes(def)
+	cfg.registerXSDTypes(def, elementTypes)
 
 	cfg.verbosef("generating type declarations from xml schema")
 	code, err := cfg.xsdgen.GenCode(docs...)
@@ -250,6 +256,36 @@ func (p *printer) operation(port wsdl.Port, op wsdl.Operation) error {
 	return nil
 }
 
+// Generates mapping of top-level element names to the names
+// of their types.
+func (cfg *Config) scanElementTypes(docs [][]byte) (map[xml.Name]xml.Name, error) {
+	const schemaNS = "http://www.w3.org/2001/XMLSchema"
+	result := make(map[xml.Name]xml.Name)
+
+	trees, err := xsd.Normalize(docs...)
+	if err != nil {
+		return nil, err
+	}
+	for _, root := range trees {
+		container := xmltree.Element{Children: []xmltree.Element{*root}}
+		for _, schema := range container.Search(schemaNS, "schema") {
+			tns := schema.Attr("", "targetNamespace")
+			for _, el := range schema.Children {
+				if el.Name != (xml.Name{schemaNS, "element"}) {
+					continue
+				}
+				xmlname := el.ResolveDefault(el.Attr("", "name"), tns)
+				xmltype := el.Resolve(el.Attr("", "type"))
+
+				if xmlname.Local != "" && xmltype.Local != "" {
+					result[xmlname] = xmltype
+				}
+			}
+		}
+	}
+	return result, nil
+}
+
 // The xsdgen package generates private types for some builtin
 // types. These types should be hidden from the user and converted
 // on the fly.
@@ -353,8 +389,9 @@ func (p *printer) opArgs(addr, method string, op wsdl.Operation, input, output w
 
 // To keep our output small (as possible), we only generate type
 // declarations for the types that are named in the WSDL definition.
-func (cfg *Config) registerXSDTypes(def *wsdl.Definition) {
+func (cfg *Config) registerXSDTypes(def *wsdl.Definition, elementTypes map[xml.Name]xml.Name) {
 	xmlns := make(map[string]struct{})
+
 	// Some schema may list messages that are not used by any
 	// ports, so we have to be thorough.
 	for _, port := range def.Ports {
@@ -364,13 +401,21 @@ func (cfg *Config) registerXSDTypes(def *wsdl.Definition) {
 					cfg.logf("ERROR: No message def found for %s", name.Local)
 				} else {
 					for _, part := range msg.Parts {
+						var typeName xml.Name
 						if part.Type.Space != "" {
-							xmlns[part.Type.Space] = struct{}{}
+							typeName = part.Type
 						}
 						if part.Element.Space != "" {
+							if t, ok := elementTypes[part.Element]; !ok {
+								cfg.verbosef("could not determine type for part %v", part)
+								typeName = part.Element
+							} else {
+								typeName = t
+							}
 							xmlns[part.Element.Space] = struct{}{}
 						}
-						cfg.xsdgen.Option(xsdgen.AllowType(part.Type))
+						xmlns[typeName.Space] = struct{}{}
+						cfg.xsdgen.Option(xsdgen.AllowType(typeName))
 					}
 				}
 			}
