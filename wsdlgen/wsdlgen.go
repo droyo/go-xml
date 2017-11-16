@@ -112,8 +112,6 @@ func (cfg *Config) GenAST(files ...string) (*ast.File, error) {
 	if err != nil {
 		return nil, err
 	}
-	cfg.verbosef("building xsd type whitelist from WSDL")
-	cfg.registerXSDTypes(def)
 
 	cfg.verbosef("generating type declarations from xml schema")
 	code, err := cfg.xsdgen.GenCode(docs...)
@@ -349,36 +347,4 @@ func (p *printer) opArgs(addr, method string, op wsdl.Operation, input, output w
 	args.output = append(args.output, "error")
 
 	return args, nil
-}
-
-// To keep our output small (as possible), we only generate type
-// declarations for the types that are named in the WSDL definition.
-func (cfg *Config) registerXSDTypes(def *wsdl.Definition) {
-	xmlns := make(map[string]struct{})
-	// Some schema may list messages that are not used by any
-	// ports, so we have to be thorough.
-	for _, port := range def.Ports {
-		for _, op := range port.Operations {
-			for _, name := range []xml.Name{op.Input, op.Output} {
-				if msg, ok := def.Message[name]; !ok {
-					cfg.logf("ERROR: No message def found for %s", name.Local)
-				} else {
-					for _, part := range msg.Parts {
-						if part.Type.Space != "" {
-							xmlns[part.Type.Space] = struct{}{}
-						}
-						if part.Element.Space != "" {
-							xmlns[part.Element.Space] = struct{}{}
-						}
-						cfg.xsdgen.Option(xsdgen.AllowType(part.Type))
-					}
-				}
-			}
-		}
-	}
-	namespaces := make([]string, 0, len(xmlns))
-	for ns := range xmlns {
-		namespaces = append(namespaces, ns)
-	}
-	cfg.xsdgen.Option(xsdgen.Namespaces(namespaces...))
 }
