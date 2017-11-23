@@ -298,6 +298,10 @@ func UseFieldNames() Option {
 }
 
 func useFieldNames(s xsd.Schema, t xsd.Type) xsd.Type {
+	used := make(map[xml.Name]struct{})
+	for _, t := range s.Types {
+		used[xsd.XMLName(t)] = struct{}{}
+	}
 	c, ok := t.(*xsd.ComplexType)
 	if !ok {
 		return t
@@ -312,6 +316,9 @@ func useFieldNames(s xsd.Schema, t xsd.Type) xsd.Type {
 			base.Anonymous = false
 		case *xsd.ComplexType:
 			if !base.Anonymous {
+				break
+			}
+			if _, inuse := used[el.Name]; inuse {
 				break
 			}
 			base.Name = el.Name
