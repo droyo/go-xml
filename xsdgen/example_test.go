@@ -179,10 +179,10 @@ func ExampleHandleSOAPArrayType() {
 	// Output: package ws
 	//
 	// type BoolArray struct {
-	// 	Items  []bool          `xml:",any"`
-	// 	Offset ArrayCoordinate `xml:"offset,attr,omitempty"`
-	// 	Id     string          `xml:"id,attr,omitempty"`
-	// 	Href   string          `xml:"href,attr,omitempty"`
+	// 	Items  []bool `xml:",any"`
+	// 	Offset string `xml:"offset,attr,omitempty"`
+	// 	Id     string `xml:"id,attr,omitempty"`
+	// 	Href   string `xml:"href,attr,omitempty"`
 	// }
 }
 
