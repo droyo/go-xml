@@ -499,7 +499,15 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type), depth int) xsd.Type
 		}
 
 		t.Base = cfg.flatten1(t.Base, push, depth+1)
-		push(t.Base)
+
+		// We expand all complexTypes to merge all of the fields from
+		// their ancestors, so generated code has no dependencies
+		// on ancestor types. The only exception is when the type
+		// has a mixed content model; we need to pull in the type
+		// of its chardata.
+		if t.Mixed {
+			push(t.Base)
+		}
 
 		cfg.debugf("%T(%s) -> %T(%s)", t, xsd.XMLName(t).Local,
 			t.Base, xsd.XMLName(t.Base).Local)
