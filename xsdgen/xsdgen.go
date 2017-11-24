@@ -497,8 +497,13 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type), depth int) xsd.Type
 			cfg.debugf("attribute %s %T(%s): %v", attr.Name.Local, t,
 				xsd.XMLName(t).Local, xsd.XMLName(attr.Type))
 		}
+
+		t.Base = cfg.flatten1(t.Base, push, depth+1)
+		push(t.Base)
+
 		cfg.debugf("%T(%s) -> %T(%s)", t, xsd.XMLName(t).Local,
 			t.Base, xsd.XMLName(t.Base).Local)
+
 		return t
 	case xsd.Builtin:
 		return t
