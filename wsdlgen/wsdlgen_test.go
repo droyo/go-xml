@@ -51,3 +51,7 @@ func TestGlobalWeather(t *testing.T) {
 func TestHello(t *testing.T) {
 	testGen(t, "../testdata/hello.wsdl")
 }
+
+func TestElementWisePart(t *testing.T) {
+	testGen(t, "testdata/ElementPart.wsdl")
+}
