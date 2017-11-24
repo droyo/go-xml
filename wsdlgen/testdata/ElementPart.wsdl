@@ -1,0 +1,38 @@
+<definitions targetNamespace="tns"
+	xmlns="http://schemas.xmlsoap.org/wsdl/"
+	xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+	xmlns:types="typens">
+<types>
+  <schema targetNamespace="typens"
+  	xmlns="http://www.w3.org/2001/XMLSchema">
+    <element name="someString" type="string" />
+  </schema>
+</types>
+
+  <message name="MyRequest">
+    <part name="path" element="typens:someString"/>
+  </message>
+
+  <message name="MyResponse">
+    <part name="result" element="typens:someString"/>
+  </message>
+
+  <portType name="MyServicePortType">
+    <operation name="MyServiceRequest">
+      <input message="tns:MyRequest"/>
+      <output message="tns:MyResponse"/>
+    </operation>
+  </portType>
+  
+  <binding name="MyServiceBinding" type="tns:MyServicePortType">
+    <operation name="MyServiceRequest">
+      <soap:operation soapAction="MyServiceRequest"/>
+    </operation>
+  </binding>
+
+  <service name="MyService">
+    <port name="MyRequestPort" binding="tns:MyServiceBinding">
+      <soap:address location="http://example.net/MyService" />
+    </port>
+  </service>
+</definitions>
