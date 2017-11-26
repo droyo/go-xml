@@ -50,13 +50,13 @@ func TestBooks(t *testing.T) {
 }
 
 type BookForm struct {
-	Name    string    `xml:"name,attr,omitempty"`
 	Author  string    `xml:"urn:books author"`
 	Title   string    `xml:"urn:books title"`
 	Genre   string    `xml:"urn:books genre"`
 	Price   float32   `xml:"urn:books price"`
 	Pubdate time.Time `xml:"urn:books pub_date"`
 	Review  string    `xml:"urn:books review"`
+	Name    string    `xml:"name,attr,omitempty"`
 }
 
 func (t *BookForm) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
