@@ -1,5 +1,14 @@
 <!--
+The xsd package normalizes all XSD files, establishing the following
+invariants:
 
+* All types have a name
+* All types are declared at the top-level of the schema
+* There are no references (ref=) in the document.
+
+This tests a corner case when one schema references elements in
+another schema, and the XML namespace prefixes of each schema
+are different.
 -->
 <test>
   <schema targetNamespace="tns"
@@ -31,7 +40,7 @@
       not get the name "MyFoo" by providing an explicit MyFoo type -->
     <xs:complexType name="MyFoo">
       <xs:sequence>
-        <xs:element name="uid" type="string" />
+        <xs:element name="uid" type="xs:string" />
       </xs:sequence>
     </xs:complexType>
   </xs:schema>
