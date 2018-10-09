@@ -1,4 +1,4 @@
-package main
+package main // import "aqwari.net/xml/cmd/xsdparse"
 
 import (
 	"flag"

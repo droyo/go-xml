@@ -2,7 +2,7 @@
 //
 // The gen package provides wrapper functions around the go/ast and
 // go/token packages to reduce boilerplate.
-package gen
+package gen // import "aqwari.net/xml/internal/gen"
 
 import (
 	"bufio"
