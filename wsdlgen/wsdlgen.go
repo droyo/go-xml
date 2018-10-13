@@ -7,7 +7,7 @@
 //
 // Code generation for the wsdlgen package can be configured by using
 // the provided Option functions.
-package wsdlgen
+package wsdlgen // import "aqwari.net/xml/wsdlgen"
 
 import (
 	"encoding/xml"

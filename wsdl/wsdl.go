@@ -1,5 +1,5 @@
 // Package wsdl parses Web Service Definition Language documents.
-package wsdl
+package wsdl // import "aqwari.net/xml/wsdl"
 
 import (
 	"bytes"
