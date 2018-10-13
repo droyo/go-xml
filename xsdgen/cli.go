@@ -18,8 +18,8 @@ import (
 // lookup identifiers and generate Go code.
 func (cfg *Config) GenCode(data ...[]byte) (*Code, error) {
 	if len(cfg.namespaces) == 0 {
-		cfg.debugf("setting namespaces to %q", cfg.namespaces)
 		cfg.Option(Namespaces(lookupTargetNS(data...)...))
+		cfg.debugf("setting namespaces to %q", cfg.namespaces)
 	}
 	deps, err := xsd.Parse(data...)
 	if err != nil {
