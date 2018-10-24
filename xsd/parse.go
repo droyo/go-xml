@@ -1,6 +1,8 @@
 package xsd
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/xml"
 	"fmt"
 	"regexp"
@@ -103,14 +105,17 @@ func Normalize(docs ...[]byte) ([]*xmltree.Element, error) {
 			result = append(result, root.Search(schemaNS, "schema")...)
 		}
 	}
+
+	anonTypeHashes := make(map[string]xml.Name)
 	for _, root := range result {
-		copyEltNamesToAnonTypes(root)
+		prepNameAnonymousTypes(root, anonTypeHashes)
 	}
 	for _, root := range result {
-		if err := nameAnonymousTypes(root); err != nil {
+		if err := nameAnonymousTypes(root, anonTypeHashes); err != nil {
 			return nil, err
 		}
 	}
+
 	for _, root := range result {
 		expandComplexShorthand(root)
 	}
@@ -140,20 +145,33 @@ func Parse(docs ...[]byte) ([]Schema, error) {
 	for _, root := range schema {
 		tns := root.Attr("", "targetNamespace")
 		s := Schema{TargetNS: tns, Types: make(map[xml.Name]Type)}
+		sHash := hash(root)
+
 		if err := s.parse(root); err != nil {
 			return nil, err
 		}
-		parsed[tns] = s
+		parsed[sHash] = s
 	}
 
 	for _, s := range parsed {
 		for _, t := range s.Types {
+
+			// This should never happen as type names should be unique
+			// per namespace. But better to know then silently overwrite
+			// duplicate XMLNames
+			if _, exists := types[XMLName(t)]; exists {
+				return nil, fmt.Errorf(
+					"Type collision - Name: [ %s ] Namespaces: [ %s ]\n",
+					XMLName(t),
+					s.TargetNS,
+				)
+			}
 			types[XMLName(t)] = t
 		}
 	}
 
 	for _, root := range schema {
-		s := parsed[root.Attr("", "targetNamespace")]
+		s := parsed[hash(root)]
 		if err := s.resolvePartialTypes(types); err != nil {
 			return nil, err
 		}
@@ -176,58 +194,13 @@ func parseType(name xml.Name) Type {
 	return builtin
 }
 
-func anonTypeName(n int, ns string) xml.Name {
-	return xml.Name{ns, fmt.Sprintf("_anon%d", n)}
-}
-
-/* Convert
-<element name="foo">
-  <complexType>
-  ...
-  </complexType>
-</element>
-
-to
-
-<element name="foo" type="foo">
-  <complexType name="foo">
-  ...
-  </complexType>
-</element>
-*/
-func copyEltNamesToAnonTypes(root *xmltree.Element) {
-	used := make(map[xml.Name]struct{})
-	tns := root.Attr("", "targetNamespace")
-
-	namedTypes := and(isType, hasAttr("", "name"))
-	for _, el := range root.SearchFunc(namedTypes) {
-		used[el.ResolveDefault(el.Attr("", "name"), tns)] = struct{}{}
-	}
-
-	eltWithAnonType := and(
-		or(isElem(schemaNS, "element"), isElem(schemaNS, "attribute")),
-		hasAttr("", "name"),
-		hasAnonymousType)
-
-	for _, el := range root.SearchFunc(eltWithAnonType) {
-		// Make sure we can use this element's name
-		xmlname := el.ResolveDefault(el.Attr("", "name"), tns)
-		if _, ok := used[xmlname]; ok {
-			continue
-		}
-		used[xmlname] = struct{}{}
-		for i, t := range el.Children {
-			if !isAnonymousType(&t) {
-				continue
-			}
-			t.SetAttr("", "name", el.Attr("", "name"))
-			el.SetAttr("", "type", el.Prefix(xmlname))
-
-			el.Children = append(el.Children[:i], el.Children[i+1:]...)
-			el.Content = nil
-			root.Children = append(root.Children, t)
-			break
-		}
+func anonTypeName(hash, ns string) xml.Name {
+	return xml.Name{
+		ns,
+		fmt.Sprintf(
+			"_anon_%s",
+			suffixFromHash(hash),
+		),
 	}
 }
 
@@ -256,13 +229,32 @@ to
     </xs:sequence>
   </xs:complexType>
 */
-func nameAnonymousTypes(root *xmltree.Element) error {
+
+func prepNameAnonymousTypes(root *xmltree.Element, anonTypeHashes map[string]xml.Name) {
+
+	for _, el := range root.SearchFunc(hasAnonymousType) {
+		if el.Name.Space != schemaNS {
+			continue
+		}
+		for i := 0; i < len(el.Children); i++ {
+			t := el.Children[i]
+
+			if !isAnonymousType(&t) {
+				continue
+			}
+			anonTypeHashes[hash(t)] = xml.Name{}
+		}
+	}
+}
+
+func nameAnonymousTypes(root *xmltree.Element, anonTypeHashes map[string]xml.Name) error {
+
 	var (
-		typeCounter int
-		updateAttr  string
-		accum       bool
+		updateAttr string
+		accum      bool
 	)
-	targetNS := root.Attr("", "targetNamespace")
+	tns := root.Attr("", "targetNamespace")
+
 	for _, el := range root.SearchFunc(hasAnonymousType) {
 		if el.Name.Space != schemaNS {
 			continue
@@ -290,9 +282,19 @@ func nameAnonymousTypes(root *xmltree.Element) error {
 			if !isAnonymousType(&t) {
 				continue
 			}
-			typeCounter++
 
-			name := anonTypeName(typeCounter, targetNS)
+			var prevUsed bool
+			tHash := hash(t)
+
+			name, _ := anonTypeHashes[tHash]
+			if zeroVal := (xml.Name{}); name == zeroVal {
+				name = anonTypeName(tHash, tns)
+				anonTypeHashes[tHash] = name
+				prevUsed = false
+			} else {
+				prevUsed = true
+			}
+
 			qname := el.Prefix(name)
 
 			t.SetAttr("", "name", name.Local)
@@ -303,12 +305,17 @@ func nameAnonymousTypes(root *xmltree.Element) error {
 			el.SetAttr("", updateAttr, qname)
 			el.Children = append(el.Children[:i], el.Children[i+1:]...)
 			el.Content = nil
-			root.Children = append(root.Children, t)
+
+			if !prevUsed {
+				root.Children = append(root.Children, t)
+			}
+
 			if !accum {
 				break
 			}
 		}
 	}
+
 	return nil
 }
 
@@ -558,11 +565,20 @@ func (s *Schema) parseTypes(root *xmltree.Element) (err error) {
 		t := s.parseSimpleType(el)
 		s.Types[t.Name] = t
 	}
-	s.Types[xml.Name{tns, "_self"}] = s.parseSelfType(root)
+
+	selfSuffix := suffixFromHash(hash(root))
+	s.Types[xml.Name{
+		tns,
+		fmt.Sprintf(
+			"_self_%s",
+			selfSuffix,
+		),
+	}] = s.parseSelfType(root, selfSuffix)
+
 	return err
 }
 
-func (s *Schema) parseSelfType(root *xmltree.Element) *ComplexType {
+func (s *Schema) parseSelfType(root *xmltree.Element, selfSuffix string) *ComplexType {
 	self := *root
 	self.Content = nil
 	self.Children = nil
@@ -573,7 +589,10 @@ func (s *Schema) parseSelfType(root *xmltree.Element) *ComplexType {
 	}
 	newdoc := self
 	self.Name.Local = "complexType"
-	self.SetAttr("", "name", "_self")
+	self.SetAttr("", "name", fmt.Sprintf(
+		"_self_%s",
+		selfSuffix,
+	))
 	newdoc.Children = []xmltree.Element{self}
 	expandComplexShorthand(&newdoc)
 	return s.parseComplexType(&newdoc.Children[0])
@@ -999,4 +1018,28 @@ func (s *Schema) lookupType(name linkedType, ext map[xml.Name]Type) (Type, bool)
 	}
 	v, ok := s.Types[xml.Name(name)]
 	return v, ok
+}
+
+// Returns a leading substring of the string passed
+func suffixFromHash(hash string) string {
+	suffixLength := 6
+	return strings.ToUpper(string(hash[:suffixLength]))
+}
+
+// Returns the hex encoded sha256 hash of the serialized argument
+func hash(i interface{}) string {
+	var sum [sha256.Size]byte
+
+	switch t := i.(type) {
+	case xmltree.Element:
+		sum = sha256.Sum256([]byte(fmt.Sprintf("%+v", t)))
+	case *xmltree.Element:
+		sum = sha256.Sum256([]byte(fmt.Sprintf("%+v", *t)))
+	case *Schema:
+		sum = sha256.Sum256([]byte(fmt.Sprintf("%+v", *t)))
+	default:
+		panic(fmt.Sprintf("Unable to hash unknown element"))
+	}
+
+	return hex.EncodeToString(sum[:sha256.Size])
 }
