@@ -106,6 +106,37 @@ func Normalize(docs ...[]byte) ([]*xmltree.Element, error) {
 		}
 	}
 
+	// Copy element names to anonymous types in order to preserve context within
+	// generated type names. This is done in two passes in order to preserve
+	// as much naming context as possible. Potential collisions are avoided by
+	// appending a suffix to names that would otherwise collide. Suffixes are
+	// based on hashes of the type being renamed in order to decouple generated
+	// type names from the ordering in which the xsd documents were passed as
+	// arguments, providing for more maintainable code based on outputed
+	// GO file
+	namedTypesByNS := map[string]map[xml.Name]string{}
+	namesToBeCopiedByNS := map[string]map[xml.Name][]string{}
+	for _, root := range result {
+		if err := prepCopyEltNamesToAnonTypes(
+			root,
+			namedTypesByNS,
+			namesToBeCopiedByNS,
+		); err != nil {
+			return nil, err
+		}
+	}
+	for _, root := range result {
+		copyEltNamesToAnonTypes(
+			root,
+			namedTypesByNS,
+			namesToBeCopiedByNS,
+		)
+	}
+
+	// Give all remaiing anonymous types a name based on hashes of the type
+	// in order to decouple the type name being generated from the ordering
+	// in which the xsd documents were passed as arguments, providing for more
+	// maintainable code based on outputed GO file
 	anonTypeHashes := make(map[string]xml.Name)
 	for _, root := range result {
 		prepNameAnonymousTypes(root, anonTypeHashes)
@@ -201,6 +232,178 @@ func anonTypeName(hash, ns string) xml.Name {
 			"_anon_%s",
 			suffixFromHash(hash),
 		),
+	}
+}
+
+/*
+	Convert:
+	<element name="foo">
+	  <complexType>
+	  ...
+	  </complexType>
+	</element>
+
+	to:
+	<element name="foo" type="foo">
+	  <complexType name="foo">
+	  ...
+	  </complexType>
+	</element>
+*/
+func prepCopyEltNamesToAnonTypes(
+	root *xmltree.Element,
+	namedTypesByNS map[string]map[xml.Name]string,
+	namesToCopiedByNS map[string]map[xml.Name][]string,
+) error {
+	var nTypes map[xml.Name]string
+	var nTypesToCopy map[xml.Name][]string
+	tns := root.Attr("", "targetNamespace")
+
+	if _, nsEncountered := namedTypesByNS[tns]; !nsEncountered {
+
+		nTypes = map[xml.Name]string{}
+		namedTypesByNS[tns] = nTypes
+
+		nTypesToCopy = map[xml.Name][]string{}
+		namesToCopiedByNS[tns] = nTypesToCopy
+
+	} else {
+		nTypes = namedTypesByNS[tns]
+		nTypesToCopy = namesToCopiedByNS[tns]
+	}
+
+	namedTypes := and(isType, hasAttr("", "name"))
+	for _, el := range root.SearchFunc(namedTypes) {
+		xmlName := el.ResolveDefault(el.Attr("", "name"), tns)
+
+		// If we've encountered a type name for the first time
+		// store it with its hash
+		if _, prevUsed := nTypes[xmlName]; !prevUsed {
+			nTypes[xmlName] = hash(el)
+		} else {
+			return fmt.Errorf(
+				"Type collision - Name: [ %s ] Namespaces: [ %s ]\n",
+				xmlName,
+				tns,
+			)
+		}
+	}
+
+	eltWithAnonType := and(
+		or(isElem(schemaNS, "element"), isElem(schemaNS, "attribute")),
+		hasAttr("", "name"),
+		hasAnonymousType)
+
+	for _, el := range root.SearchFunc(eltWithAnonType) {
+
+		xmlname := el.ResolveDefault(el.Attr("", "name"), tns)
+		ntHash, explicitlyNamed := nTypes[xmlname]
+		for _, t := range el.Children {
+
+			if !isAnonymousType(&t) {
+				continue
+			}
+
+			t.SetAttr("", "name", el.Attr("", "name"))
+			tHash := hash(t)
+
+			if explicitlyNamed {
+				if ntHash != tHash {
+					nTypesToCopy[xmlname] = append(nTypesToCopy[xmlname], tHash)
+				}
+			} else {
+				nTypesToCopy[xmlname] = append(nTypesToCopy[xmlname], tHash)
+			}
+			break
+		}
+	}
+
+	return nil
+}
+
+func copyEltNamesToAnonTypes(
+	root *xmltree.Element,
+	namedTypesByNS map[string]map[xml.Name]string,
+	namesToCopiedByNS map[string]map[xml.Name][]string,
+) {
+
+	tns := root.Attr("", "targetNamespace")
+	nTypes := namedTypesByNS[tns]
+	nTypesToCopy := namesToCopiedByNS[tns]
+
+	getSuffix := func(xmlName xml.Name, typeHash string) (
+		isNamedType bool,
+		suffix string,
+	) {
+		ntHash, isNamedType := nTypes[xmlName]
+
+		if isNamedType {
+			if typeHash == ntHash {
+				suffix = ""
+				return
+			}
+
+		} else {
+			if numUnique(nTypesToCopy[xmlName]) == 1 {
+				suffix = ""
+				return
+			}
+		}
+
+		isNamedType = false
+		suffix = suffixFromHash(typeHash)
+		return
+	}
+
+	eltWithAnonType := and(
+		or(isElem(schemaNS, "element"), isElem(schemaNS, "attribute")),
+		hasAttr("", "name"),
+		hasAnonymousType)
+
+	for _, el := range root.SearchFunc(eltWithAnonType) {
+		xmlname := el.ResolveDefault(el.Attr("", "name"), tns)
+
+		for i, t := range el.Children {
+			if !isAnonymousType(&t) {
+				continue
+			}
+
+			// Preemptively set the type's name to that of its parent element
+			// so we can hash the result and check if the type should be anon
+			// with/without a suffix, or the parent element should instead
+			// reference and already defined type
+			t.SetAttr("", "name", el.Attr("", "name"))
+			tHash := hash(t)
+			isNamedType, suffix := getSuffix(xmlname, tHash)
+
+			// If the name/hash of the anon type matches that of an explicity
+			// declared type, refernce that type and throw away the anon type
+			if isNamedType {
+				el.SetAttr("", "type", el.Prefix(xmlname))
+				el.Children = append(el.Children[:i], el.Children[i+1:]...)
+				el.Content = nil
+
+				// Otherwise append suffix and replace anon type with
+				// new type with name suffix
+			} else {
+				t.SetAttr(
+					"",
+					"name",
+					fmt.Sprintf("%s%s", el.Attr("", "name"), suffix),
+				)
+
+				el.SetAttr(
+					"",
+					"type",
+					fmt.Sprintf("%s%s", el.Prefix(xmlname), suffix),
+				)
+
+				el.Children = append(el.Children[:i], el.Children[i+1:]...)
+				el.Content = nil
+				root.Children = append(root.Children, t)
+			}
+			break
+		}
 	}
 }
 
@@ -1018,6 +1221,17 @@ func (s *Schema) lookupType(name linkedType, ext map[xml.Name]Type) (Type, bool)
 	}
 	v, ok := s.Types[xml.Name(name)]
 	return v, ok
+}
+
+// Returns the number of unique strings in a slice
+func numUnique(stringSlice []string) int {
+	u := make(map[string]bool)
+
+	for _, s := range stringSlice {
+		u[s] = true
+	}
+
+	return len(u)
 }
 
 // Returns a leading substring of the string passed
