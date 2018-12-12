@@ -252,7 +252,7 @@ func (fn *Function) Decl() (*ast.FuncDecl, error) {
 		return nil, errors.New("function name unset")
 	}
 	if len(fn.body) == 0 {
-		return nil, fmt.Errorf("function body for %s unset")
+		return nil, fmt.Errorf("function body for %s unset", fn.name)
 	}
 
 	if fn.godoc != "" {
