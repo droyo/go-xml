@@ -1,0 +1,17 @@
+<!-- Where possible (if the type name has not been used already), anonymous types
+  declared inside an element or attribute should have the same name as their container. -->
+
+<element name="TradePrice">
+   <complexType>
+       <all>
+           <element name="price" type="float"/>
+       </all>
+   </complexType>
+</element>
+<element name="TradePriceRequest">
+   <complexType>
+       <all>
+           <element name="tickerSymbol" type="string"/>
+       </all>
+   </complexType>
+</element>

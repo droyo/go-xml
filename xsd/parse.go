@@ -189,11 +189,10 @@ func anonTypeName(n int, ns string) xml.Name {
 
 to
 
-<element name="foo" type="foo">
-  <complexType name="foo">
+<element name="foo" type="foo"/>
+<complexType name="foo">
   ...
-  </complexType>
-</element>
+</complexType>
 */
 func copyEltNamesToAnonTypes(root *xmltree.Element) {
 	used := make(map[xml.Name]struct{})
@@ -209,6 +208,7 @@ func copyEltNamesToAnonTypes(root *xmltree.Element) {
 		hasAttr("", "name"),
 		hasAnonymousType)
 
+	var newChildren []xmltree.Element
 	for _, el := range root.SearchFunc(eltWithAnonType) {
 		// Make sure we can use this element's name
 		xmlname := el.ResolveDefault(el.Attr("", "name"), tns)
@@ -221,14 +221,14 @@ func copyEltNamesToAnonTypes(root *xmltree.Element) {
 				continue
 			}
 			t.SetAttr("", "name", el.Attr("", "name"))
+			newChildren = append(newChildren, t)
 			el.SetAttr("", "type", el.Prefix(xmlname))
-
 			el.Children = append(el.Children[:i], el.Children[i+1:]...)
 			el.Content = nil
-			root.Children = append(root.Children, t)
 			break
 		}
 	}
+	root.Children = append(root.Children, newChildren...)
 }
 
 /*
@@ -261,6 +261,7 @@ func nameAnonymousTypes(root *xmltree.Element) error {
 		typeCounter int
 		updateAttr  string
 		accum       bool
+		newChildren []xmltree.Element
 	)
 	targetNS := root.Attr("", "targetNamespace")
 	for _, el := range root.SearchFunc(hasAnonymousType) {
@@ -303,12 +304,13 @@ func nameAnonymousTypes(root *xmltree.Element) error {
 			el.SetAttr("", updateAttr, qname)
 			el.Children = append(el.Children[:i], el.Children[i+1:]...)
 			el.Content = nil
-			root.Children = append(root.Children, t)
+			newChildren = append(newChildren, t)
 			if !accum {
 				break
 			}
 		}
 	}
+	root.Children = append(root.Children, newChildren...)
 	return nil
 }
 

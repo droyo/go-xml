@@ -1,0 +1,22 @@
+{
+  "_self": {
+    "Elements": [
+      {
+        "Name": {"Space": "tns", "Local": "TradePrice"},
+        "Type": {
+          "Base": 0,
+          "Name": {"Local": "TradePrice"},
+          "Elements": [{"Name": {"Local": "price"}, "Type": 21}]
+        }
+      },
+      {
+        "Name": {"Space": "tns", "Local": "TradePriceRequest"},
+        "Type": {
+          "Base": 0,
+          "Name": {"Local": "TradePriceRequest"},
+          "Elements": [{"Name": {"Local": "tickerSymbol"}, "Type": 38}]
+        }
+      }
+    ]
+  }
+}
