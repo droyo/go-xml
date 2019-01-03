@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"aqwari.net/xml/internal/gen"
+	"aqwari.net/xml/wsdlgen"
 	"aqwari.net/xml/xmltree"
 	"aqwari.net/xml/xsd"
 	"aqwari.net/xml/xsdgen"
@@ -54,6 +55,29 @@ func main() {
 		}
 	}
 
+	wsdlTestCases, err := findWSDLTestCases()
+	if err != nil {
+		errorsEncountered = true
+		log.Print(err)
+	}
+
+	for _, testCase := range wsdlTestCases {
+		var cfg wsdlgen.Config
+		cfg.Option(wsdlgen.DefaultOptions...)
+
+		code, tests, err := genWSDLTests(cfg, testCase.filename, testCase.pkg)
+		if err != nil {
+			errorsEncountered = true
+			log.Print(testCase.pkg, ":", err)
+			continue
+		} else {
+			log.Printf("generated wsdl tests for %s", testCase.pkg)
+		}
+		if err := writeTestFiles(code, tests, testCase.pkg); err != nil {
+			errorsEncountered = true
+			log.Print(testCase.pkg, ":", err)
+		}
+	}
 	if errorsEncountered {
 		os.Exit(1)
 	}
@@ -89,6 +113,11 @@ func writeTestFiles(code, tests *ast.File, pkg string) error {
 // Returns type definitions and unit tests as separate files.
 func genXSDTests(cfg xsdgen.Config, data []byte, pkg string) (code, tests *ast.File, err error) {
 	cfg.Option(xsdgen.PackageName(pkg))
+	if pkg == "stockquote" {
+		cfg.Option(
+			xsdgen.LogLevel(2),
+			xsdgen.LogOutput(log.New(os.Stderr, "xsdgen: ", 0)))
+	}
 	main, err := cfg.GenCode(data)
 	if err != nil {
 		return nil, nil, err
@@ -230,4 +259,51 @@ func findXSDTestCases() ([]testCase, error) {
 		}
 	}
 	return result, nil
+}
+
+// Generates unit tests for marshal/unmarshal of request/responses to a
+// WSDL service. The tests will do the following:
+//
+// 	- ../../wsdlgen/examples/forecast/ndfd.wsdl
+func genWSDLTests(cfg wsdlgen.Config, filename, pkg string) (code, tests *ast.File, err error) {
+	cfg.Option(
+		wsdlgen.PackageName(pkg),
+		wsdlgen.LogLevel(3),
+		wsdlgen.LogOutput(log.New(os.Stderr, "wsdlgen: ", 0)))
+	cfg.XSDOption(
+		xsdgen.LogLevel(3),
+		xsdgen.LogOutput(log.New(os.Stderr, "xsdgen: ", 0)))
+
+	code, err = cfg.GenAST(filename)
+	if err != nil {
+		return nil, nil, err
+	}
+	tests = new(ast.File)
+	tests.Name = ast.NewIdent(pkg)
+	return code, tests, nil
+}
+
+// Test case for WSDL tests
+type wsdlTestCase struct {
+	pkg      string
+	filename string
+}
+
+// Looks for subdirectories containing files with a wsdl document. Returns
+// slice of wsdlTestCase values.
+func findWSDLTestCases() ([]wsdlTestCase, error) {
+	var cases []wsdlTestCase
+
+	wsdlFiles, err := filepath.Glob("*/*.wsdl")
+	if err != nil {
+		return nil, err
+	}
+
+	for _, filename := range wsdlFiles {
+		cases = append(cases, wsdlTestCase{
+			pkg:      filepath.Dir(filename),
+			filename: filename,
+		})
+	}
+	return cases, nil
 }
