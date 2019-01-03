@@ -11,15 +11,10 @@ import (
 )
 
 const (
-	wsdlNS    = "http://schemas.xmlsoap.org/wsdl/"
-	soapNS    = "http://schemas.xmlsoap.org/wsdl/soap/"
-	soap12NS  = "http://schemas.xmlsoap.org/wsdl/soap12/"
-	httpNS    = "http://schemas.xmlsoap.org/wsdl/http/"
-	mimeNS    = "http://schemas.xmlsoap.org/wsdl/mime/"
-	soapencNS = "http://schemas.xmlsoap.org/soap/encoding/"
-	soapenvNS = "http://schemas.xmlsoap.org/soap/envelope/"
-	xsiNS     = "http://www.w3.org/2000/10/XMLSchema-instance"
-	xsdNS     = "http://www.w3.org/2000/10/XMLSchema"
+	wsdlNS   = "http://schemas.xmlsoap.org/wsdl/"
+	soapNS   = "http://schemas.xmlsoap.org/wsdl/soap/"
+	soap12NS = "http://schemas.xmlsoap.org/wsdl/soap12/"
+	httpNS   = "http://schemas.xmlsoap.org/wsdl/http/"
 )
 
 // A Definition contains all information necessary to generate Go code
