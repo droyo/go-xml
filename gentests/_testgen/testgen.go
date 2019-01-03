@@ -8,6 +8,7 @@ import (
 	"go/ast"
 	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -29,39 +30,51 @@ func glob(pat string) string {
 }
 
 func main() {
+	var errorsEncountered bool
 	cfg := new(xsdgen.Config)
-	cases := findTestCases()
+	cases := findXSDTestCases()
 
 	cfg.Option(xsdgen.DefaultOptions...)
 	for _, dir := range cases {
 		data, err := ioutil.ReadFile(glob(filepath.Join(dir, "*.xsd")))
 		if err != nil {
+			errorsEncountered = true
 			log.Print(err)
 			continue
 		}
-		tests, err := genTests(*cfg, data, dir)
+		tests, err := genXSDTests(*cfg, data, dir)
 		if err != nil {
+			errorsEncountered = true
 			log.Print(dir, ":", err)
 			continue
 		} else {
-			log.Printf("generated tests for %s", dir)
+			log.Printf("generated xsd tests for %s", dir)
 		}
-		filename := filepath.Join(dir, dir+"_test.go")
-		source, err := gen.FormattedSource(tests, filename)
-		if err != nil {
+		if err := writeTestFiles(tests, dir); err != nil {
+			errorsEncountered = true
 			log.Print(dir, ":", err)
-			continue
-		}
-		if err := ioutil.WriteFile(filename, source, 0666); err != nil {
-			log.Print(dir, ":", err)
-		}
-
-		// This is needed so 'go build' works and automated CI doesn't complain.
-		err = ioutil.WriteFile(filepath.Join(dir, dir+".go"), []byte("package "+dir+"\n"), 0666)
-		if err != nil {
-			log.Print(err)
 		}
 	}
+
+	if errorsEncountered {
+		os.Exit(1)
+	}
+}
+
+func writeTestFiles(file *ast.File, pkg string) error {
+	testFilename := filepath.Join(pkg, pkg+"_test.go")
+
+	src, err := gen.FormattedSource(file, testFilename)
+	if err != nil {
+		return err
+	}
+	if err := ioutil.WriteFile(testFilename, src, 0666); err != nil {
+		return err
+	}
+
+	// This is needed so 'go build' works and automated CI doesn't complain.
+	buildFilename := filepath.Join(pkg, pkg+".go")
+	return ioutil.WriteFile(buildFilename, []byte("package "+pkg+"\n"), 0666)
 }
 
 // Generates unit tests for xml marshal unmarshalling of
@@ -72,7 +85,7 @@ func main() {
 //   the document described in the XML schema.
 // - Marshal the resulting file back into an XML document.
 // - Compare the two documents for equality.
-func genTests(cfg xsdgen.Config, data []byte, dir string) (*ast.File, error) {
+func genXSDTests(cfg xsdgen.Config, data []byte, dir string) (*ast.File, error) {
 	cfg.Option(xsdgen.PackageName(dir))
 	code, err := cfg.GenCode(data)
 	if err != nil {
@@ -191,7 +204,7 @@ func topLevelElements(root *xmltree.Element) []Element {
 // Looks for subdirectories containing pairs of (xml, xsd) files
 // that should contain an xml document and the schema it conforms to,
 // respectively. Returns slice of the directory names
-func findTestCases() []string {
+func findXSDTestCases() []string {
 	filenames, err := filepath.Glob("*/*.xsd")
 	if err != nil {
 		return nil
