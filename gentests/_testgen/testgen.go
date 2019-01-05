@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"aqwari.net/xml/internal/gen"
+	"aqwari.net/xml/wsdl"
 	"aqwari.net/xml/wsdlgen"
 	"aqwari.net/xml/xmltree"
 	"aqwari.net/xml/xsd"
@@ -280,7 +281,119 @@ func genWSDLTests(cfg wsdlgen.Config, filename, pkg string) (code, tests *ast.Fi
 	}
 	tests = new(ast.File)
 	tests.Name = ast.NewIdent(pkg)
+
+	doc, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, nil, err
+	}
+	def, err := wsdl.Parse(doc)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	type templateParams struct {
+		Address string
+		OpName  string
+		Input   string
+		Output  string
+	}
+
+	for _, port := range def.Ports {
+		for _, op := range port.Operations {
+			params := templateParams{
+				Address: port.Address,
+				OpName:  strings.Title(op.Name.Local),
+			}
+			params.Input, params.Output = findInputOutput(code, params.OpName)
+
+			fn, err := gen.Func("Test"+params.OpName).
+				Args("t *testing.T").
+				BodyTmpl(`
+					var (
+						client Client
+						input {{.Input}}
+					)
+					inputSample, err := ioutil.ReadFile("{{.OpName}}-input.xml")
+					if err != nil {
+						t.Fatal(err)
+					}
+					if err := xml.Unmarshal(inputSample, &input); err != nil {
+						t.Fatal(err)
+					} else {
+						t.Logf("sending %#v", input)
+					}
+					
+					outputSample, err := ioutil.ReadFile("{{.OpName}}-output.xml")
+					if err != nil {
+						t.Fatal(err)
+					}
+					want, err := xmltree.Parse(outputSample)
+					if err != nil {
+						t.Fatal(err)
+					}
+					
+					envelope := []byte(fmt.Sprintf(
+						"<Envelope xmlns=%q><Body>%s\n</Body></Envelope>",
+						"http://schemas.xmlsoap.org/soap/envelope/",
+						outputSample))
+
+					client.HTTPClient = testutil.FakeClient("{{.Address}}", envelope)
+
+					output, err := client.{{.OpName}}(input)
+					if err != nil {
+						t.Fatal(err)
+					}
+					
+					outputXML, err := xml.Marshal(output)
+					if err != nil {
+						t.Fatal(err)
+					}
+					
+					got, err := xmltree.Parse(outputXML)
+					if err != nil {
+						t.Fatal(err)
+					}
+					
+					// descend into the input sample to match the stripped
+					// result given back to us by the generated method
+					inner := want.Search(got.Name.Space, got.Name.Local)
+					if len(inner) < 1 {
+						t.Fatalf("got \n%s\n, want \n%s\n", got, want)
+					} else {
+						want = inner[0]
+					}
+					
+					if !xmltree.Equal(got, want) {
+						t.Errorf("got \n%s\n, want \n%s\n", got, want)
+					} else {
+						t.Logf("got %s", xmltree.MarshalIndent(got, "", "  "))
+					}
+					`, params).Decl()
+			if err != nil {
+				return nil, nil, err
+			}
+			tests.Decls = append(tests.Decls, fn)
+		}
+	}
 	return code, tests, nil
+}
+
+func findInputOutput(file *ast.File, name string) (inputType, outputType string) {
+	for _, decl := range file.Decls {
+		if fn, ok := decl.(*ast.FuncDecl); ok && fn.Name.Name == name {
+			if len(fn.Type.Params.List) > 0 {
+				if id, ok := fn.Type.Params.List[0].Type.(*ast.Ident); ok {
+					inputType = id.Name
+				}
+			}
+			if len(fn.Type.Results.List) > 0 {
+				if id, ok := fn.Type.Results.List[0].Type.(*ast.Ident); ok {
+					outputType = id.Name
+				}
+			}
+		}
+	}
+	return inputType, outputType
 }
 
 // Test case for WSDL tests

@@ -1,0 +1,3 @@
+<TradePriceRequest xmlns="http://example.com/stockquote.xsd">
+  <tickerSymbol>FOOBAR</tickerSymbol>
+</TradePriceRequest>

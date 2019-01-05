@@ -1,0 +1,7 @@
+<GetLastTradePriceOutput xmlns="http://example.com/stockquote.xsd">
+  <body>
+    <TradePrice>
+      <price>1.2345</price>
+    </TradePrice>
+  </body>
+</GetLastTradePriceOutput>
