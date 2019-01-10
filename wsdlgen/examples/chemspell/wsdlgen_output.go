@@ -40,8 +40,8 @@ func (a *ArrayOfxsdstring) UnmarshalXML(d *xml.Decoder, start xml.StartElement) 
 
 type Client struct {
 	HTTPClient   http.Client
-	ResponseHook func(*http.Response)
-	RequestHook  func(*http.Request)
+	ResponseHook func(*http.Response) *http.Response
+	RequestHook  func(*http.Request) *http.Request
 }
 type soapEnvelope struct {
 	XMLName struct{} `xml:"http://schemas.xmlsoap.org/soap/envelope/ Envelope"`
@@ -77,7 +77,7 @@ func (c *Client) do(method, uri, action string, in, out interface{}) error {
 	}
 	req.Header.Set("SOAPAction", action)
 	if c.RequestHook != nil {
-		c.RequestHook(req)
+		req = c.RequestHook(req)
 	}
 	rsp, err := c.HTTPClient.Do(req)
 	if err != nil {
@@ -85,7 +85,7 @@ func (c *Client) do(method, uri, action string, in, out interface{}) error {
 	}
 	defer rsp.Body.Close()
 	if c.ResponseHook != nil {
-		c.ResponseHook(rsp)
+		rsp = c.ResponseHook(rsp)
 	}
 	dec := xml.NewDecoder(rsp.Body)
 	envelope.Body.Message = out

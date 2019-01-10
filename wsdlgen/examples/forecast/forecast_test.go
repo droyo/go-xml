@@ -15,7 +15,7 @@ func TestNDFDGen(t *testing.T) {
 			InsecureSkipVerify: true,
 		},
 	}
-	client.RequestHook = func(req *http.Request) {
+	client.RequestHook = func(req *http.Request) *http.Request {
 		data, err := httputil.DumpRequest(req, true)
 		if err != nil {
 			panic(err)
@@ -30,13 +30,15 @@ func TestNDFDGen(t *testing.T) {
 		// a mock server. The following line can be removed to
 		// obtain such output. Please be responsible.
 		req.URL = nil
+		return req
 	}
-	client.ResponseHook = func(rsp *http.Response) {
+	client.ResponseHook = func(rsp *http.Response) *http.Response {
 		data, err := httputil.DumpResponse(rsp, true)
 		if err != nil {
 			panic(err)
 		}
 		t.Log(string(data))
+		return rsp
 	}
 
 	s, _ := client.NDFDgen(NDFDgenRequest{
