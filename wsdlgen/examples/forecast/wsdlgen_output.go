@@ -165,7 +165,7 @@ func (t *xsdDateTime) MarshalText() ([]byte, error) {
 }
 
 type Client struct {
-	HTTPClient   http.Client
+	HTTPClient   *http.Client
 	ResponseHook func(*http.Response) *http.Response
 	RequestHook  func(*http.Request) *http.Request
 }
@@ -206,7 +206,11 @@ func (c *Client) do(ctx context.Context, method, uri, action string, in, out int
 	if c.RequestHook != nil {
 		req = c.RequestHook(req)
 	}
-	rsp, err := c.HTTPClient.Do(req)
+	httpClient := c.HTTPClient
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
+	rsp, err := httpClient.Do(req)
 	if err != nil {
 		return err
 	}

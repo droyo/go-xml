@@ -11,7 +11,7 @@ import "aqwari.net/xml/internal/gen"
 // dependencies becomes.
 var helpers string = `
 	type Client struct {
-		HTTPClient http.Client
+		HTTPClient *http.Client
 		ResponseHook func(*http.Response) *http.Response
 		RequestHook func(*http.Request) *http.Request
 	}
@@ -54,7 +54,13 @@ var helpers string = `
 		if c.RequestHook != nil {
 			req = c.RequestHook(req)
 		}
-		rsp, err := c.HTTPClient.Do(req)
+
+		httpClient := c.HTTPClient
+		if httpClient == nil {
+			httpClient = http.DefaultClient
+		}
+
+		rsp, err := httpClient.Do(req)
 		if err != nil {
 			return err
 		}

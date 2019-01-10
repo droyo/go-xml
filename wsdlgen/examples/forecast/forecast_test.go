@@ -11,9 +11,11 @@ import (
 
 func TestNDFDGen(t *testing.T) {
 	client := NewClient()
-	client.HTTPClient.Transport = &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
+	client.HTTPClient = &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
 		},
 	}
 	client.RequestHook = func(req *http.Request) *http.Request {
