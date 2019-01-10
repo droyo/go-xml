@@ -4,6 +4,7 @@ package chemspell
 
 import (
 	"bytes"
+	"context"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -56,7 +57,7 @@ type soapEnvelope struct {
 	} `xml:"http://schemas.xmlsoap.org/soap/envelope/ Body"`
 }
 
-func (c *Client) do(method, uri, action string, in, out interface{}) error {
+func (c *Client) do(ctx context.Context, method, uri, action string, in, out interface{}) error {
 	var body io.Reader
 	var envelope soapEnvelope
 	if method == "POST" || method == "PUT" {
@@ -76,6 +77,7 @@ func (c *Client) do(method, uri, action string, in, out interface{}) error {
 		return err
 	}
 	req.Header.Set("SOAPAction", action)
+	req = req.WithContext(ctx)
 	if c.RequestHook != nil {
 		req = c.RequestHook(req)
 	}
@@ -97,7 +99,7 @@ func (c *Client) do(method, uri, action string, in, out interface{}) error {
 	}
 	return nil
 }
-func (c *Client) GetSugList(name string, src string) (string, error) {
+func (c *Client) GetSugList(ctx context.Context, name string, src string) (string, error) {
 	var input struct {
 		XMLName struct{} `xml:"http://chemspell.nlm.nih.gov/axis/SpellAid.jws/axis/SpellAid.jws getSugList"`
 		Args    struct {
@@ -113,10 +115,10 @@ func (c *Client) GetSugList(name string, src string) (string, error) {
 			Return string `xml:"http://chemspell.nlm.nih.gov/axis/SpellAid.jws/axis/SpellAid.jws return"`
 		} `xml:"http://chemspell.nlm.nih.gov/axis/SpellAid.jws/axis/SpellAid.jws getSugListResponse"`
 	}
-	err := c.do("POST", "http://chemspell.nlm.nih.gov/axis/SpellAid.jws", "", &input, &output)
+	err := c.do(ctx, "POST", "http://chemspell.nlm.nih.gov/axis/SpellAid.jws", "", &input, &output)
 	return string(output.Args.Return), err
 }
-func (c *Client) Main(args ArrayOfxsdstring) error {
+func (c *Client) Main(ctx context.Context, args ArrayOfxsdstring) error {
 	var input struct {
 		XMLName struct{} `xml:"http://chemspell.nlm.nih.gov/axis/SpellAid.jws/axis/SpellAid.jws main"`
 		Args    struct {
@@ -128,6 +130,6 @@ func (c *Client) Main(args ArrayOfxsdstring) error {
 		XMLName struct{} `xml:"http://chemspell.nlm.nih.gov/axis/SpellAid.jws/axis/SpellAid.jws main"`
 		Args    struct{} `xml:"http://chemspell.nlm.nih.gov/axis/SpellAid.jws/axis/SpellAid.jws mainResponse"`
 	}
-	err := c.do("POST", "http://chemspell.nlm.nih.gov/axis/SpellAid.jws", "", &input, &output)
+	err := c.do(ctx, "POST", "http://chemspell.nlm.nih.gov/axis/SpellAid.jws", "", &input, &output)
 	return err
 }

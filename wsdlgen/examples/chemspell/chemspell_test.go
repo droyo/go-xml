@@ -1,6 +1,7 @@
 package chemspell
 
 import (
+	"context"
 	"crypto/tls"
 	"net/http"
 	"net/http/httputil"
@@ -32,7 +33,7 @@ func TestNDFDGen(t *testing.T) {
 		return rsp
 	}
 
-	s, err := client.GetSugList("foo", "All databases")
+	s, err := client.GetSugList(context.TODO(), "foo", "All databases")
 	t.Log(s, err)
 	//err := client.Main([]string{"foo", "bar"})
 	//t.Log(err)

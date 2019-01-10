@@ -198,10 +198,11 @@ func (p *printer) operation(port wsdl.Port, op wsdl.Operation) error {
 		}
 		p.file.Decls = append(p.file.Decls, decls...)
 	}
+	args := append([]string{"ctx context.Context"}, params.input...)
 	fn := gen.Func(p.xsdgen.NameOf(op.Name)).
 		Comment(op.Doc).
 		Receiver("c *Client").
-		Args(params.input...).
+		Args(args...).
 		BodyTmpl(`
 			var input struct {
 				XMLName struct{} `+"`"+`xml:"{{.MsgName.Space}} {{.MsgName.Local}}"`+"`"+`
@@ -225,7 +226,7 @@ func (p *printer) operation(port wsdl.Port, op wsdl.Operation) error {
 				}`+"`xml:\"{{.OutputName.Space}} {{.OutputName.Local}}\"`"+`
 			}
 			
-			err := c.do({{.Method|printf "%q"}}, {{.Address|printf "%q"}}, {{.SOAPAction|printf "%q"}}, &input, &output)
+			err := c.do(ctx, {{.Method|printf "%q"}}, {{.Address|printf "%q"}}, {{.SOAPAction|printf "%q"}}, &input, &output)
 			
 			{{ if .OutputFields -}}
 			return {{ range .OutputFields }}{{.Type}}(output.Args.{{.Name}}), {{ end }} err

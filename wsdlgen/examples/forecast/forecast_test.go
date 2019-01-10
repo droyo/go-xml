@@ -1,6 +1,7 @@
 package forecast
 
 import (
+	"context"
 	"crypto/tls"
 	"net/http"
 	"net/http/httputil"
@@ -41,7 +42,7 @@ func TestNDFDGen(t *testing.T) {
 		return rsp
 	}
 
-	s, _ := client.NDFDgen(NDFDgenRequest{
+	s, _ := client.NDFDgen(context.TODO(), NDFDgenRequest{
 		EndTime:   time.Now(),
 		StartTime: time.Now().Add(-time.Minute * 10),
 		Unit:      "m",
