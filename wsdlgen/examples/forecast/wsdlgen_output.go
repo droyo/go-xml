@@ -61,6 +61,9 @@ type FeatureType string
 // May be one of 24 hourly, 12 hourly
 type Format string
 
+// Must match the pattern [\-]?\d{1,2}\.\d+,[\-]?\d{1,3}\.\d+
+type LatLonPair string
+
 // Must match the pattern [a-zA-Z'\-]*( ?[a-zA-Z'\-]*)*,[A-Z][A-Z](\|[a-zA-Z'\-]*( ?[a-zA-Z'\-]*)*,[A-Z][A-Z])*
 type ListCityNames string
 
@@ -134,35 +137,11 @@ type WeatherParameters struct {
 	Minrh        bool `xml:"http://graphical.weather.gov/xml/DWMLgen/schema/DWML.xsd minrh"`
 }
 
+// Must match the pattern \d{5}(\-\d{4})?
+type ZipCode string
+
 // Must match the pattern \d{5}(\-\d{4})?( \d{5}(\-\d{4})?)*
 type ZipCodeList string
-
-type xsdDate time.Time
-
-func (t *xsdDate) UnmarshalText(text []byte) error {
-	return _unmarshalTime(text, (*time.Time)(t), "2006-01-02")
-}
-func (t *xsdDate) MarshalText() ([]byte, error) {
-	return []byte((*time.Time)(t).Format("2006-01-02")), nil
-}
-func _unmarshalTime(text []byte, t *time.Time, format string) (err error) {
-	s := string(bytes.TrimSpace(text))
-	*t, err = time.Parse(format, s)
-	if _, ok := err.(*time.ParseError); ok {
-		*t, err = time.Parse(format+"Z07:00", s)
-	}
-	return err
-}
-
-type xsdDateTime time.Time
-
-func (t *xsdDateTime) UnmarshalText(text []byte) error {
-	return _unmarshalTime(text, (*time.Time)(t), "2006-01-02T15:04:05.999999999")
-}
-func (t *xsdDateTime) MarshalText() ([]byte, error) {
-	return []byte((*time.Time)(t).Format("2006-01-02T15:04:05.999999999")), nil
-}
-
 type Client struct {
 	HTTPClient   http.Client
 	ResponseHook func(*http.Response)
@@ -241,8 +220,8 @@ func (c *Client) NDFDgen(v NDFDgenRequest) (string, error) {
 			Latitude          float64           `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl latitude"`
 			Longitude         float64           `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl longitude"`
 			Product           Product           `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl product"`
-			StartTime         xsdDateTime       `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl startTime"`
-			EndTime           xsdDateTime       `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl endTime"`
+			StartTime         time.Time         `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl startTime"`
+			EndTime           time.Time         `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl endTime"`
 			Unit              Unit              `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl Unit"`
 			WeatherParameters WeatherParameters `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl weatherParameters"`
 		} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl NDFDgenRequest"`
@@ -250,8 +229,8 @@ func (c *Client) NDFDgen(v NDFDgenRequest) (string, error) {
 	input.Args.Latitude = float64(v.Latitude)
 	input.Args.Longitude = float64(v.Longitude)
 	input.Args.Product = Product(v.Product)
-	input.Args.StartTime = xsdDateTime(v.StartTime)
-	input.Args.EndTime = xsdDateTime(v.EndTime)
+	input.Args.StartTime = time.Time(v.StartTime)
+	input.Args.EndTime = time.Time(v.EndTime)
 	input.Args.Unit = Unit(v.Unit)
 	input.Args.WeatherParameters = WeatherParameters(v.WeatherParameters)
 	var output struct {
@@ -278,17 +257,17 @@ func (c *Client) NDFDgenByDay(v NDFDgenByDayRequest) (string, error) {
 	var input struct {
 		XMLName struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl NDFDgenByDay"`
 		Args    struct {
-			Latitude  float64 `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl latitude"`
-			Longitude float64 `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl longitude"`
-			StartDate xsdDate `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl startDate"`
-			NumDays   int     `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl numDays"`
-			Unit      Unit    `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl Unit"`
-			Format    Format  `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl format"`
+			Latitude  float64   `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl latitude"`
+			Longitude float64   `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl longitude"`
+			StartDate time.Time `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl startDate"`
+			NumDays   int       `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl numDays"`
+			Unit      Unit      `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl Unit"`
+			Format    Format    `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl format"`
 		} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl NDFDgenByDayRequest"`
 	}
 	input.Args.Latitude = float64(v.Latitude)
 	input.Args.Longitude = float64(v.Longitude)
-	input.Args.StartDate = xsdDate(v.StartDate)
+	input.Args.StartDate = time.Time(v.StartDate)
 	input.Args.NumDays = int(v.NumDays)
 	input.Args.Unit = Unit(v.Unit)
 	input.Args.Format = Format(v.Format)
@@ -318,16 +297,16 @@ func (c *Client) NDFDgenLatLonList(v NDFDgenLatLonListRequest) (string, error) {
 		Args    struct {
 			ListLatLon        ListLatLon        `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl listLatLon"`
 			Product           Product           `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl product"`
-			StartTime         xsdDateTime       `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl startTime"`
-			EndTime           xsdDateTime       `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl endTime"`
+			StartTime         time.Time         `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl startTime"`
+			EndTime           time.Time         `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl endTime"`
 			Unit              Unit              `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl Unit"`
 			WeatherParameters WeatherParameters `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl weatherParameters"`
 		} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl NDFDgenLatLonListRequest"`
 	}
 	input.Args.ListLatLon = ListLatLon(v.ListLatLon)
 	input.Args.Product = Product(v.Product)
-	input.Args.StartTime = xsdDateTime(v.StartTime)
-	input.Args.EndTime = xsdDateTime(v.EndTime)
+	input.Args.StartTime = time.Time(v.StartTime)
+	input.Args.EndTime = time.Time(v.EndTime)
 	input.Args.Unit = Unit(v.Unit)
 	input.Args.WeatherParameters = WeatherParameters(v.WeatherParameters)
 	var output struct {
@@ -354,14 +333,14 @@ func (c *Client) NDFDgenByDayLatLonList(v NDFDgenByDayLatLonListRequest) (string
 		XMLName struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl NDFDgenByDayLatLonList"`
 		Args    struct {
 			ListLatLon ListLatLon `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl listLatLon"`
-			StartDate  xsdDate    `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl startDate"`
+			StartDate  time.Time  `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl startDate"`
 			NumDays    int        `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl numDays"`
 			Unit       Unit       `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl Unit"`
 			Format     Format     `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl format"`
 		} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl NDFDgenByDayLatLonListRequest"`
 	}
 	input.Args.ListLatLon = ListLatLon(v.ListLatLon)
-	input.Args.StartDate = xsdDate(v.StartDate)
+	input.Args.StartDate = time.Time(v.StartDate)
 	input.Args.NumDays = int(v.NumDays)
 	input.Args.Unit = Unit(v.Unit)
 	input.Args.Format = Format(v.Format)
@@ -388,13 +367,13 @@ func (c *Client) GmlLatLonList(v GmlLatLonListRequest) (string, error) {
 		XMLName struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl GmlLatLonList"`
 		Args    struct {
 			ListLatLon        ListLatLon        `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl listLatLon"`
-			RequestedTime     xsdDateTime       `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl requestedTime"`
+			RequestedTime     time.Time         `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl requestedTime"`
 			FeatureType       FeatureType       `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl featureType"`
 			WeatherParameters WeatherParameters `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl weatherParameters"`
 		} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl GmlLatLonListRequest"`
 	}
 	input.Args.ListLatLon = ListLatLon(v.ListLatLon)
-	input.Args.RequestedTime = xsdDateTime(v.RequestedTime)
+	input.Args.RequestedTime = time.Time(v.RequestedTime)
 	input.Args.FeatureType = FeatureType(v.FeatureType)
 	input.Args.WeatherParameters = WeatherParameters(v.WeatherParameters)
 	var output struct {
@@ -422,16 +401,16 @@ func (c *Client) GmlTimeSeries(v GmlTimeSeriesRequest) (string, error) {
 		XMLName struct{} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl GmlTimeSeries"`
 		Args    struct {
 			ListLatLon   ListLatLon  `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl listLatLon"`
-			StartTime    xsdDateTime `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl startTime"`
-			EndTime      xsdDateTime `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl endTime"`
+			StartTime    time.Time   `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl startTime"`
+			EndTime      time.Time   `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl endTime"`
 			CompType     CompType    `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl compType"`
 			FeatureType  FeatureType `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl featureType"`
 			PropertyName string      `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl propertyName"`
 		} `xml:"http://graphical.weather.gov/xml/DWMLgen/wsdl/ndfdXML.wsdl GmlTimeSeriesRequest"`
 	}
 	input.Args.ListLatLon = ListLatLon(v.ListLatLon)
-	input.Args.StartTime = xsdDateTime(v.StartTime)
-	input.Args.EndTime = xsdDateTime(v.EndTime)
+	input.Args.StartTime = time.Time(v.StartTime)
+	input.Args.EndTime = time.Time(v.EndTime)
 	input.Args.CompType = CompType(v.CompType)
 	input.Args.FeatureType = FeatureType(v.FeatureType)
 	input.Args.PropertyName = string(v.PropertyName)
