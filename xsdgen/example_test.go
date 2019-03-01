@@ -153,7 +153,7 @@ func ExampleReplace() {
 	//
 	// type StringArray struct {
 	// 	Items     []string `xml:",any"`
-	// 	ArrayType string   `xml:"arrayType,attr,omitempty"`
+	// 	ArrayType string   `xml:"http://www.example.com/ arrayType,attr,omitempty"`
 	// }
 }
 
@@ -180,9 +180,9 @@ func ExampleHandleSOAPArrayType() {
 	//
 	// type BoolArray struct {
 	// 	Items  []bool `xml:",any"`
-	// 	Offset string `xml:"offset,attr,omitempty"`
-	// 	Id     string `xml:"id,attr,omitempty"`
-	// 	Href   string `xml:"href,attr,omitempty"`
+	// 	Offset string `xml:"http://schemas.xmlsoap.org/soap/encoding/ offset,attr,omitempty"`
+	// 	Id     string `xml:"http://schemas.xmlsoap.org/soap/encoding/ id,attr,omitempty"`
+	// 	Href   string `xml:"http://schemas.xmlsoap.org/soap/encoding/ href,attr,omitempty"`
 	// }
 }
 
