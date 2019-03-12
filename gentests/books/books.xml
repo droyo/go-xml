@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
-<books xmlns="urn:books">
-   <book name="bk001">
+<books xmlns="urn:books" xmlns:books="urn:books">
+   <book books:name="bk001">
       <author>Writer</author>
       <title>The First Book</title>
       <genre>Fiction</genre>
@@ -9,7 +9,7 @@
       <review>An amazing story of nothing.</review>
    </book>
 
-   <book name="bk002">
+   <book books:name="bk002">
       <author>Poet</author>
       <title>The Poets First Poem</title>
       <genre>Poem</genre>
