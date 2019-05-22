@@ -87,7 +87,7 @@ func (e *encoder) encode(el, parent *Element, visited map[*Element]struct{}) err
 	}
 	if _, ok := visited[el]; ok {
 		// We have a cycle. Leave a comment, but no error
-		e.WriteContent([]byte("<!-- cycle detected -->"), len(visited)+1)
+		e.w.Write([]byte("<!-- cycle detected -->"))
 		return nil
 	}
 	scope := diffScope(parent, el)
@@ -96,7 +96,7 @@ func (e *encoder) encode(el, parent *Element, visited map[*Element]struct{}) err
 	}
 	if len(el.Children) == 0 {
 		if len(el.Content) > 0 {
-			e.WriteContent(el.Content, len(visited)+1)
+			e.w.Write(el.Content)
 		} else {
 			return nil
 		}
@@ -110,20 +110,6 @@ func (e *encoder) encode(el, parent *Element, visited map[*Element]struct{}) err
 	}
 	if err := e.encodeCloseTag(el, len(visited)); err != nil {
 		return err
-	}
-	return nil
-}
-
-func (e *encoder) WriteContent(content []byte, depth int) error {
-	if e.pretty {
-		io.WriteString(e.w, e.prefix)
-		for i := 0; i < depth; i++ {
-			io.WriteString(e.w, e.indent)
-		}
-	}
-	e.w.Write(content)
-	if e.pretty && !bytes.HasSuffix(content, []byte("\n")) {
-		io.WriteString(e.w, "\n")
 	}
 	return nil
 }
@@ -161,7 +147,9 @@ func (e *encoder) encodeOpenTag(el *Element, scope Scope, depth int) error {
 		return err
 	}
 	if e.pretty {
-		io.WriteString(e.w, "\n")
+		if len(el.Children) > 0 || len(el.Content) == 0 {
+			io.WriteString(e.w, "\n")
+		}
 	}
 	return nil
 }
@@ -169,7 +157,9 @@ func (e *encoder) encodeOpenTag(el *Element, scope Scope, depth int) error {
 func (e *encoder) encodeCloseTag(el *Element, depth int) error {
 	if e.pretty {
 		for i := 0; i < depth; i++ {
-			io.WriteString(e.w, e.indent)
+			if len(el.Children) > 0 {
+				io.WriteString(e.w, e.indent)
+			}
 		}
 	}
 	if err := tagTmpl.ExecuteTemplate(e.w, "end", el); err != nil {

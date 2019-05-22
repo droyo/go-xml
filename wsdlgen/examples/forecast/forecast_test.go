@@ -1,6 +1,7 @@
 package forecast
 
 import (
+	"context"
 	"crypto/tls"
 	"net/http"
 	"net/http/httputil"
@@ -10,12 +11,14 @@ import (
 
 func TestNDFDGen(t *testing.T) {
 	client := NewClient()
-	client.HTTPClient.Transport = &http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
+	client.HTTPClient = &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
 		},
 	}
-	client.RequestHook = func(req *http.Request) {
+	client.RequestHook = func(req *http.Request) *http.Request {
 		data, err := httputil.DumpRequest(req, true)
 		if err != nil {
 			panic(err)
@@ -30,16 +33,18 @@ func TestNDFDGen(t *testing.T) {
 		// a mock server. The following line can be removed to
 		// obtain such output. Please be responsible.
 		req.URL = nil
+		return req
 	}
-	client.ResponseHook = func(rsp *http.Response) {
+	client.ResponseHook = func(rsp *http.Response) *http.Response {
 		data, err := httputil.DumpResponse(rsp, true)
 		if err != nil {
 			panic(err)
 		}
 		t.Log(string(data))
+		return rsp
 	}
 
-	s, _ := client.NDFDgen(NDFDgenRequest{
+	s, _ := client.NDFDgen(context.TODO(), NDFDgenRequest{
 		EndTime:   time.Now(),
 		StartTime: time.Now().Add(-time.Minute * 10),
 		Unit:      "m",

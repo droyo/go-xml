@@ -789,6 +789,7 @@ func parseAttribute(ns string, el *xmltree.Element) Attribute {
 	} else {
 		a.Name.Local = name
 	}
+	a.Name.Space = ns
 	a.Type = parseType(el.Resolve(el.Attr("", "type")))
 	a.Default = el.Attr("", "default")
 	a.Scope = el.Scope

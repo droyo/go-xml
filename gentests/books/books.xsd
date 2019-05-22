@@ -22,7 +22,7 @@
       <xsd:element name="pub_date" type="xsd:date" />
       <xsd:element name="review"   type="xsd:string"/>
     </xsd:sequence>
-    <xsd:attribute name="name"   type="xsd:string"/>
+    <xsd:attribute name="name" form="qualified" type="xsd:string"/>
   </xsd:complexType>
 </xsd:schema>
 
