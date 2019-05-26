@@ -4,6 +4,62 @@ package xsd
 
 import "strconv"
 
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[AnyType-0]
+	_ = x[ENTITIES-1]
+	_ = x[ENTITY-2]
+	_ = x[ID-3]
+	_ = x[IDREF-4]
+	_ = x[IDREFS-5]
+	_ = x[NCName-6]
+	_ = x[NMTOKEN-7]
+	_ = x[NMTOKENS-8]
+	_ = x[NOTATION-9]
+	_ = x[Name-10]
+	_ = x[QName-11]
+	_ = x[AnyURI-12]
+	_ = x[Base64Binary-13]
+	_ = x[Boolean-14]
+	_ = x[Byte-15]
+	_ = x[Date-16]
+	_ = x[DateTime-17]
+	_ = x[Decimal-18]
+	_ = x[Double-19]
+	_ = x[Duration-20]
+	_ = x[Float-21]
+	_ = x[GDay-22]
+	_ = x[GMonth-23]
+	_ = x[GMonthDay-24]
+	_ = x[GYear-25]
+	_ = x[GYearMonth-26]
+	_ = x[HexBinary-27]
+	_ = x[Int-28]
+	_ = x[Integer-29]
+	_ = x[Language-30]
+	_ = x[Long-31]
+	_ = x[NegativeInteger-32]
+	_ = x[NonNegativeInteger-33]
+	_ = x[NonPositiveInteger-34]
+	_ = x[NormalizedString-35]
+	_ = x[PositiveInteger-36]
+	_ = x[Short-37]
+	_ = x[String-38]
+	_ = x[Time-39]
+	_ = x[Token-40]
+	_ = x[UnsignedByte-41]
+	_ = x[UnsignedInt-42]
+	_ = x[UnsignedLong-43]
+	_ = x[UnsignedShort-44]
+	_ = x[XMLLang-45]
+	_ = x[XMLSpace-46]
+	_ = x[XMLBase-47]
+	_ = x[XMLId-48]
+	_ = x[AnySimpleType-49]
+}
+
 const _Builtin_name = "AnyTypeENTITIESENTITYIDIDREFIDREFSNCNameNMTOKENNMTOKENSNOTATIONNameQNameAnyURIBase64BinaryBooleanByteDateDateTimeDecimalDoubleDurationFloatGDayGMonthGMonthDayGYearGYearMonthHexBinaryIntIntegerLanguageLongNegativeIntegerNonNegativeIntegerNonPositiveIntegerNormalizedStringPositiveIntegerShortStringTimeTokenUnsignedByteUnsignedIntUnsignedLongUnsignedShortXMLLangXMLSpaceXMLBaseXMLIdAnySimpleType"
 
 var _Builtin_index = [...]uint16{0, 7, 15, 21, 23, 28, 34, 40, 47, 55, 63, 67, 72, 78, 90, 97, 101, 105, 113, 120, 126, 134, 139, 143, 149, 158, 163, 173, 182, 185, 192, 200, 204, 219, 237, 255, 271, 286, 291, 297, 301, 306, 318, 329, 341, 354, 361, 369, 376, 381, 394}
