@@ -1,0 +1,10 @@
+{
+  "Node": {
+    "Elements": [
+      {"Name": {"Local": "Key"}, "Type": 38},
+      {"Name": {"Local": "Value"}, "Type": 40},
+      {"Name": {"Local": "Parent"}, "Type": 0},
+      {"Name": {"Local": "Child"}, "Type": 0}
+    ]
+  }
+}

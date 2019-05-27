@@ -1,0 +1,8 @@
+<complexType name='Node'>
+  <sequence>
+    <element name='Key' type='string'/>
+    <element name='Value' type='int' />
+    <element name='Parent' type='tns:Node' />
+    <element name='Child' type='tns:Node' maxOccurs='unbounded' />
+  </sequence>
+</complexType>
