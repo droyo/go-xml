@@ -1,4 +1,8 @@
 [![GoDoc](https://godoc.org/aqwari.net/xml?status.svg)](https://godoc.org/aqwari.net/xml) [![Build Status](https://travis-ci.org/droyo/go-xml.svg?branch=master)](https://travis-ci.org/droyo/go-xml)
+## UPDATE:
+This fork of `go-xml` repository extends the functionality as follows:
+ * Adding json annotations to xsdvalidator output
+ * Creating non mandatory fields in xsdgen output as pointers
 
 ## Installation
 
