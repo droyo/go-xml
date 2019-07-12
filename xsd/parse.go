@@ -690,18 +690,31 @@ func joinElem(a, b Element) Element {
 }
 
 func parseInt(s string) int {
+	result, _ := parseIntFound(s)
+	return result
+}
+
+func parseIntDefault(s string, d int) int {
+	result, found := parseIntFound(s)
+	if !found {
+		return d
+	}
+	return result
+}
+
+func parseIntFound(s string) (int, bool) {
 	s = strings.TrimSpace(s)
 	switch s {
 	case "":
-		return 0
+		return 0, false
 	case "unbounded":
-		return -1
+		return -1, true
 	}
 	n, err := strconv.Atoi(s)
 	if err != nil {
 		stop(err.Error())
 	}
-	return n
+	return n, true
 }
 
 // https://www.w3.org/TR/xmlschema-2/#decimal
@@ -729,10 +742,18 @@ func parseBool(s string) bool {
 	return false
 }
 
+func minOccurs(el *xmltree.Element) int {
+	return parseIntDefault(el.Attr("", "minOccurs"), 1)
+}
+
+func maxOccurs(el *xmltree.Element) int {
+	return parseIntDefault(el.Attr("", "maxOccurs"), 1)
+}
+
 func parsePlural(el *xmltree.Element) bool {
-	if min := parseInt(el.Attr("", "minOccurs")); min > 1 {
+	if min := minOccurs(el); min > 1 {
 		return true
-	} else if max := parseInt(el.Attr("", "maxOccurs")); max < 0 || max > 1 {
+	} else if max := maxOccurs(el); max < 0 || max > 1 {
 		return true
 	}
 	return false
@@ -765,7 +786,7 @@ func parseElement(ns string, el *xmltree.Element) Element {
 	if el.Attr("", "type") == "" {
 		e.Type = AnyType
 	}
-	if x := el.Attr("", "minOccurs"); x != "" && parseInt(x) == 0 {
+	if minOccurs(el) == 0 {
 		e.Optional = true
 	} else if e.Default != "" {
 		e.Optional = true
