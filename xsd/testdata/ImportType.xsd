@@ -1,0 +1,47 @@
+<!--
+The xsd package normalizes all XSD files, establishing the following
+invariants:
+
+* All types have a name
+* All types are declared at the top-level of the schema
+* There are no references (ref=) in the document.
+
+This tests a corner case when one schema references elements in
+another schema, and the XML namespace prefixes of each schema
+are different.
+-->
+<test>
+  <schema targetNamespace="tns"
+          xmlns="http://www.w3.org/2001/XMLSchema"
+          xmlns:tns="tns"
+          xmlns:otherns="otherns">
+    <import namespace="otherns" />
+    <complexType name="MyType">
+      <sequence>
+        <element name="location" type="string" />
+        <element ref="otherns:MyFoo" minOccurs="1" />
+      </sequence>
+    </complexType>
+  </schema>
+
+  <xs:schema targetNamespace="otherns"
+          xmlns:xs="http://www.w3.org/2001/XMLSchema"
+          xmlns:tns="tns"
+          xmlns="otherns">
+    <xs:element name="MyFoo">
+      <xs:simpleType>
+        <xs:restriction base="xs:string">
+          <xs:pattern value=".*" />
+        </xs:restriction>
+      </xs:simpleType>
+    </xs:element>
+    
+    <!-- Ensure the MyFoo element's anonymous type does
+      not get the name "MyFoo" by providing an explicit MyFoo type -->
+    <xs:complexType name="MyFoo">
+      <xs:sequence>
+        <xs:element name="uid" type="xs:string" />
+      </xs:sequence>
+    </xs:complexType>
+  </xs:schema>
+</test>

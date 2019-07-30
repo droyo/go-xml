@@ -1,7 +1,22 @@
 language: go
 go_import_path: aqwari.net/xml
 go:
-  - 1.7
+  - "1.9"
+  - "1.10"
+  - "1.11"
+
+install:
+  - go get -t -v ./...
+  # While this package supports Go 1.9+, stringer does not. We need newer
+  # versions of Go to check generated files.
+  - gimme 1.11
+  - source ~/.gimme/envs/go1.11.env
+  - go get -v golang.org/x/tools/cmd/stringer
+
+before_script:
+  - source ~/.gimme/envs/go1.11.env
+  - go generate ./...
+  - if [[ -n $(git status -s) ]]; then echo "Unclean working tree"; git diff; exit 1; fi
 
 notifications:
   email:

@@ -361,27 +361,49 @@ func flattenRef(schema []*xmltree.Element) error {
 		unpackGroups(doc)
 		if hasCycle(doc, nil) {
 			return fmt.Errorf("cycle detected after flattening references "+
-				"in schema %s:\n%s\n", ns, xmltree.MarshalIndent(doc, "", "  "))
+				"in schema %d:\n%s\n", ns, xmltree.MarshalIndent(doc, "", "  "))
 		}
 	}
 	return nil
 }
 
-// Dereference a pointer to an XML element, returning
-// the full XML object. It's OK to modify ref.
+// Flatten a reference to an XML element, returning the full XML
+// object.
 func deref(ref, real *xmltree.Element) *xmltree.Element {
-	attrs := ref.StartElement.Attr
-	ref.Content = real.Content
-	ref.StartElement = real.StartElement.Copy()
-	ref.Children = append([]xmltree.Element{}, real.Children...)
-	ref.Scope = *real.JoinScope(&ref.Scope)
-	for _, attr := range attrs {
-		if attr.Name.Local == "ref" {
-			continue
-		}
-		ref.SetAttr(attr.Name.Space, attr.Name.Local, attr.Value)
+	el := new(xmltree.Element)
+	el.Scope = ref.Scope
+	el.Name = real.Name
+	el.StartElement.Attr = append([]xml.Attr{}, real.StartElement.Attr...)
+	el.Content = append([]byte{}, real.Content...)
+	el.Children = append([]xmltree.Element{}, real.Children...)
+
+	// Some attributes can contain a qname, and must be converted to use the
+	// xmlns prefixes in ref's scope.
+	hasQName := map[xml.Name]bool{
+		xml.Name{"", "type"}: true,
 	}
-	return ref
+	for i, attr := range el.StartElement.Attr {
+		if hasQName[attr.Name] {
+			xmlname := real.Resolve(attr.Value)
+			attr.Value = ref.Prefix(xmlname)
+			el.StartElement.Attr[i] = attr
+		}
+	}
+	// If there are child elements, rather than checking all children
+	// for xmlns conversion, we can just import the xmlns prefixes
+	if len(el.Children) > 0 {
+		el.Scope = *real.JoinScope(&ref.Scope)
+	}
+
+	// Attributes added to the reference overwrite attributes in the
+	// referenced element.
+	for _, attr := range ref.StartElement.Attr {
+		if (attr.Name != xml.Name{"", "ref"}) {
+			el.SetAttr(attr.Name.Space, attr.Name.Local, attr.Value)
+		}
+	}
+
+	return el
 }
 
 // After dereferencing groups and attributeGroups, we need to
@@ -767,6 +789,7 @@ func parseAttribute(ns string, el *xmltree.Element) Attribute {
 	} else {
 		a.Name.Local = name
 	}
+	a.Name.Space = ns
 	a.Type = parseType(el.Resolve(el.Attr("", "type")))
 	a.Default = el.Attr("", "default")
 	a.Scope = el.Scope
