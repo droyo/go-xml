@@ -2,7 +2,7 @@
 //
 // The gen package provides wrapper functions around the go/ast and
 // go/token packages to reduce boilerplate.
-package gen
+package gen // import "aqwari.net/xml/internal/gen"
 
 import (
 	"bufio"
@@ -252,7 +252,7 @@ func (fn *Function) Decl() (*ast.FuncDecl, error) {
 		return nil, errors.New("function name unset")
 	}
 	if len(fn.body) == 0 {
-		return nil, fmt.Errorf("function body for %s unset")
+		return nil, fmt.Errorf("function body for %s unset", fn.name)
 	}
 
 	if fn.godoc != "" {

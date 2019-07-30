@@ -1,5 +1,5 @@
 // Package dependency builds and flattens dependency graphs.
-package dependency
+package dependency // import "aqwari.net/xml/internal/dependency"
 
 import (
 	"sort"

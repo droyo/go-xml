@@ -38,4 +38,4 @@ embed a comment in your go source like so:
 
 	//go:generate xsdgen -ns "http://example.net/ws/" schemafile.xml
 */
-package main
+package main // import "aqwari.net/xml/cmd/xsdgen"

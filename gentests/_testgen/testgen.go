@@ -8,6 +8,7 @@ import (
 	"go/ast"
 	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -29,39 +30,51 @@ func glob(pat string) string {
 }
 
 func main() {
+	var errorsEncountered bool
 	cfg := new(xsdgen.Config)
-	cases := findTestCases()
+
+	xsdTestCases, err := findXSDTestCases()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	cfg.Option(xsdgen.DefaultOptions...)
-	for _, dir := range cases {
-		data, err := ioutil.ReadFile(glob(filepath.Join(dir, "*.xsd")))
+	for _, testCase := range xsdTestCases {
+		code, tests, err := genXSDTests(*cfg, testCase.doc, testCase.pkg)
 		if err != nil {
-			log.Print(err)
-			continue
-		}
-		tests, err := genTests(*cfg, data, dir)
-		if err != nil {
-			log.Print(dir, ":", err)
+			errorsEncountered = true
+			log.Print(testCase.pkg)
 			continue
 		} else {
-			log.Printf("generated tests for %s", dir)
+			log.Printf("generated xsd tests for %s", testCase.pkg)
 		}
-		filename := filepath.Join(dir, dir+"_test.go")
-		source, err := gen.FormattedSource(tests, filename)
-		if err != nil {
-			log.Print(dir, ":", err)
-			continue
-		}
-		if err := ioutil.WriteFile(filename, source, 0666); err != nil {
-			log.Print(dir, ":", err)
-		}
-
-		// This is needed so 'go build' works and automated CI doesn't complain.
-		err = ioutil.WriteFile(filepath.Join(dir, dir+".go"), []byte("package "+dir+"\n"), 0666)
-		if err != nil {
-			log.Print(err)
+		if err := writeTestFiles(code, tests, testCase.pkg); err != nil {
+			errorsEncountered = true
+			log.Print(testCase.pkg, ":", err)
 		}
 	}
+
+	if errorsEncountered {
+		os.Exit(1)
+	}
+}
+
+func writeTestFiles(code, tests *ast.File, pkg string) error {
+	testFilename := filepath.Join(pkg, pkg+"_test.go")
+	testSrc, err := gen.FormattedSource(tests, testFilename)
+	if err != nil {
+		return err
+	}
+	if err := ioutil.WriteFile(testFilename, testSrc, 0666); err != nil {
+		return err
+	}
+
+	codeFilename := filepath.Join(pkg, pkg+".go")
+	codeSrc, err := gen.FormattedSource(code, codeFilename)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(codeFilename, codeSrc, 0666)
 }
 
 // Generates unit tests for xml marshal unmarshalling of
@@ -72,25 +85,30 @@ func main() {
 //   the document described in the XML schema.
 // - Marshal the resulting file back into an XML document.
 // - Compare the two documents for equality.
-func genTests(cfg xsdgen.Config, data []byte, dir string) (*ast.File, error) {
-	cfg.Option(xsdgen.PackageName(dir))
-	code, err := cfg.GenCode(data)
+//
+// Returns type definitions and unit tests as separate files.
+func genXSDTests(cfg xsdgen.Config, data []byte, pkg string) (code, tests *ast.File, err error) {
+	cfg.Option(xsdgen.PackageName(pkg))
+	main, err := cfg.GenCode(data)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	file, err := code.GenAST()
+	code, err = main.GenAST()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
+
+	tests = new(ast.File)
+	tests.Name = ast.NewIdent(pkg)
 
 	// We look for top-level elements in the schema to determine what
 	// the example document looks like.
 	roots, err := xsd.Normalize(data)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if len(roots) < 1 {
-		return nil, fmt.Errorf("no schema in %s", dir)
+		return nil, nil, fmt.Errorf("no schema in %s", pkg)
 	}
 	root := roots[0]
 	doc := topLevelElements(root)
@@ -99,21 +117,21 @@ func genTests(cfg xsdgen.Config, data []byte, dir string) (*ast.File, error) {
 	for _, elem := range doc {
 		fields = append(fields,
 			gen.Public(elem.Name.Local),
-			ast.NewIdent(code.NameOf(elem.Type)),
+			ast.NewIdent(main.NameOf(elem.Type)),
 			gen.String(fmt.Sprintf(`xml:"%s %s"`, elem.Name.Space, elem.Name.Local)))
 	}
 	expr, err := gen.ToString(gen.Struct(fields...))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	var params struct {
 		DocStruct string
-		Dir       string
+		Pkg       string
 	}
 	params.DocStruct = expr
-	params.Dir = dir
-	fn, err := gen.Func("Test"+strings.Title(dir)).
+	params.Pkg = pkg
+	fn, err := gen.Func("Test"+strings.Title(pkg)).
 		Args("t *testing.T").
 		BodyTmpl(`
 			type Document {{.DocStruct}}
@@ -142,7 +160,7 @@ func genTests(cfg xsdgen.Config, data []byte, dir string) (*ast.File, error) {
 			
 			inputTree, err := xmltree.Parse(input)
 			if err != nil {
-				t.Fatal("{{.Dir}}: ", err)
+				t.Fatal("{{.Pkg}}: ", err)
 			}
 			
 			outputTree, err := xmltree.Parse(output)
@@ -158,11 +176,10 @@ func genTests(cfg xsdgen.Config, data []byte, dir string) (*ast.File, error) {
 			`, params).Decl()
 
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	// Test goes at the top
-	file.Decls = append([]ast.Decl{fn}, file.Decls...)
-	return file, nil
+	tests.Decls = append(tests.Decls, fn)
+	return code, tests, nil
 }
 
 type Element struct {
@@ -188,17 +205,29 @@ func topLevelElements(root *xmltree.Element) []Element {
 	return result
 }
 
+type testCase struct {
+	pkg string
+	doc []byte
+}
+
 // Looks for subdirectories containing pairs of (xml, xsd) files
 // that should contain an xml document and the schema it conforms to,
 // respectively. Returns slice of the directory names
-func findTestCases() []string {
+func findXSDTestCases() ([]testCase, error) {
 	filenames, err := filepath.Glob("*/*.xsd")
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	result := make([]string, 0, len(filenames))
+	result := make([]testCase, 0, len(filenames))
 	for _, xsdfile := range filenames {
-		result = append(result, filepath.Base(filepath.Dir(xsdfile)))
+		if data, err := ioutil.ReadFile(xsdfile); err != nil {
+			return nil, err
+		} else {
+			result = append(result, testCase{
+				pkg: filepath.Base(filepath.Dir(xsdfile)),
+				doc: data,
+			})
+		}
 	}
-	return result
+	return result, nil
 }

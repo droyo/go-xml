@@ -218,17 +218,50 @@ func ExampleMarshal() {
 
 	// Output:
 	// <toc>
-	//   <chapter>
-	//     Civilizing Huck.Miss Watson.Tom Sawyer Waits.
-	//   </chapter>
-	//   <chapter>
-	//     The Boys Escape Jim.Torn Sawyer's Gang.Deep-laid Plans.
-	//   </chapter>
-	//   <chapter>
-	//     A Good Going-over.Grace Triumphant."One of Tom Sawyers's Lies".
-	//   </chapter>
-	//   <chapter>
-	//     Huck and the Judge.Superstition.
-	//   </chapter>
+	//   <chapter>Civilizing Huck.Miss Watson.Tom Sawyer Waits.</chapter>
+	//   <chapter>The Boys Escape Jim.Torn Sawyer's Gang.Deep-laid Plans.</chapter>
+	//   <chapter>A Good Going-over.Grace Triumphant."One of Tom Sawyers's Lies".</chapter>
+	//   <chapter>Huck and the Judge.Superstition.</chapter>
+	// </toc>
+}
+
+func ExampleMarshalNested() {
+	var input = []byte(`<?xml version="1.0" encoding="UTF-8"?>
+	<toc>
+	  <level1>
+	    <level2>
+	      <data>Hello World</data>
+	      <justTheTag />
+	      <number>3</number>
+	    </level2>
+	    <level2>
+	      <data with-attr="1">Hello, again</data>
+	      <justTheTag />
+	      <number>12</number>
+	    </level2>
+	  </level1>
+	</toc>`)
+
+	parsed, err := xmltree.Parse(input)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	fmt.Printf("%s\n", xmltree.MarshalIndent(parsed, "", "  "))
+
+	// Output:
+	// <toc>
+	//   <level1>
+	//     <level2>
+	//       <data>Hello World</data>
+	//       <justTheTag />
+	//       <number>3</number>
+	//     </level2>
+	//     <level2>
+	//       <data with-attr="1">Hello, again</data>
+	//       <justTheTag />
+	//       <number>12</number>
+	//     </level2>
+	//   </level1>
 	// </toc>
 }
