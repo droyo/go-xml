@@ -686,6 +686,12 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%s element %s: %v", t.Name.Local, el.Name.Local, err)
 		}
+		
+		// Use pointer for optional structs
+		if !el.Plural && fmt.Sprintf("%s", base) != "string" && (el.Nillable || el.Optional) {
+			base = ast.NewIdent(fmt.Sprintf("*%s", base))
+		}
+
 		name := namegen.element(el.Name)
 		if el.Wildcard {
 			tag = `xml:",any"`
