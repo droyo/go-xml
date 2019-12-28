@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"aqwari.net/xml/internal/dependency"
 	"aqwari.net/xml/xmltree"
@@ -817,7 +818,7 @@ func (s *Schema) parseSimpleType(root *xmltree.Element) *SimpleType {
 		switch el.Name.Local {
 		case "restriction":
 			t.Base = parseType(el.Resolve(el.Attr("", "base")))
-			t.Restriction = parseSimpleRestriction(el)
+			t.Restriction = parseSimpleRestriction(el, t.Base)
 		case "list":
 			t.Base = parseType(el.Resolve(el.Attr("", "itemType")))
 			t.List = true
@@ -842,7 +843,7 @@ func parseAnnotation(el *xmltree.Element) (doc annotation) {
 	return doc
 }
 
-func parseSimpleRestriction(root *xmltree.Element) Restriction {
+func parseSimpleRestriction(root *xmltree.Element, base Type) Restriction {
 	var r Restriction
 	var doc annotation
 	// Most of the restrictions on a simpleType are suited for
@@ -855,12 +856,29 @@ func parseSimpleRestriction(root *xmltree.Element) Restriction {
 		case "enumeration":
 			r.Enum = append(r.Enum, el.Attr("", "value"))
 		case "minExclusive", "minInclusive":
-			// NOTE(droyo) min/max is also valid in XSD for
-			// dateTime elements. Currently, such an XSD will
-			// cause an error here.
-			r.Min = parseDecimal(el.Attr("", "value"))
+			if v, ok := base.(Builtin); ok && v == Date {
+				d, err := time.Parse("2006-01-02", el.Attr("", "value"))
+
+				if err != nil {
+					stop(err.Error())
+				}
+
+				r.MinDate = d
+			} else {
+				r.Min = parseDecimal(el.Attr("", "value"))
+			}
 		case "maxExclusive", "maxInclusive":
-			r.Max = parseDecimal(el.Attr("", "value"))
+			if v, ok := base.(Builtin); ok && v == Date {
+				d, err := time.Parse("2006-01-02", el.Attr("", "value"))
+
+				if err != nil {
+					stop(err.Error())
+				}
+
+				r.MaxDate = d
+			} else {
+				r.Max = parseDecimal(el.Attr("", "value"))
+			}
 		case "length":
 			r.MaxLength = parseInt(el.Attr("", "value"))
 		case "minLength":
