@@ -110,9 +110,6 @@ func Normalize(docs ...[]byte) ([]*xmltree.Element, error) {
 		if err := nameAnonymousTypes(root); err != nil {
 			return nil, err
 		}
-		if err := setChoicesOptional(root); err != nil {
-			return nil, err
-		}
 	}
 	for _, root := range result {
 		expandComplexShorthand(root)
@@ -232,31 +229,6 @@ func copyEltNamesToAnonTypes(root *xmltree.Element) {
 			break
 		}
 	}
-}
-
-// Inside a <xs:choice>, set all children to optional
-// If child is a <xs:sequence> set its children to optional
-func setChoicesOptional(root *xmltree.Element) error {
-
-	for _, el := range root.SearchFunc(isElem(schemaNS, "choice")) {
-		for i := 0; i < len(el.Children); i++ {
-			t := el.Children[i]
-
-			if t.Name.Space == schemaNS && t.Name.Local == "sequence" {
-				for j := 0; j < len(t.Children); j++ {
-					t2 := t.Children[j]
-					t2.SetAttr("", "minOccurs", "0")
-					t.Children[j] = t2
-				}
-			} else {
-				t.SetAttr("", "minOccurs", "0")
-			}
-
-			el.Children[i] = t
-		}
-	}
-
-	return nil
 }
 
 /*
