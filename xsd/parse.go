@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"aqwari.net/xml/internal/dependency"
-	"aqwari.net/xml/xmltree"
+	"github.com/CognitoIQ/go-xml/internal/dependency"
+	"github.com/CognitoIQ/go-xml/xmltree"
 )
 
 func hasCycle(root *xmltree.Element, visited map[*xmltree.Element]struct{}) bool {

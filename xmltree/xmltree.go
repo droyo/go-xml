@@ -4,7 +4,7 @@
 // and manipulating XML documents as trees, along with
 // functionality to resolve XML namespace prefixes at any point
 // in the tree.
-package xmltree // import "aqwari.net/xml/xmltree"
+package xmltree // import "github.com/CognitoIQ/go-xml/xmltree"
 
 import (
 	"bytes"

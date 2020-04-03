@@ -1,6 +1,6 @@
 // Package commandline contains helper types for collecting
 // command-line arguments.
-package commandline // import "aqwari.net/xml/internal/commandline"
+package commandline // import "github.com/CognitoIQ/go-xml/internal/commandline"
 
 import (
 	"bytes"

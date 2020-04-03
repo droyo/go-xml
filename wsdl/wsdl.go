@@ -1,5 +1,5 @@
 // Package wsdl parses Web Service Definition Language documents.
-package wsdl // import "aqwari.net/xml/wsdl"
+package wsdl // import "github.com/CognitoIQ/go-xml/wsdl"
 
 import (
 	"bytes"
@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"aqwari.net/xml/xmltree"
+	"github.com/CognitoIQ/go-xml/xmltree"
 )
 
 const (

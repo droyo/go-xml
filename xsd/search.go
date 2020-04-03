@@ -1,6 +1,6 @@
 package xsd
 
-import "aqwari.net/xml/xmltree"
+import "github.com/CognitoIQ/go-xml/xmltree"
 
 // Search predicates for the xmltree.Element.Search method
 type predicate func(el *xmltree.Element) bool

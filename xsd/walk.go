@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"aqwari.net/xml/xmltree"
+	"github.com/CognitoIQ/go-xml/xmltree"
 )
 
 // When working with an xml tree structure, we naturally have some

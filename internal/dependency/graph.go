@@ -1,5 +1,5 @@
 // Package dependency builds and flattens dependency graphs.
-package dependency // import "aqwari.net/xml/internal/dependency"
+package dependency // import "github.com/CognitoIQ/go-xml/internal/dependency"
 
 import (
 	"sort"

@@ -11,7 +11,7 @@
 //
 // The xsd package respects XML name spaces in schema documents, and can
 // parse schema documents that import or include other schema documents.
-package xsd // import "aqwari.net/xml/xsd"
+package xsd // import "github.com/CognitoIQ/go-xml/xsd"
 
 import (
 	"bytes"
@@ -20,7 +20,7 @@ import (
 	"io"
 	"regexp"
 
-	"aqwari.net/xml/xmltree"
+	"github.com/CognitoIQ/go-xml/xmltree"
 )
 
 const (
