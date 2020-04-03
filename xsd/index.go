@@ -8,6 +8,7 @@ import (
 
 type elementKey struct {
 	Name, Type xml.Name
+	Depth int
 }
 
 type schemaIndex struct {
@@ -17,15 +18,15 @@ type schemaIndex struct {
 	idByName map[elementKey]int
 }
 
-func (idx *schemaIndex) ByName(name, typ xml.Name) (*xmltree.Element, bool) {
-	if id, ok := idx.idByName[elementKey{name, typ}]; ok {
+func (idx *schemaIndex) ByName(name xml.Name, typ xml.Name, depth int) (*xmltree.Element, bool) {
+	if id, ok := idx.idByName[elementKey{name, typ, depth}]; ok {
 		return idx.eltByID[id], true
 	}
 	return nil, false
 }
 
-func (idx *schemaIndex) ElementID(name, typ xml.Name) (int, bool) {
-	id, ok := idx.idByName[elementKey{name, typ}]
+func (idx *schemaIndex) ElementID(name xml.Name, typ xml.Name, depth int) (int, bool) {
+	id, ok := idx.idByName[elementKey{name, typ, depth}]
 	return id, ok
 }
 
@@ -40,7 +41,7 @@ func indexSchema(schema []*xmltree.Element) *schemaIndex {
 			index.eltByID = append(index.eltByID, el)
 			if name := el.Attr("", "name"); name != "" {
 				xmlname := el.ResolveDefault(name, tns)
-				index.idByName[elementKey{xmlname, el.Name}] = id
+				index.idByName[elementKey{xmlname, el.Name,  el.Depth}] = id
 			}
 		}
 	}

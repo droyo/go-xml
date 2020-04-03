@@ -338,7 +338,8 @@ func flattenRef(schema []*xmltree.Element) error {
 			continue
 		}
 		name := el.Resolve(el.Attr("", "ref"))
-		if dep, ok := index.ElementID(name, el.Name); !ok {
+    //refs should always refer to global elements (so only get elements with depth 0)
+		if dep, ok := index.ElementID(name, el.Name, 0); !ok {
 			return fmt.Errorf("could not find ref %s in %s",
 				el.Attr("", "ref"), el)
 		} else {
@@ -351,7 +352,8 @@ func flattenRef(schema []*xmltree.Element) error {
 			return
 		}
 		ref := el.Resolve(el.Attr("", "ref"))
-		real, ok := index.ByName(ref, el.Name)
+    //refs should always refer to global elements (so only get elements with depth 0)
+		real, ok := index.ByName(ref, el.Name, 0)
 		if !ok {
 			panic("bug building dep tree; missing " + el.Attr("", "ref"))
 		}

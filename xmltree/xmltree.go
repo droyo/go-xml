@@ -49,6 +49,10 @@ type Element struct {
 	Content []byte
 	// Sub-elements contained within this element.
 	Children []Element
+
+  //the element's depth within the schema
+  //elements with a depth of 0 are immediate children of the XSD's root element (and the children of those elements are 1 etc...)
+  Depth int
 }
 
 // Attr gets the value of the first attribute whose name matches the
@@ -262,7 +266,7 @@ walk:
 	for scanner.scan() {
 		switch tok := scanner.tok.(type) {
 		case xml.StartElement:
-			child := Element{StartElement: tok.Copy(), Scope: el.Scope}
+		  child := Element{StartElement: tok.Copy(), Scope: el.Scope, Depth: depth}
 			if err := child.parse(scanner, data, depth+1); err != nil {
 				return err
 			}
