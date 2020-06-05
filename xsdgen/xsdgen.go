@@ -519,6 +519,16 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type), depth int) xsd.Type
 	panic(fmt.Errorf("unexpected %T(%s %s)", t, xsd.XMLName(t).Space, xsd.XMLName(t).Local))
 }
 
+func addNamespace(t *xsd.ComplexType) *xsd.ComplexType {
+	namespace := make([]xsd.Element, 1)
+	namespace[0].Name.Local = "XmlNS"
+	namespace[0].Name.Space = t.Elements[0].Name.Space
+	namespace[0].Type = xsd.String
+	namespace[0].Scope = t.Elements[0].Scope
+	t.Elements = append(namespace, t.Elements...)
+	return t
+}
+
 func (cfg *Config) genTypeSpec(t xsd.Type) (result []spec, err error) {
 	var s []spec
 	cfg.debugf("generating type spec for %q", xsd.XMLName(t).Local)
@@ -527,6 +537,9 @@ func (cfg *Config) genTypeSpec(t xsd.Type) (result []spec, err error) {
 	case *xsd.SimpleType:
 		s, err = cfg.genSimpleType(t)
 	case *xsd.ComplexType:
+		if cfg.addNamespace {
+			t = addNamespace(t)
+		}
 		s, err = cfg.genComplexType(t)
 	case xsd.Builtin:
 		// pass
@@ -682,6 +695,15 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 			options = ",omitempty"
 		}
 		tag := fmt.Sprintf(`xml:"%s %s%s"`, el.Name.Space, el.Name.Local, options)
+
+		if cfg.addNamespace {
+			prefixLocal := strings.Split(el.Scope.Prefix(el.Name), ":")
+			tag = fmt.Sprintf(`xml:"%s:%s%s"`, prefixLocal[0], el.Name.Local, options)
+		}
+		if el.Name.Local == "XmlNS" {
+			prefixLocal := strings.Split(el.Scope.Prefix(el.Name), ":")
+			tag = fmt.Sprintf(`xml:"xmlns:%s,attr,omitempty"`, prefixLocal[0])
+		}
 		base, err := cfg.expr(el.Type)
 		if err != nil {
 			return nil, fmt.Errorf("%s element %s: %v", t.Name.Local, el.Name.Local, err)
