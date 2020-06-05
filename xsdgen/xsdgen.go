@@ -322,14 +322,17 @@ func (cfg *Config) expandComplexTypes(types []xsd.Type) []xsd.Type {
 		for _, attr := range c.Attributes {
 			shadowedAttributes[attr.Name] = struct{}{}
 		}
+
+		elements := []xsd.Element{}
 		for _, el := range b.Elements {
 			if _, ok := shadowedElements[el.Name]; !ok {
-				c.Elements = append(c.Elements, el)
+				elements = append(elements, el)
 			} else {
 				cfg.debugf("complexType %s: extended element %s is overrided",
 					c.Name.Local, el.Name.Local)
 			}
 		}
+		c.Elements = append(elements, c.Elements...)
 		for _, attr := range b.Attributes {
 			if _, ok := shadowedAttributes[attr.Name]; !ok {
 				c.Attributes = append(c.Attributes, attr)
