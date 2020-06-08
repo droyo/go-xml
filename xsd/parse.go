@@ -106,8 +106,9 @@ func Normalize(docs ...[]byte) ([]*xmltree.Element, error) {
 	for _, root := range result {
 		copyEltNamesToAnonTypes(root)
 	}
+	typeCounter := 0
 	for _, root := range result {
-		if err := nameAnonymousTypes(root); err != nil {
+		if err := nameAnonymousTypes(root, &typeCounter); err != nil {
 			return nil, err
 		}
 	}
@@ -256,11 +257,10 @@ to
     </xs:sequence>
   </xs:complexType>
 */
-func nameAnonymousTypes(root *xmltree.Element) error {
+func nameAnonymousTypes(root *xmltree.Element, typeCounter *int) error {
 	var (
-		typeCounter int
-		updateAttr  string
-		accum       bool
+		updateAttr string
+		accum      bool
 	)
 	targetNS := root.Attr("", "targetNamespace")
 	for _, el := range root.SearchFunc(hasAnonymousType) {
@@ -290,9 +290,9 @@ func nameAnonymousTypes(root *xmltree.Element) error {
 			if !isAnonymousType(&t) {
 				continue
 			}
-			typeCounter++
+			*typeCounter++
 
-			name := anonTypeName(typeCounter, targetNS)
+			name := anonTypeName(*typeCounter, targetNS)
 			qname := el.Prefix(name)
 
 			t.SetAttr("", "name", name.Local)
