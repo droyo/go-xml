@@ -523,16 +523,15 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type), depth int) xsd.Type
 	panic(fmt.Errorf("unexpected %T(%s %s)", t, xsd.XMLName(t).Space, xsd.XMLName(t).Local))
 }
 
-func addNamespace(t *xsd.ComplexType) *xsd.ComplexType {
-	if t.Elements[0].Name.Local != "XmlNS" {
+func addNamespace(t *xsd.ComplexType) {
+	if t.Elements[0].Name.Local != "XMLNs" {
 		namespace := make([]xsd.Element, 1)
-		namespace[0].Name.Local = "XmlNS"
+		namespace[0].Name.Local = "XMLNs"
 		namespace[0].Name.Space = t.Elements[0].Name.Space
 		namespace[0].Type = xsd.String
 		namespace[0].Scope = t.Elements[0].Scope
 		t.Elements = append(namespace, t.Elements...)
 	}
-	return t
 }
 
 func (cfg *Config) genTypeSpec(t xsd.Type) (result []spec, err error) {
@@ -544,7 +543,7 @@ func (cfg *Config) genTypeSpec(t xsd.Type) (result []spec, err error) {
 		s, err = cfg.genSimpleType(t)
 	case *xsd.ComplexType:
 		if cfg.addNamespace {
-			t = addNamespace(t)
+			addNamespace(t)
 		}
 		s, err = cfg.genComplexType(t)
 	case xsd.Builtin:
@@ -708,7 +707,7 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 			tag = fmt.Sprintf(`xml:"%s:%s%s"`, prefixLocal[0], el.Name.Local, options)
 		}
 
-		if el.Name.Local == "XmlNS" {
+		if el.Name.Local == "XMLNs" {
 			prefixLocal := strings.Split(el.Scope.Prefix(el.Name), ":")
 			tag = fmt.Sprintf(`xml:"xmlns:%s,attr,omitempty"`, prefixLocal[0])
 		}
@@ -810,14 +809,14 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 		unmarshal, marshal, err := cfg.genComplexTypeMethods(t, overrides)
 		if err != nil {
 			return result, err
-		} else {
-			if unmarshal != nil {
-				s.methods = append(s.methods, unmarshal)
-			}
-			if marshal != nil {
-				s.methods = append(s.methods, marshal)
-			}
 		}
+		if unmarshal != nil {
+			s.methods = append(s.methods, unmarshal)
+		}
+		if marshal != nil {
+			s.methods = append(s.methods, marshal)
+		}
+
 	}
 	result = append(result, s)
 	return result, nil
@@ -825,20 +824,22 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 
 func (cfg *Config) genComplexTypeMethods(t *xsd.ComplexType, overrides []fieldOverride) (marshal, unmarshal *ast.FuncDecl, err error) {
 	var data struct {
-		Overrides   []fieldOverride
-		Type        string
-		NamesSpaces []xml.Name
+		Overrides  []fieldOverride
+		Type       string
+		NameSpaces []xml.Name
 	}
 	data.Overrides = overrides
 	data.Type = cfg.public(t.Name)
 
-	nameSpace := t.Elements[0].Name.Space
-	for _, el := range t.Elements {
-		if el.Name.Space != nameSpace {
-			var namespace xml.Name
-			namespace.Space = el.Name.Space
-			namespace.Local = strings.Title(el.Name.Local)
-			data.NamesSpaces = append(data.NamesSpaces, namespace)
+	if cfg.addNamespace {
+		nameSpace := t.Elements[0].Name.Space
+		for _, el := range t.Elements {
+			if el.Name.Space != nameSpace {
+				var namespace xml.Name
+				namespace.Space = el.Name.Space
+				namespace.Local = strings.Title(el.Name.Local)
+				data.NameSpaces = append(data.NameSpaces, namespace)
+			}
 		}
 	}
 
@@ -897,8 +898,8 @@ func (cfg *Config) genComplexTypeMethods(t *xsd.ComplexType, overrides []fieldOv
 			layout.{{.FieldName}} = (*{{.ToType}})(&layout.T.{{.FieldName}})
 			{{end -}}
 
-			{{- range .NamesSpaces}}
-			layout.{{.Local}}.XmlNS = "{{.Space}}"
+			{{- range .NameSpaces}}
+			layout.{{.Local}}.XMLNs = "{{.Space}}"
 			{{end -}}
 			//
 			return e.EncodeElement(layout, start)
