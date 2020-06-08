@@ -422,14 +422,6 @@ func SOAPArrayAsSlice() Option {
 	}
 }
 
-// AddNamespace to the generated structs
-func AddNamespace(addNamespace bool) Option {
-	return func(cfg *Config) Option {
-		prev := cfg.addNamespace
-		cfg.addNamespace = addNamespace
-		return AddNamespace(prev)
-	}
-}
 
 func (cfg *Config) filterFields(t *xsd.ComplexType) ([]xsd.Attribute, []xsd.Element) {
 	var (
