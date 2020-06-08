@@ -386,7 +386,7 @@ func ExampleAddNamespace() {
 	// package ws
 	//
 	// type Book struct {
-	//   XmlNS  string `xml:"xmlns:tns,attr,omitempty"`
+	//   XMLNs  string `xml:"xmlns:tns,attr,omitempty"`
 	//   Title  string `xml:"tns:title"`
 	//   Author string `xml:"tns:author"`
 	// }

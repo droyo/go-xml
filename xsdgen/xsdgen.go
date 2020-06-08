@@ -706,19 +706,12 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 			prefixLocal := strings.Split(el.Scope.Prefix(el.Name), ":")
 			tag = fmt.Sprintf(`xml:"%s:%s%s"`, prefixLocal[0], el.Name.Local, options)
 		}
-<<<<<<< HEAD
-		if el.Name.Local == "XmlNS" {
-			prefixLocal := strings.Split(el.Scope.Prefix(el.Name), ":")
-			tag = fmt.Sprintf(`xml:"xmlns:%s,attr,omitempty"`, prefixLocal[0])
-		}
-=======
 
 		if el.Name.Local == "XMLNs" {
 			prefixLocal := strings.Split(el.Scope.Prefix(el.Name), ":")
 			tag = fmt.Sprintf(`xml:"xmlns:%s,attr,omitempty"`, prefixLocal[0])
 		}
 
->>>>>>> 58b7d55624c10b23b90092bfd0523cb3b245eb55
 		base, err := cfg.expr(el.Type)
 		if err != nil {
 			return nil, fmt.Errorf("%s element %s: %v", t.Name.Local, el.Name.Local, err)
