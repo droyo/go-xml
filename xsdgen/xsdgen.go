@@ -870,6 +870,11 @@ func (cfg *Config) genSimpleType(t *xsd.SimpleType) ([]spec, error) {
 	if t.List {
 		return cfg.genSimpleListSpec(t)
 	}
+
+	if len(t.Restriction.Enum) == 1 {
+		return cfg.genEnumOneValue(t)
+	}
+
 	if len(t.Union) > 0 {
 		// We don't support unions because the code that needs
 		// to be generated to check which of the member types
@@ -1164,6 +1169,41 @@ func (cfg *Config) genSimpleListSpec(t *xsd.SimpleType) ([]spec, error) {
 	}
 
 	s.methods = append(s.methods, marshal, unmarshal)
+	return []spec{s}, nil
+}
+
+// Generate a type declaration for a enum type with one element, along with marshal
+// methods.
+func (cfg *Config) genEnumOneValue(t *xsd.SimpleType) ([]spec, error) {
+	cfg.debugf("generating Go source for enum with one element %q", xsd.XMLName(t).Local)
+
+	if len(t.Restriction.Enum) != 1 {
+		return nil, nil
+	}
+
+	expr, err := cfg.expr(t.Base)
+	if err != nil {
+		return nil, err
+	}
+	s := spec{
+		doc:     t.Doc,
+		name:    cfg.public(t.Name),
+		expr:    expr,
+		xsdType: t,
+	}
+	marshal, err := gen.Func("MarshalText").
+		Receiver("x *"+s.name).
+		Returns("[]byte", "error").
+		Body(`
+			return []byte("` + t.Restriction.Enum[0] + `"), nil
+		`).Decl()
+
+	if err != nil {
+		return nil, fmt.Errorf("MarshalText %s: %v", s.name, err)
+	}
+
+	s.methods = append(s.methods, marshal)
+
 	return []spec{s}, nil
 }
 
