@@ -775,7 +775,8 @@ func parseElement(ns string, el *xmltree.Element) Element {
 			doc = doc.append(parseAnnotation(el))
 		}
 	})
-	t, ok := e.Type.(linkedType); if ok {
+	t, ok := e.Type.(linkedType)
+	if ok {
 		e.Name.Space = t.Space
 	}
 	e.Doc = string(doc)
