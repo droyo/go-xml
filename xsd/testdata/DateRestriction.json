@@ -1,0 +1,16 @@
+{
+  "adult-birthday": {
+    "Base": 16,
+    "Restriction": {
+      "MinDate": "1900-01-01T00:00:00Z",
+      "MaxDate": "2002-01-01T00:00:00Z"
+    }
+  },
+  "child-birthday": {
+    "Base": 16,
+    "Restriction": {
+      "MinDate": "2003-01-01T00:00:00Z",
+      "MaxDate": "2021-01-01T00:00:00Z"
+    }
+  }
+}

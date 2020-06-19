@@ -1,0 +1,13 @@
+<simpleType name="adult-birthday">
+  <restriction base="date">
+    <minInclusive value="1900-01-01" />
+    <maxInclusive value="2002-01-01" />
+  </restriction>
+</simpleType>
+
+<simpleType name="child-birthday">
+  <restriction base="date">
+    <minInclusive value="2003-01-01" />
+    <maxInclusive value="2021-01-01" />
+  </restriction>
+</simpleType>
