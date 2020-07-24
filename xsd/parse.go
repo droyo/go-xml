@@ -868,12 +868,28 @@ func parseSimpleRestriction(root *xmltree.Element, base Type) Restriction {
 				}
 
 				r.MinDate = d
+			} else if v, ok := base.(Builtin); ok && v == DateTime {
+				d, err := time.Parse(time.RFC3339, el.Attr("", "value"))
+
+				if err != nil {
+					stop(err.Error())
+				}
+
+				r.MinDate = d
 			} else {
 				r.Min = parseDecimal(el.Attr("", "value"))
 			}
 		case "maxExclusive", "maxInclusive":
 			if v, ok := base.(Builtin); ok && v == Date {
 				d, err := time.Parse("2006-01-02", el.Attr("", "value"))
+
+				if err != nil {
+					stop(err.Error())
+				}
+
+				r.MaxDate = d
+			} else if v, ok := base.(Builtin); ok && v == DateTime {
+				d, err := time.Parse(time.RFC3339, el.Attr("", "value"))
 
 				if err != nil {
 					stop(err.Error())
