@@ -46,11 +46,6 @@ type typeTransform func(xsd.Schema, xsd.Type) xsd.Type
 type propertyFilter func(interface{}) bool
 type specTransform func(spec) spec
 
-func (cfg *Config) errorf(format string, v ...interface{}) {
-	if cfg.logger != nil {
-		cfg.logger.Printf(format, v...)
-	}
-}
 func (cfg *Config) logf(format string, v ...interface{}) {
 	if cfg.logger != nil && cfg.loglevel > 0 {
 		cfg.logger.Printf(format, v...)
@@ -597,6 +592,12 @@ func (cfg *Config) addStandardHelpers() {
 				}
 				return err
 			`),
+		gen.Func("_marshalTime").
+			Args("t time.Time", "format string").
+			Returns("[]byte", "error").
+			Body(`
+				return []byte(t.Format(format + "Z07:00")), nil
+			`),
 	}
 	for _, fn := range fns {
 		cfg.helperFuncs[fn.Name()] = fn.MustDecl()
@@ -631,7 +632,7 @@ func (cfg *Config) addStandardHelpers() {
 				gen.Func("MarshalText").
 					Receiver("t "+name).
 					Returns("[]byte", "error").
-					Body(`return []byte((time.Time)(t).Format(%q)), nil`, timeSpec).
+					Body(`return _marshalTime((time.Time)(t), %q)`, timeSpec).
 					MustDecl(),
 				// workaround golang.org/issues/11939
 				gen.Func("MarshalXML").
@@ -660,7 +661,7 @@ func (cfg *Config) addStandardHelpers() {
 						return xml.Attr{Name: name, Value: string(m)}, err
 					`).MustDecl(),
 			},
-			helperFuncs: []string{"_unmarshalTime"},
+			helperFuncs: []string{"_unmarshalTime", "_marshalTime"},
 		}
 	}
 
