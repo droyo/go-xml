@@ -1,8 +1,6 @@
 package wsdlgen
 
 import (
-	"encoding/xml"
-
 	"aqwari.net/xml/wsdl"
 	"aqwari.net/xml/xsdgen"
 )
@@ -37,10 +35,6 @@ func (cfg *Config) debugf(format string, args ...interface{}) {
 	if cfg.loglevel > 2 {
 		cfg.logf(format, args...)
 	}
-}
-
-func (cfg *Config) publicName(name xml.Name) string {
-	return cfg.xsdgen.NameOf(name)
 }
 
 // Option applies the provides Options to a Config, modifying the

@@ -46,11 +46,6 @@ type typeTransform func(xsd.Schema, xsd.Type) xsd.Type
 type propertyFilter func(interface{}) bool
 type specTransform func(spec) spec
 
-func (cfg *Config) errorf(format string, v ...interface{}) {
-	if cfg.logger != nil {
-		cfg.logger.Printf(format, v...)
-	}
-}
 func (cfg *Config) logf(format string, v ...interface{}) {
 	if cfg.logger != nil && cfg.loglevel > 0 {
 		cfg.logger.Printf(format, v...)

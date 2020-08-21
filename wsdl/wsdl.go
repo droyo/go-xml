@@ -56,9 +56,9 @@ type Message struct {
 func (m *Message) String() string {
 	parts := make([]string, 0, len(m.Parts))
 	for _, p := range m.Parts {
-		parts = append(parts, fmt.Sprintf("%s", p.Type.Local))
+		parts = append(parts, p.Type.Local)
 	}
-	return fmt.Sprintf("%s", strings.Join(parts, ", "))
+	return strings.Join(parts, ", ")
 }
 
 // A Part describes the name and type of a parameter to pass

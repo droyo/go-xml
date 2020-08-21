@@ -932,38 +932,6 @@ func (cfg *Config) addSpecMethods(s spec) (spec, error) {
 	return s, nil
 }
 
-// Generate a type declaration for the bult-in list values, along with
-// marshal/unmarshal methods
-func (cfg *Config) addTokenListMethods(s spec, t *xsd.SimpleType) (spec, error) {
-	cfg.debugf("generating Go source for token list %q", s.name)
-	marshal, err := gen.Func("MarshalText").
-		Receiver("x *"+s.name).
-		Returns("[]byte", "error").
-		Body(`
-			return []byte(strings.Join(x, " ")), nil
-		`).Decl()
-
-	if err != nil {
-		return spec{}, fmt.Errorf("MarshalText %s: %v", s.name, err)
-	}
-
-	unmarshal, err := gen.Func("UnmarshalText").
-		Receiver("x *" + s.name).
-		Args("text []byte").
-		Returns("error").
-		Body(`
-			*x = bytes.Fields(text)
-			return nil
-		`).Decl()
-
-	if err != nil {
-		return spec{}, fmt.Errorf("UnmarshalText %s: %v", s.name, err)
-	}
-
-	s.methods = append(s.methods, marshal, unmarshal)
-	return s, nil
-}
-
 // Generate a type declaration for a <list> type, along with marshal/unmarshal
 // methods.
 func (cfg *Config) genSimpleListSpec(t *xsd.SimpleType) ([]spec, error) {
