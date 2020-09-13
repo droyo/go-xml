@@ -850,6 +850,7 @@ func parseAnnotation(el *xmltree.Element) (doc annotation) {
 func parseSimpleRestriction(root *xmltree.Element, base Type) Restriction {
 	var r Restriction
 	var doc annotation
+	var enumDoc []annotation
 	// Most of the restrictions on a simpleType are suited for
 	// validating input. This package is not a validator; we assume
 	// that the server sends valid data, and that it will tell us if
@@ -859,6 +860,9 @@ func parseSimpleRestriction(root *xmltree.Element, base Type) Restriction {
 		switch el.Name.Local {
 		case "enumeration":
 			r.Enum = append(r.Enum, el.Attr("", "value"))
+			walk(el, func(enumChild *xmltree.Element) {
+				enumDoc = append(enumDoc, parseAnnotation(enumChild))
+			})
 		case "minExclusive", "minInclusive":
 			if v, ok := base.(Builtin); ok && v == Date {
 				d, err := time.Parse("2006-01-02", el.Attr("", "value"))
@@ -930,6 +934,10 @@ func parseSimpleRestriction(root *xmltree.Element, base Type) Restriction {
 		}
 	})
 	r.Doc = string(doc)
+	r.EnumDoc = make([]string, len(enumDoc))
+	for idx := range enumDoc {
+		r.EnumDoc[idx] = string(enumDoc[idx])
+	}
 	return r
 }
 

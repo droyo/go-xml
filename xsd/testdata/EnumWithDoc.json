@@ -1,0 +1,9 @@
+{
+  "RestrictionEnum": {
+    "Base": 38,
+    "Restriction": {
+      "Enum": ["FIRST", "SECOND"],
+      "EnumDoc": ["Documentation to value FIRST", "Documentation to value SECOND"]
+    }
+  }
+}
