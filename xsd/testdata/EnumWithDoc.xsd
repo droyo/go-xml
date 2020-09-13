@@ -1,4 +1,7 @@
 <simpleType name="RestrictionEnum">
+  <annotation>
+    <documentation>Documentation to restriction</documentation>
+  </annotation>
   <restriction base="string">
     <enumeration value="FIRST">
       <annotation>
@@ -10,5 +13,6 @@
         <documentation>Documentation to value SECOND</documentation>
       </annotation>
     </enumeration>
+    <enumeration value="OTHER"/>
   </restriction>
 </simpleType>
