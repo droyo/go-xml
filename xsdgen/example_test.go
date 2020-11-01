@@ -327,7 +327,7 @@ func ExampleUseFieldNames() {
 	// 	return _unmarshalTime(text, (*time.Time)(t), "2006-01-02")
 	// }
 	// func (t xsdDate) MarshalText() ([]byte, error) {
-	// 	return []byte((time.Time)(t).Format("2006-01-02")), nil
+	// 	return _marshalTime((time.Time)(t), "2006-01-02")
 	// }
 	// func (t xsdDate) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 	// 	if (time.Time)(t).IsZero() {
@@ -353,6 +353,9 @@ func ExampleUseFieldNames() {
 	// 		*t, err = time.Parse(format+"Z07:00", s)
 	// 	}
 	// 	return err
+	// }
+	// func _marshalTime(t time.Time, format string) ([]byte, error) {
+	// 	return []byte(t.Format(format + "Z07:00")), nil
 	// }
 
 }
