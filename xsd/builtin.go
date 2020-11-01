@@ -93,7 +93,7 @@ func (b Builtin) Name() xml.Name {
 // does not name a built-in type, ParseBuiltin returns
 // a non-nil error.
 func ParseBuiltin(qname xml.Name) (Builtin, error) {
-	for i := AnyType; i <= UnsignedShort; i++ {
+	for i := AnyType; i <= AnySimpleType; i++ {
 		if i.Name() == qname {
 			return i, nil
 		}
