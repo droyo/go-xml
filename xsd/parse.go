@@ -362,7 +362,7 @@ func flattenRef(schema []*xmltree.Element) error {
 		unpackGroups(doc)
 		if hasCycle(doc, nil) {
 			return fmt.Errorf("cycle detected after flattening references "+
-				"in schema %d:\n%s\n", ns, xmltree.MarshalIndent(doc, "", "  "))
+				"in schema %d:\n%s", ns, xmltree.MarshalIndent(doc, "", "  "))
 		}
 	}
 	return nil
