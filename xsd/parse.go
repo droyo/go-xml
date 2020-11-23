@@ -105,6 +105,7 @@ func Normalize(docs ...[]byte) ([]*xmltree.Element, error) {
 		}
 	}
 	for _, root := range result {
+		stubProhibitedAttributeType(root)
 		copyEltNamesToAnonTypes(root)
 	}
 	typeCounter := 0
@@ -540,6 +541,31 @@ func propagateMixedAttr(t, b Type, depth int) {
 		c.Mixed = true
 	default:
 		panic(fmt.Sprintf("unexpected %T", b))
+	}
+}
+
+// Some schema may define and reference attributes that cannot be used
+// by specifying the use='prohibited' attribute in the schema. Because they
+// cannot be used, it is common to ellide type information from these
+// attributes. Convert
+//
+//  <attribute name="foo" use="prohibited" />
+//
+// to
+//
+// <attribute name="foo" use="prohibited" type="xsd:anyType" />
+//
+// https://www.w3.org/TR/xmlschema11-1/#declare-attribute
+func stubProhibitedAttributeType(root *xmltree.Element) {
+	var (
+		isAttr = isElem(schemaNS, "attribute")
+		isProhibited = hasAttrValue("", "use", "prohibited")
+		hasNoType = hasAttrValue("", "type", "")
+		anyType = xml.Name{Space: schemaNS, Local: "anySimpleType"}
+	)
+	for _, el := range root.SearchFunc(and(isAttr, isProhibited, hasNoType)) {
+
+		el.SetAttr("", "type", el.Prefix(anyType))
 	}
 }
 
