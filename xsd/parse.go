@@ -105,7 +105,7 @@ func Normalize(docs ...[]byte) ([]*xmltree.Element, error) {
 		}
 	}
 	for _, root := range result {
-		stubProhibitedAttributeType(root)
+		attributeDefaultType(root)
 		copyEltNamesToAnonTypes(root)
 	}
 	typeCounter := 0
@@ -544,26 +544,18 @@ func propagateMixedAttr(t, b Type, depth int) {
 	}
 }
 
-// Some schema may define and reference attributes that cannot be used
-// by specifying the use='prohibited' attribute in the schema. Because they
-// cannot be used, it is common to ellide type information from these
-// attributes. Convert
+// 3.2.2 XML Representation of Attribute Declaration Schema Components
 //
-//  <attribute name="foo" use="prohibited" />
+// Specifies that attributes without a type default to anySimpleType.
 //
-// to
-//
-// <attribute name="foo" use="prohibited" type="xsd:anyType" />
-//
-// https://www.w3.org/TR/xmlschema11-1/#declare-attribute
-func stubProhibitedAttributeType(root *xmltree.Element) {
+// http://www.w3.org/TR/xmlschema-1/#cAttribute_Declarations
+func attributeDefaultType(root *xmltree.Element) {
 	var (
 		isAttr = isElem(schemaNS, "attribute")
-		isProhibited = hasAttrValue("", "use", "prohibited")
 		hasNoType = hasAttrValue("", "type", "")
 		anyType = xml.Name{Space: schemaNS, Local: "anySimpleType"}
 	)
-	for _, el := range root.SearchFunc(and(isAttr, isProhibited, hasNoType)) {
+	for _, el := range root.SearchFunc(and(isAttr, hasNoType)) {
 
 		el.SetAttr("", "type", el.Prefix(anyType))
 	}
