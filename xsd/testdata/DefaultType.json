@@ -2,6 +2,9 @@
   "localElement": {
     "Attributes": [
       {"Name": {"Local": "substitutionGroup"}, "Type": 49}
+    ],
+    "Elements": [
+      {"Name": {"Local": "annotation"}, "Type": 1}
     ]
   }
 }
