@@ -220,7 +220,9 @@ func TestCases(t *testing.T) {
 			t.Logf("subtest in %s.json failed", base)
 			t.Logf("normalized XSDs:")
 			for _, doc := range docs {
-				t.Logf("\n%s", xmltree.MarshalIndent(doc, "", "  "))
+				if doc.Attr("", "targetNamespace") == "tns" {
+					t.Logf("\n%s", xmltree.MarshalIndent(doc, "", "  "))
+				}
 			}
 		}
 	}

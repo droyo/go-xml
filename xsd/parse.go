@@ -105,6 +105,8 @@ func Normalize(docs ...[]byte) ([]*xmltree.Element, error) {
 		}
 	}
 	for _, root := range result {
+		attributeDefaultType(root)
+		elementDefaultType(root)
 		copyEltNamesToAnonTypes(root)
 	}
 	typeCounter := 0
@@ -540,6 +542,38 @@ func propagateMixedAttr(t, b Type, depth int) {
 		c.Mixed = true
 	default:
 		panic(fmt.Sprintf("unexpected %T", b))
+	}
+}
+
+// 3.2.2 XML Representation of Attribute Declaration Schema Components
+//
+// Specifies that attributes without a type default to anySimpleType.
+//
+// http://www.w3.org/TR/xmlschema-1/#cAttribute_Declarations
+func attributeDefaultType(root *xmltree.Element) {
+	var (
+		isAttr = isElem(schemaNS, "attribute")
+		hasNoType = hasAttrValue("", "type", "")
+		anyType = xml.Name{Space: schemaNS, Local: "anySimpleType"}
+	)
+	for _, el := range root.SearchFunc(and(isAttr, hasNoType)) {
+		el.SetAttr("", "type", el.Prefix(anyType))
+	}
+}
+
+// 3.3.2 XML Representation of Element Declaration Schema Components
+//
+// Elements types default to anyType
+//
+// https://www.w3.org/TR/xmlschema-1/#Element_Declaration_details
+func elementDefaultType(root *xmltree.Element) {
+	var (
+		isElement = isElem(schemaNS, "element")
+		hasNoType = hasAttrValue("", "type", "")
+		anyType = xml.Name{Space: schemaNS, Local: "anyType"}
+	)
+	for _, el := range root.SearchFunc(and(isElement, hasNoType)) {
+		el.SetAttr("", "type", el.Prefix(anyType))
 	}
 }
 

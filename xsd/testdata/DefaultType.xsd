@@ -1,0 +1,15 @@
+<!--
+
+Attributes may have the use='prohibited' attribute, which means they
+cannot be used in a valid document. However, other types may reference
+those attributes or derive types from them and be expected to work.
+
+See https://www.w3.org/TR/xmlschema11-1/#declare-attribute
+-->
+<complexType name="localElement">
+  <attribute name="substitutionGroup" />
+  <sequence>
+    <element name="annotation" />
+  </sequence>
+</complexType>
+

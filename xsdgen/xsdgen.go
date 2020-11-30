@@ -960,7 +960,7 @@ func (cfg *Config) genSimpleListSpec(t *xsd.SimpleType) ([]spec, error) {
 	}
 
 	switch base.(xsd.Builtin) {
-	case xsd.ID, xsd.NCName, xsd.NMTOKEN, xsd.Name, xsd.QName, xsd.ENTITY, xsd.AnyURI, xsd.Language, xsd.String, xsd.Token, xsd.XMLLang, xsd.XMLSpace, xsd.XMLBase, xsd.XMLId, xsd.Duration, xsd.NormalizedString:
+	case xsd.ID, xsd.NCName, xsd.NMTOKEN, xsd.Name, xsd.QName, xsd.ENTITY, xsd.AnyURI, xsd.Language, xsd.String, xsd.Token, xsd.XMLLang, xsd.XMLSpace, xsd.XMLBase, xsd.XMLId, xsd.Duration, xsd.NormalizedString, xsd.AnySimpleType:
 		marshalFn = marshalFn.Body(`
 			result := make([][]byte, 0, len(*x))
 			for _, v := range *x {
