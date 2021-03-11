@@ -147,7 +147,14 @@ func Parse(docs ...[]byte) ([]Schema, error) {
 		if err := s.parse(root); err != nil {
 			return nil, err
 		}
-		parsed[tns] = s
+		if existingSchema, found := parsed[tns]; found {
+			err = existingSchema.MergeTypes(&s)
+			if err != nil {
+				return nil, fmt.Errorf("error merging types into existing schema: %v", err)
+			}
+		} else {
+			parsed[tns] = s
+		}
 	}
 
 	for _, s := range parsed {
