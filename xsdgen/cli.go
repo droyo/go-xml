@@ -54,6 +54,15 @@ func (cfg *Config) GenCode(data ...[]byte) (*Code, error) {
 // GenAST creates an *ast.File containing type declarations and
 // associated methods based on a set of XML schema.
 func (cfg *Config) GenAST(files ...string) (*ast.File, error) {
+	data, err := cfg.readFiles(files...)
+	code, err := cfg.GenCode(data...)
+	if err != nil {
+		return nil, err
+	}
+	return code.GenAST()
+}
+
+func (cfg *Config) readFiles(files ...string) ([][]byte,error) {
 	data := make([][]byte, 0, len(files))
 	for _, filename := range files {
 		b, err := ioutil.ReadFile(filename)
@@ -61,13 +70,27 @@ func (cfg *Config) GenAST(files ...string) (*ast.File, error) {
 			return nil, err
 		}
 		cfg.debugf("read %s", filename)
+		if cfg.followImports {
+			importedRefs, err := xsd.Imports(b)
+			if err != nil {
+				return nil, fmt.Errorf("error discovering imports: %v", err)
+			}
+			importedFiles := make([]string, 0, len(importedRefs))
+			for _, r := range importedRefs {
+				importedFiles = append(importedFiles, r.Location)
+			}
+			referencedData, err := cfg.readFiles(importedFiles...)
+			if err != nil {
+				return nil, fmt.Errorf("error reading imported files: %v", err)
+			}
+			for _, d := range referencedData {
+				// prepend imported refs (i.e. append before the referencing file)
+				data = append(data, d)
+			}
+		}
 		data = append(data, b)
 	}
-	code, err := cfg.GenCode(data...)
-	if err != nil {
-		return nil, err
-	}
-	return code.GenAST()
+	return data, nil
 }
 
 // The GenSource method converts the AST returned by GenAST to formatted
@@ -87,14 +110,15 @@ func (cfg *Config) GenSource(files ...string) ([]byte, error) {
 // same as those passed to the xsdgen command.
 func (cfg *Config) GenCLI(arguments ...string) error {
 	var (
-		err          error
-		replaceRules commandline.ReplaceRuleList
-		xmlns        commandline.Strings
-		fs           = flag.NewFlagSet("xsdgen", flag.ExitOnError)
-		packageName  = fs.String("pkg", "", "name of the the generated package")
-		output       = fs.String("o", "xsdgen_output.go", "name of the output file")
-		verbose      = fs.Bool("v", false, "print verbose output")
-		debug        = fs.Bool("vv", false, "print debug output")
+		err           error
+		replaceRules  commandline.ReplaceRuleList
+		xmlns         commandline.Strings
+		fs            = flag.NewFlagSet("xsdgen", flag.ExitOnError)
+		packageName   = fs.String("pkg", "", "name of the the generated package")
+		output        = fs.String("o", "xsdgen_output.go", "name of the output file")
+		followImports = fs.Bool("f", false, "follow import statements; load imported references recursively into scope")
+		verbose       = fs.Bool("v", false, "print verbose output")
+		debug         = fs.Bool("vv", false, "print debug output")
 	)
 	fs.Var(&replaceRules, "r", "replacement rule 'regex -> repl' (can be used multiple times)")
 	fs.Var(&xmlns, "ns", "target namespace(s) to generate types for")
@@ -111,6 +135,7 @@ func (cfg *Config) GenCLI(arguments ...string) error {
 		cfg.Option(LogLevel(1))
 	}
 	cfg.Option(Namespaces(xmlns...))
+	cfg.Option(FollowImports(*followImports))
 	for _, r := range replaceRules {
 		cfg.Option(replaceAllNamesRegex(r.From, r.To))
 	}
