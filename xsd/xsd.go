@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io"
 	"regexp"
+	"strings"
 	"time"
 
 	"aqwari.net/xml/xmltree"
@@ -108,6 +109,19 @@ type Schema struct {
 	// Any annotations declared at the top-level of the schema, separated
 	// by new lines.
 	Doc string
+}
+
+// MergeTypes adds the types from the incoming schema into
+// the receiving schema, returns error if the schemas have
+// different target namespaces.
+func (s *Schema) MergeTypes(incoming *Schema) error {
+	if !strings.EqualFold(s.TargetNS, incoming.TargetNS) {
+		return fmt.Errorf("cannot merge types from %s into %s", incoming.TargetNS, s.TargetNS)
+	}
+	for n,t := range incoming.Types {
+		s.Types[n] = t
+	}
+	return nil
 }
 
 // FindType looks for a type by its canonical name. In addition to the types
