@@ -20,6 +20,8 @@ type Config struct {
 	loglevel        int
 	namespaces      []string
 	pkgname         string
+	// load xsd imports recursively into memory before parsing
+	followImports   bool
 	preprocessType  typeTransform
 	postprocessType specTransform
 	// Helper functions
@@ -231,6 +233,17 @@ func PackageName(name string) Option {
 		prev := cfg.pkgname
 		cfg.pkgname = name
 		return PackageName(prev)
+	}
+}
+
+// FollowImports specifies whether or not
+// to recursively read in imported schemas
+// before attempting to parse
+func FollowImports(follow bool) Option {
+	return func(cfg *Config) Option {
+		prev := cfg.followImports
+		cfg.followImports = follow
+		return FollowImports(prev)
 	}
 }
 
