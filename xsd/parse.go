@@ -552,9 +552,9 @@ func propagateMixedAttr(t, b Type, depth int) {
 // http://www.w3.org/TR/xmlschema-1/#cAttribute_Declarations
 func attributeDefaultType(root *xmltree.Element) {
 	var (
-		isAttr = isElem(schemaNS, "attribute")
+		isAttr    = isElem(schemaNS, "attribute")
 		hasNoType = hasAttrValue("", "type", "")
-		anyType = xml.Name{Space: schemaNS, Local: "anySimpleType"}
+		anyType   = xml.Name{Space: schemaNS, Local: "anySimpleType"}
 	)
 	for _, el := range root.SearchFunc(and(isAttr, hasNoType)) {
 		el.SetAttr("", "type", el.Prefix(anyType))
@@ -570,7 +570,7 @@ func elementDefaultType(root *xmltree.Element) {
 	var (
 		isElement = isElem(schemaNS, "element")
 		hasNoType = hasAttrValue("", "type", "")
-		anyType = xml.Name{Space: schemaNS, Local: "anyType"}
+		anyType   = xml.Name{Space: schemaNS, Local: "anyType"}
 	)
 	for _, el := range root.SearchFunc(and(isElement, hasNoType)) {
 		el.SetAttr("", "type", el.Prefix(anyType))
@@ -894,46 +894,12 @@ func parseSimpleRestriction(root *xmltree.Element, base Type) Restriction {
 		case "enumeration":
 			r.Enum = append(r.Enum, el.Attr("", "value"))
 		case "minExclusive", "minInclusive":
-			if v, ok := base.(Builtin); ok && v == Date {
-				d, err := time.Parse("2006-01-02", el.Attr("", "value"))
-
-				if err != nil {
-					stop(err.Error())
-				}
-
-				r.MinDate = d
-			} else if v, ok := base.(Builtin); ok && v == DateTime {
-				d, err := time.Parse(time.RFC3339, el.Attr("", "value"))
-
-				if err != nil {
-					stop(err.Error())
-				}
-
-				r.MinDate = d
-			} else {
-				r.Min = parseDecimal(el.Attr("", "value"))
-			}
+			r.MinDate, r.Min = parseMinMaxRestriction(el, base)
 		case "maxExclusive", "maxInclusive":
-			if v, ok := base.(Builtin); ok && v == Date {
-				d, err := time.Parse("2006-01-02", el.Attr("", "value"))
-
-				if err != nil {
-					stop(err.Error())
-				}
-
-				r.MaxDate = d
-			} else if v, ok := base.(Builtin); ok && v == DateTime {
-				d, err := time.Parse(time.RFC3339, el.Attr("", "value"))
-
-				if err != nil {
-					stop(err.Error())
-				}
-
-				r.MaxDate = d
-			} else {
-				r.Max = parseDecimal(el.Attr("", "value"))
-			}
+			r.MaxDate, r.Max = parseMinMaxRestriction(el, base)
 		case "length":
+			r.Length = parseInt(el.Attr("", "value"))
+		case "maxLength":
 			r.MaxLength = parseInt(el.Attr("", "value"))
 		case "minLength":
 			r.MinLength = parseInt(el.Attr("", "value"))
@@ -961,10 +927,50 @@ func parseSimpleRestriction(root *xmltree.Element, base Type) Restriction {
 			}
 		case "annotation":
 			doc = doc.append(parseAnnotation(el))
+		case "totalDigits":
+			r.TotalDigits = parseInt(el.Attr("", "value"))
 		}
 	})
 	r.Doc = string(doc)
 	return r
+}
+
+// For minInclusive, minExclusive, maxInclusive and maxExclusive restrictions
+func parseMinMaxRestriction(el *xmltree.Element, base Type) (time.Time, float64) {
+	var date time.Time
+	var decimal float64
+	if v, ok := base.(Builtin); ok {
+		var format string
+		if v == Date {
+			format = "2006-01-02"
+		} else if v == DateTime {
+			format = time.RFC3339
+		}
+
+		if format != "" {
+			d, err := time.Parse(format, el.Attr("", "value"))
+			if err != nil {
+				stop(err.Error())
+			}
+			date = d
+		} else {
+			decimal = parseDecimal(el.Attr("", "value"))
+		}
+	} else if _, ok := base.(linkedType); ok {
+		// The base of the linked type is unknown, try to parse dates and decimals
+		d, err := time.Parse("2006-01-02", el.Attr("", "value"))
+		if err != nil {
+			d, err := time.Parse(time.RFC3339, el.Attr("", "value"))
+			if err != nil {
+				decimal = parseDecimal(el.Attr("", "value"))
+			}
+			date = d
+		}
+		date = d
+	} else {
+		decimal = parseDecimal(el.Attr("", "value"))
+	}
+	return date, decimal
 }
 
 // XML Schema defines its own flavor of regular expressions here:
