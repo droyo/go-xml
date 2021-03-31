@@ -228,11 +228,13 @@ type Restriction struct {
 	// The minimum and maximum (exclusive) value of this type, if
 	// numeric
 	Min, Max float64
-	// Maximum and minimum length (in characters) of this type
-	MinLength, MaxLength int
-	MinDate, MaxDate     time.Time
+	// Exact, maximum and minimum length (in characters) of this type
+	Length, MinLength, MaxLength int
+	MinDate, MaxDate             time.Time
 	// Regular expression that values of this type must match
 	Pattern *regexp.Regexp
+	// The exact number of digits allowed
+	TotalDigits int
 	// Any annotations for the restriction, if present.
 	Doc string
 }
