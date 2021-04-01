@@ -225,6 +225,8 @@ type Restriction struct {
 	// If len(Enum) > 0, the type must be one of the values contained
 	// in Enum.
 	Enum []string
+	// Any annotations for each Enum
+	EnumDoc []string
 	// The minimum and maximum (exclusive) value of this type, if
 	// numeric
 	Min, Max float64
