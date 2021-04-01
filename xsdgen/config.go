@@ -42,6 +42,9 @@ type Config struct {
 	// if populated, only types that are true in this map
 	// will be selected.
 	allowTypes map[xml.Name]bool
+
+	//True for adding namespace to the struct
+	addNamespace bool
 }
 
 type typeTransform func(xsd.Schema, xsd.Type) xsd.Type
@@ -73,6 +76,7 @@ var DefaultOptions = []Option{
 	HandleSOAPArrayType(),
 	SOAPArrayAsSlice(),
 	UseFieldNames(),
+	AddNamespace(false),
 }
 
 // The Namespaces option configures the code generation process
@@ -352,6 +356,15 @@ func useFieldNames(s xsd.Schema, t xsd.Type) xsd.Type {
 	return t
 }
 
+// AddNamespace to the generated structs
+func AddNamespace(addNamespace bool) Option {
+	return func(cfg *Config) Option {
+		prev := cfg.addNamespace
+		cfg.addNamespace = addNamespace
+		return AddNamespace(prev)
+	}
+}
+
 // ProcessTypes allows for users to make arbitrary changes to a type before
 // Go source code is generated.
 func ProcessTypes(fn func(xsd.Schema, xsd.Type) xsd.Type) Option {
@@ -416,6 +429,7 @@ func SOAPArrayAsSlice() Option {
 		})(cfg)
 	}
 }
+
 
 func (cfg *Config) filterFields(t *xsd.ComplexType) ([]xsd.Attribute, []xsd.Element) {
 	var (

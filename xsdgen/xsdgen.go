@@ -327,6 +327,7 @@ func (cfg *Config) expandComplexTypes(types []xsd.Type) []xsd.Type {
 		for _, el := range b.Elements {
 			if _, ok := shadowedElements[el.Name]; !ok {
 				elements = append(elements, el)
+
 			} else {
 				cfg.debugf("complexType %s: extended element %s is overrided",
 					c.Name.Local, el.Name.Local)
@@ -522,6 +523,17 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type), depth int) xsd.Type
 	panic(fmt.Errorf("unexpected %T(%s %s)", t, xsd.XMLName(t).Space, xsd.XMLName(t).Local))
 }
 
+func addNamespace(t *xsd.ComplexType) {
+	if t.Elements[0].Name.Local != "XMLNs" {
+		namespace := make([]xsd.Element, 1)
+		namespace[0].Name.Local = "XMLNs"
+		namespace[0].Name.Space = t.Elements[0].Name.Space
+		namespace[0].Type = xsd.String
+		namespace[0].Scope = t.Elements[0].Scope
+		t.Elements = append(namespace, t.Elements...)
+	}
+}
+
 func (cfg *Config) genTypeSpec(t xsd.Type) (result []spec, err error) {
 	var s []spec
 	cfg.debugf("generating type spec for %q", xsd.XMLName(t).Local)
@@ -530,6 +542,9 @@ func (cfg *Config) genTypeSpec(t xsd.Type) (result []spec, err error) {
 	case *xsd.SimpleType:
 		s, err = cfg.genSimpleType(t)
 	case *xsd.ComplexType:
+		if cfg.addNamespace {
+			addNamespace(t)
+		}
 		s, err = cfg.genComplexType(t)
 	case xsd.Builtin:
 		// pass
@@ -684,7 +699,19 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 		if el.Nillable || el.Optional {
 			options = ",omitempty"
 		}
+
 		tag := fmt.Sprintf(`xml:"%s %s%s"`, el.Name.Space, el.Name.Local, options)
+
+		if cfg.addNamespace {
+			prefixLocal := strings.Split(el.Scope.Prefix(el.Name), ":")
+			tag = fmt.Sprintf(`xml:"%s:%s%s"`, prefixLocal[0], el.Name.Local, options)
+		}
+
+		if el.Name.Local == "XMLNs" {
+			prefixLocal := strings.Split(el.Scope.Prefix(el.Name), ":")
+			tag = fmt.Sprintf(`xml:"xmlns:%s,attr,omitempty"`, prefixLocal[0])
+		}
+
 		base, err := cfg.expr(el.Type)
 		if err != nil {
 			return nil, fmt.Errorf("%s element %s: %v", t.Name.Local, el.Name.Local, err)
@@ -778,18 +805,18 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 		xsdType:     t,
 		helperTypes: helperTypes,
 	}
-	if len(overrides) > 0 {
+	if len(overrides) > 0 || cfg.addNamespace {
 		unmarshal, marshal, err := cfg.genComplexTypeMethods(t, overrides)
 		if err != nil {
 			return result, err
-		} else {
-			if unmarshal != nil {
-				s.methods = append(s.methods, unmarshal)
-			}
-			if marshal != nil {
-				s.methods = append(s.methods, marshal)
-			}
 		}
+		if unmarshal != nil {
+			s.methods = append(s.methods, unmarshal)
+		}
+		if marshal != nil {
+			s.methods = append(s.methods, marshal)
+		}
+
 	}
 	result = append(result, s)
 	return result, nil
@@ -797,11 +824,24 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 
 func (cfg *Config) genComplexTypeMethods(t *xsd.ComplexType, overrides []fieldOverride) (marshal, unmarshal *ast.FuncDecl, err error) {
 	var data struct {
-		Overrides []fieldOverride
-		Type      string
+		Overrides  []fieldOverride
+		Type       string
+		NameSpaces []xml.Name
 	}
 	data.Overrides = overrides
 	data.Type = cfg.public(t.Name)
+
+	if cfg.addNamespace {
+		nameSpace := t.Elements[0].Name.Space
+		for _, el := range t.Elements {
+			if el.Name.Space != nameSpace {
+				var namespace xml.Name
+				namespace.Space = el.Name.Space
+				namespace.Local = strings.Title(el.Name.Local)
+				data.NameSpaces = append(data.NameSpaces, namespace)
+			}
+		}
+	}
 
 	unmarshal, err = gen.Func("UnmarshalXML").
 		Receiver("t *"+data.Type).
@@ -838,9 +878,6 @@ func (cfg *Config) genComplexTypeMethods(t *xsd.ComplexType, overrides []fieldOv
 			nonDefaultOverrides = append(nonDefaultOverrides, v)
 		}
 	}
-	if len(nonDefaultOverrides) == 0 {
-		return nil, unmarshal, nil
-	}
 
 	data.Overrides = nonDefaultOverrides
 	marshal, err = gen.Func("MarshalXML").
@@ -856,10 +893,15 @@ func (cfg *Config) genComplexTypeMethods(t *xsd.ComplexType, overrides []fieldOv
 				{{end -}}
 			}
 			layout.T = (*T)(t)
+			
 			{{- range .Overrides}}
 			layout.{{.FieldName}} = (*{{.ToType}})(&layout.T.{{.FieldName}})
 			{{end -}}
 
+			{{- range .NameSpaces}}
+			layout.{{.Local}}.XMLNs = "{{.Space}}"
+			{{end -}}
+			//
 			return e.EncodeElement(layout, start)
 		`, data).Decl()
 	return marshal, unmarshal, err
