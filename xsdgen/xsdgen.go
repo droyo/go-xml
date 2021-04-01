@@ -110,7 +110,7 @@ func (c *Code) NameOf(name xml.Name) string {
 		return "NOTFOUND" + name.Local
 	}
 
-	switch b := c.cfg.flatten1(t, func(xsd.Type) {}, 0).(type) {
+	switch b := c.cfg.flatten1(t, map[xml.Name]xsd.Type{}, func(xsd.Type) {}, 0).(type) {
 	case xsd.Builtin:
 		return c.NameOf(b.Name())
 	}
@@ -371,6 +371,8 @@ func (cfg *Config) flatten(types map[xml.Name]xsd.Type) []xsd.Type {
 	push := func(t xsd.Type) {
 		result = append(result, t)
 	}
+
+	var flattenedTypes = map[xml.Name]xsd.Type{}
 	for _, t := range types {
 		if xsd.XMLName(t).Local == "_self" {
 			continue
@@ -384,7 +386,7 @@ func (cfg *Config) flatten(types map[xml.Name]xsd.Type) []xsd.Type {
 				continue
 			}
 		}
-		if t := cfg.flatten1(t, push, 0); t != nil {
+		if t := cfg.flatten1(t, flattenedTypes, push, 0); t != nil {
 			push(t)
 		}
 	}
@@ -402,7 +404,12 @@ func dedup(types []xsd.Type) (unique []xsd.Type) {
 	return unique
 }
 
-func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type), depth int) xsd.Type {
+func (cfg *Config) flatten1(t xsd.Type, flattenedTypes map[xml.Name]xsd.Type, push func(xsd.Type), depth int) xsd.Type {
+	if res, ok := flattenedTypes[xsd.XMLName(t)]; ok {
+		return res
+	}
+	flattenedTypes[xsd.XMLName(t)] = t
+
 	const maxDepth = 1000
 	if depth > maxDepth {
 		return t
@@ -463,6 +470,8 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type), depth int) xsd.Type
 			t.Doc = "Must be at least " + strconv.Itoa(t.Restriction.MinLength) + " items long"
 			return t
 		}
+
+		flattenedTypes[xsd.XMLName(t)] = t.Base
 		return t.Base
 	case *xsd.ComplexType:
 		// We can "unpack" a struct if it is extending a simple
@@ -478,30 +487,33 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type), depth int) xsd.Type
 					t.Name.Local, xsd.XMLName(t.Base))
 				switch b := t.Base.(type) {
 				case xsd.Builtin:
+					flattenedTypes[xsd.XMLName(t)] = b
 					return b
 				case *xsd.SimpleType:
-					return cfg.flatten1(t.Base, push, depth+1)
+					res := cfg.flatten1(t.Base, flattenedTypes, push, depth+1)
+					flattenedTypes[xsd.XMLName(t)] = res
+					return res
 				}
 			}
 		}
 		// We can flatten a struct field if its type does not
 		// need additional methods for unmarshalling.
 		for i, el := range t.Elements {
-			el.Type = cfg.flatten1(el.Type, push, depth+1)
+			el.Type = cfg.flatten1(el.Type, flattenedTypes, push, depth+1)
 			t.Elements[i] = el
 			push(el.Type)
 			cfg.debugf("element %s %T(%s): %v", el.Name.Local, t,
 				xsd.XMLName(t).Local, xsd.XMLName(el.Type))
 		}
 		for i, attr := range t.Attributes {
-			attr.Type = cfg.flatten1(attr.Type, push, depth+1)
+			attr.Type = cfg.flatten1(attr.Type, flattenedTypes, push, depth+1)
 			t.Attributes[i] = attr
 			push(attr.Type)
 			cfg.debugf("attribute %s %T(%s): %v", attr.Name.Local, t,
 				xsd.XMLName(t).Local, xsd.XMLName(attr.Type))
 		}
 
-		t.Base = cfg.flatten1(t.Base, push, depth+1)
+		t.Base = cfg.flatten1(t.Base, flattenedTypes, push, depth+1)
 
 		// We expand all complexTypes to merge all of the fields from
 		// their ancestors, so generated code has no dependencies
