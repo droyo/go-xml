@@ -16,10 +16,10 @@ import (
 // A Config holds user-defined overrides and filters that are used when
 // generating Go source code from an xsd document.
 type Config struct {
-	logger          Logger
-	loglevel        int
-	namespaces      []string
-	pkgname         string
+	logger     Logger
+	loglevel   int
+	namespaces []string
+	pkgname    string
 	// load xsd imports recursively into memory before parsing
 	followImports   bool
 	preprocessType  typeTransform
@@ -44,15 +44,18 @@ type Config struct {
 	allowTypes map[xml.Name]bool
 }
 
-type typeTransform func(xsd.Schema, xsd.Type) xsd.Type
-type propertyFilter func(interface{}) bool
-type specTransform func(spec) spec
+type (
+	typeTransform  func(xsd.Schema, xsd.Type) xsd.Type
+	propertyFilter func(interface{}) bool
+	specTransform  func(spec) spec
+)
 
 func (cfg *Config) logf(format string, v ...interface{}) {
 	if cfg.logger != nil && cfg.loglevel > 0 {
 		cfg.logger.Printf(format, v...)
 	}
 }
+
 func (cfg *Config) debugf(format string, v ...interface{}) {
 	if cfg.logger != nil && cfg.loglevel > 3 {
 		cfg.logger.Printf(format, v...)
@@ -513,7 +516,7 @@ func (cfg *Config) parseSOAPArrayType(s xsd.Schema, t xsd.Type) xsd.Type {
 			continue
 		}
 		for _, a := range v.Attr {
-			if (a.Name != xml.Name{wsdl, "arrayType"}) {
+			if (a.Name != xml.Name{Space: wsdl, Local: "arrayType"}) {
 				continue
 			}
 			itemType = v.Resolve(a.Value)
@@ -768,7 +771,7 @@ func (cfg *Config) soapArrayToSlice(s spec) spec {
 	}
 	cfg.debugf("flattening single-element slice struct type %s to []%v", s.name, slice.Elt)
 	tag := gen.TagKey(str.Fields.List[0], "xml")
-	xmltag := xml.Name{"", ",any"}
+	xmltag := xml.Name{Space: "", Local: ",any"}
 
 	if tag != "" {
 		parts := strings.Split(tag, ",")
