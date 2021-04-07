@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+  xmlns="http://example.org/" targetNamespace="http://example.org/">
+
+  <xs:simpleType name="dType">
+    <xs:annotation>
+      <xs:documentation>type for weekday</xs:documentation>
+    </xs:annotation>
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="MON"/>
+      <xs:enumeration value="TUE"/>
+      <xs:enumeration value="WED"/>
+      <xs:enumeration value="THU"/>
+      <xs:enumeration value="FRI"/>
+      <xs:enumeration value="SAT"/>
+      <xs:enumeration value="SUN"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="intType">
+    <xs:annotation>
+      <xs:documentation>integer enum</xs:documentation>
+    </xs:annotation>
+    <xs:restriction base="xs:integer">
+      <xs:enumeration value="1"/>
+      <xs:enumeration value="2"/>
+      <xs:enumeration value="3"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="floatType">
+    <xs:annotation>
+      <xs:documentation>float enum</xs:documentation>
+    </xs:annotation>
+    <xs:restriction base="xs:decimal">
+      <xs:enumeration value="0.9"/>
+      <xs:enumeration value="0.333333333"/>
+      <xs:enumeration value="0.0"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+</xs:schema>
