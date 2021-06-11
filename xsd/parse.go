@@ -114,7 +114,7 @@ func Normalize(docs ...[]byte) ([]*xmltree.Element, error) {
 		if err := nameAnonymousTypes(root, &typeCounter); err != nil {
 			return nil, err
 		}
-		if err := setChoicesOptional(root); err != nil {
+		if err := setChoices(root); err != nil {
 			return nil, err
 		}
 	}
@@ -238,9 +238,9 @@ func copyEltNamesToAnonTypes(root *xmltree.Element) {
 	}
 }
 
-// Inside a <xs:choice>, set all children to optional
-// If child is a <xs:sequence> set its children to optional
-func setChoicesOptional(root *xmltree.Element) error {
+// Inside a <xs:choice>, set a "choice" attribute to represent that it is a child of a choice element
+// If child is a <xs:sequence> set its children to the same choice
+func setChoices(root *xmltree.Element) error {
 
 	for _, el := range root.SearchFunc(isElem(schemaNS, "choice")) {
 		for i := 0; i < len(el.Children); i++ {
@@ -249,11 +249,11 @@ func setChoicesOptional(root *xmltree.Element) error {
 			if t.Name.Space == schemaNS && t.Name.Local == "sequence" {
 				for j := 0; j < len(t.Children); j++ {
 					t2 := t.Children[j]
-					t2.SetAttr("", "minOccurs", "0")
+					t2.SetAttr("", "choice", strconv.Itoa(i+1))
 					t.Children[j] = t2
 				}
 			} else {
-				t.SetAttr("", "minOccurs", "0")
+				t.SetAttr("", "choice", strconv.Itoa(i+1))
 			}
 
 			el.Children[i] = t
@@ -823,6 +823,7 @@ func parseElement(ns string, el *xmltree.Element) Element {
 		Abstract: parseBool(el.Attr("", "abstract")),
 		Nillable: parseBool(el.Attr("", "nillable")),
 		Plural:   parsePlural(el),
+		Choice:   parseInt(el.Attr("", "choice")),
 		Scope:    el.Scope,
 	}
 	if el.Attr("", "type") == "" {
