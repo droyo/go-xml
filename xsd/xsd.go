@@ -63,6 +63,9 @@ type Element struct {
 	Optional bool
 	// If true, this element will be declared as a pointer.
 	Nillable bool
+	// If > 0, this element is inside a choice element.
+	// Represents the ordering of elements within a choice (Elements within a sequence share the same choice order).
+	Choice int
 	// Default overrides the zero value of this element.
 	Default string
 	// Any additional attributes provided in the <xs:element> element.
