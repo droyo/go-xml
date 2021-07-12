@@ -689,6 +689,15 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%s element %s: %v", t.Name.Local, el.Name.Local, err)
 		}
+
+		_, isArrayType := base.(*ast.ArrayType)
+		if !el.Plural &&
+			fmt.Sprintf("%s", base) != "string" &&
+			!isArrayType &&
+			(el.Nillable || el.Optional) {
+			base = &ast.StarExpr{X: base}
+		}
+
 		name := namegen.element(el.Name)
 		if el.Wildcard {
 			tag = `xml:",any"`
