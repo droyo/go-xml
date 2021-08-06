@@ -159,7 +159,7 @@ type ComplexType struct {
 	// True if this is an anonymous type
 	Anonymous bool
 	// XML elements that this type may contain in its content.
-	Elements []Element
+	Elements []*Element
 	// Possible attributes for the element's opening tag.
 	Attributes []Attribute
 	// An abstract type does not appear in the xml document, but

@@ -103,7 +103,7 @@ func (e *encoder) encode(el, parent *Element, visited map[*Element]struct{}) err
 	}
 	for i := range el.Children {
 		visited[el] = struct{}{}
-		if err := e.encode(&el.Children[i], el, visited); err != nil {
+		if err := e.encode(el.Children[i], el, visited); err != nil {
 			return err
 		}
 		delete(visited, el)
@@ -139,7 +139,7 @@ func (e *encoder) encodeOpenTag(el *Element, scope Scope, depth int) error {
 			io.WriteString(e.w, e.indent)
 		}
 	}
-	var tag = struct {
+	tag := struct {
 		*Element
 		NS []xml.Name
 	}{Element: el, NS: scope.ns}

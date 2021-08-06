@@ -235,10 +235,10 @@ func TestModification(t *testing.T) {
 	root := parseDoc(t, from)
 	// Remove any non-<li> children from all <ul> elements
 	// in the document.
-	valid := make([]Element, 0, len(root.Children))
+	valid := make([]*Element, 0, len(root.Children))
 	for _, p := range root.Search("", "li") {
 		t.Logf("%#v", *p)
-		valid = append(valid, *p)
+		valid = append(valid, p)
 	}
 	root.Children = valid
 	if s := root.String(); s != to {
@@ -249,7 +249,7 @@ func TestModification(t *testing.T) {
 func TestStringPreserveNS(t *testing.T) {
 	root := parseDoc(t, exampleDoc)
 	var doc []byte
-	var descent = 4
+	descent := 4
 	for _, el := range root.Flatten() {
 		descent--
 		if descent <= 0 {

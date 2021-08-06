@@ -47,7 +47,7 @@ func lookupTargetNS(data ...[]byte) []string {
 			continue
 		}
 		outer := xmltree.Element{
-			Children: []xmltree.Element{*tree},
+			Children: []*xmltree.Element{tree},
 		}
 		elts := outer.Search("http://www.w3.org/2001/XMLSchema", "schema")
 		for _, el := range elts {
@@ -323,7 +323,7 @@ func (cfg *Config) expandComplexTypes(types []xsd.Type) []xsd.Type {
 			shadowedAttributes[attr.Name] = struct{}{}
 		}
 
-		elements := []xsd.Element{}
+		elements := []*xsd.Element{}
 		for _, el := range b.Elements {
 			if _, ok := shadowedElements[el.Name]; !ok {
 				elements = append(elements, el)

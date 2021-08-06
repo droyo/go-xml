@@ -18,7 +18,7 @@ func hasCycle(root *xmltree.Element, visited map[*xmltree.Element]struct{}) bool
 	}
 	visited[root] = struct{}{}
 	for i := range root.Children {
-		el := &root.Children[i]
+		el := root.Children[i]
 		if _, ok := visited[el]; ok {
 			return true
 		}
@@ -109,6 +109,7 @@ func Normalize(docs ...[]byte) ([]*xmltree.Element, error) {
 		elementDefaultType(root)
 		copyEltNamesToAnonTypes(root)
 	}
+
 	typeCounter := 0
 	for _, root := range result {
 		if err := nameAnonymousTypes(root, &typeCounter); err != nil {
@@ -203,12 +204,12 @@ to
 </element>
 */
 func copyEltNamesToAnonTypes(root *xmltree.Element) {
-	used := make(map[xml.Name]struct{})
+	used := make(map[xml.Name]xmltree.Element)
 	tns := root.Attr("", "targetNamespace")
 
 	namedTypes := and(isType, hasAttr("", "name"))
 	for _, el := range root.SearchFunc(namedTypes) {
-		used[el.ResolveDefault(el.Attr("", "name"), tns)] = struct{}{}
+		used[el.ResolveDefault(el.Attr("", "name"), tns)] = *el
 	}
 
 	eltWithAnonType := and(
@@ -216,23 +217,63 @@ func copyEltNamesToAnonTypes(root *xmltree.Element) {
 		hasAttr("", "name"),
 		hasAnonymousType)
 
-	for _, el := range root.SearchFunc(eltWithAnonType) {
-		// Make sure we can use this element's name
-		xmlname := el.ResolveDefault(el.Attr("", "name"), tns)
-		if _, ok := used[xmlname]; ok {
-			continue
+	withAnonElems := root.SearchFunc(eltWithAnonType)
+	for _, parentElem := range withAnonElems {
+		// create a copy of the original element so we can compare it later in its original state
+		cpy := *parentElem
+		// clone slices so they can't be modified
+		clonedContent := make([]byte, len(cpy.Content))
+		copy(clonedContent, cpy.Content)
+		cpy.Content = clonedContent
+		clonedAttrs := make([]xml.Attr, len(cpy.StartElement.Attr))
+		copy(clonedAttrs, cpy.StartElement.Attr)
+		cpy.StartElement.Attr = clonedAttrs
+
+		xmlname := parentElem.ResolveDefault(parentElem.Attr("", "name"), tns)
+		tmpName := xmlname
+		var offset int
+		prevMatch := false
+		for {
+			// check if the name is already in use
+			if anonChild, ok := used[tmpName]; ok {
+				// if the name is in use, check if the elements area identical
+				if xmltree.Equal(&anonChild, parentElem) {
+					prevMatch = true
+					if offset > 0 {
+						anonChild.SetAttr("", "name", anonChild.Prefix(tmpName))
+					}
+					break
+				}
+				// try again with an integer suffix (Name, Name1, Name2, etc.) until we find a free name
+				offset++
+				tmpName.Local = xmlname.Local + strconv.Itoa(offset)
+			} else {
+				// set the name once we find an unused one
+				if offset > 0 {
+					anonChild.SetAttr("", "name", anonChild.Prefix(tmpName))
+				}
+				break
+			}
 		}
-		used[xmlname] = struct{}{}
-		for i, t := range el.Children {
-			if !isAnonymousType(&t) {
+		// mark the name as used by the element
+		used[tmpName] = cpy
+
+		for i, anonChild := range parentElem.Children {
+			if !isAnonymousType(anonChild) {
 				continue
 			}
-			t.SetAttr("", "name", el.Attr("", "name"))
-			el.SetAttr("", "type", el.Prefix(xmlname))
+			anonChild.SetAttr("", "name", parentElem.Prefix(tmpName))
+			parentElem.SetAttr("", "type", parentElem.Prefix(tmpName))
 
-			el.Children = append(el.Children[:i], el.Children[i+1:]...)
-			el.Content = nil
-			root.Children = append(root.Children, t)
+			// remove the anonymous child element from its parent
+			parentElem.Children = append(parentElem.Children[:i], parentElem.Children[i+1:]...)
+			parentElem.Content = nil
+
+			// don't add the same anon type twice
+			if !prevMatch {
+				// add the anonymous type as an element on root level
+				root.Children = append(root.Children, anonChild)
+			}
 			break
 		}
 	}
@@ -241,7 +282,6 @@ func copyEltNamesToAnonTypes(root *xmltree.Element) {
 // Inside a <xs:choice>, set all children to optional
 // If child is a <xs:sequence> set its children to optional
 func setChoicesOptional(root *xmltree.Element) error {
-
 	for _, el := range root.SearchFunc(isElem(schemaNS, "choice")) {
 		for i := 0; i < len(el.Children); i++ {
 			t := el.Children[i]
@@ -294,7 +334,9 @@ func nameAnonymousTypes(root *xmltree.Element, typeCounter *int) error {
 		accum      bool
 	)
 	targetNS := root.Attr("", "targetNamespace")
-	for _, el := range root.SearchFunc(hasAnonymousType) {
+
+	anonElementParents := root.SearchFunc(hasAnonymousType)
+	for _, el := range anonElementParents {
 		if el.Name.Space != schemaNS {
 			continue
 		}
@@ -318,7 +360,7 @@ func nameAnonymousTypes(root *xmltree.Element, typeCounter *int) error {
 		for i := 0; i < len(el.Children); i++ {
 			t := el.Children[i]
 
-			if !isAnonymousType(&t) {
+			if !isAnonymousType(t) {
 				continue
 			}
 			*typeCounter++
@@ -406,7 +448,7 @@ func deref(ref, real *xmltree.Element) *xmltree.Element {
 	el.Name = real.Name
 	el.StartElement.Attr = append([]xml.Attr{}, real.StartElement.Attr...)
 	el.Content = append([]byte{}, real.Content...)
-	el.Children = append([]xmltree.Element{}, real.Children...)
+	el.Children = append([]*xmltree.Element{}, real.Children...)
 
 	// Some attributes can contain a qname, and must be converted to use the
 	// xmlns prefixes in ref's scope.
@@ -444,9 +486,9 @@ func unpackGroups(doc *xmltree.Element) {
 	hasGroups := hasChild(isGroup)
 
 	for _, el := range doc.SearchFunc(hasGroups) {
-		children := make([]xmltree.Element, 0, len(el.Children))
+		children := make([]*xmltree.Element, 0, len(el.Children))
 		for _, c := range el.Children {
-			if isGroup(&c) {
+			if isGroup(c) {
 				children = append(children, c.Children...)
 			} else {
 				children = append(children, c)
@@ -464,10 +506,10 @@ func expandComplexShorthand(root *xmltree.Element) {
 
 Loop:
 	for _, el := range root.SearchFunc(isComplexType) {
-		newChildren := make([]xmltree.Element, 0, len(el.Children))
-		restrict := xmltree.Element{
+		newChildren := make([]*xmltree.Element, 0, len(el.Children))
+		restrict := &xmltree.Element{
 			Scope:    el.Scope,
-			Children: make([]xmltree.Element, 0, len(el.Children)),
+			Children: make([]*xmltree.Element, 0, len(el.Children)),
 		}
 
 		for _, child := range el.Children {
@@ -488,9 +530,9 @@ Loop:
 		restrict.Name.Local = "restriction"
 		restrict.SetAttr("", "base", restrict.Prefix(AnyType.Name()))
 
-		content := xmltree.Element{
+		content := &xmltree.Element{
 			Scope:    el.Scope,
-			Children: []xmltree.Element{restrict},
+			Children: []*xmltree.Element{restrict},
 		}
 		content.Name.Space = schemaNS
 		content.Name.Local = "complexContent"
@@ -626,7 +668,8 @@ func (s *Schema) parseTypes(root *xmltree.Element) (err error) {
 }
 
 func (s *Schema) parseSelfType(root *xmltree.Element) *ComplexType {
-	self := *root
+	tmp1 := *root
+	self := &tmp1
 	self.Content = nil
 	self.Children = nil
 	for _, el := range root.Children {
@@ -634,12 +677,14 @@ func (s *Schema) parseSelfType(root *xmltree.Element) *ComplexType {
 			self.Children = append(self.Children, el)
 		}
 	}
-	newdoc := self
+	// copy from pointer and back, to avoid cycle
+	tmp2 := *self
+	newdoc := &tmp2
 	self.Name.Local = "complexType"
 	self.SetAttr("", "name", "_self")
-	newdoc.Children = []xmltree.Element{self}
-	expandComplexShorthand(&newdoc)
-	return s.parseComplexType(&newdoc.Children[0])
+	newdoc.Children = []*xmltree.Element{self}
+	expandComplexShorthand(newdoc)
+	return s.parseComplexType(newdoc.Children[0])
 }
 
 // http://www.w3.org/TR/2004/REC-xmlschema-1-20041028/structures.html#element-complexType
@@ -719,7 +764,7 @@ func (t *ComplexType) parseComplexContent(ns string, root *xmltree.Element) {
 					usedElt[elt.Name] = len(t.Elements)
 					t.Elements = append(t.Elements, elt)
 				} else {
-					t.Elements[existing] = joinElem(t.Elements[existing], elt)
+					t.Elements[existing] = joinElem(*t.Elements[existing], *elt)
 				}
 			}
 
@@ -735,7 +780,7 @@ func (t *ComplexType) parseComplexContent(ns string, root *xmltree.Element) {
 	t.Doc += string(doc)
 }
 
-func joinElem(a, b Element) Element {
+func joinElem(a, b Element) *Element {
 	if a.Doc != "" {
 		a.Doc += "\n"
 	}
@@ -749,7 +794,7 @@ func joinElem(a, b Element) Element {
 		a.Default = ""
 	}
 
-	return a
+	return &a
 }
 
 func parseInt(s string) int {
@@ -801,20 +846,22 @@ func parsePlural(el *xmltree.Element) bool {
 	return false
 }
 
-func parseAnyElement(ns string, el *xmltree.Element) Element {
+func parseAnyElement(ns string, el *xmltree.Element) *Element {
 	var base Type = AnyType
 	typeattr := el.Attr("", "type")
 	if typeattr != "" {
 		base = parseType(el.Resolve(typeattr))
 	}
-	return Element{
+	elem := Element{
 		Plural:   parsePlural(el),
 		Type:     base,
 		Wildcard: true,
 	}
+
+	return &elem
 }
 
-func parseElement(ns string, el *xmltree.Element) Element {
+func parseElement(ns string, el *xmltree.Element) *Element {
 	var doc annotation
 	e := Element{
 		Name:     el.ResolveDefault(el.Attr("", "name"), ns),
@@ -844,7 +891,7 @@ func parseElement(ns string, el *xmltree.Element) Element {
 	}
 	e.Doc = string(doc)
 	e.Attr = el.StartElement.Attr
-	return e
+	return &e
 }
 
 func parseAttribute(ns string, el *xmltree.Element) Attribute {
