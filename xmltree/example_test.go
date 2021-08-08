@@ -119,7 +119,7 @@ func ExampleElement_SearchFunc() {
 }
 
 func ExampleUnmarshal() {
-	var input = []byte(`<mediawiki xml:lang="en">
+	input := []byte(`<mediawiki xml:lang="en">
 	  <page>
 	    <title>Page title</title>
 	    <restrictions>edit=sysop:move=sysop</restrictions>
@@ -178,7 +178,7 @@ func ExampleUnmarshal() {
 }
 
 func ExampleMarshal() {
-	var input = []byte(`<?xml version="1.0" encoding="UTF-8"?>
+	input := []byte(`<?xml version="1.0" encoding="UTF-8"?>
 	<toc>
 	  <chapter-list>
 	    <chapter>
@@ -200,7 +200,7 @@ func ExampleMarshal() {
 	  </chapter-list>
 	</toc>`)
 
-	var chapters []xmltree.Element
+	var chapters []*xmltree.Element
 	root, err := xmltree.Parse(input)
 	if err != nil {
 		log.Fatal(err)
@@ -211,7 +211,7 @@ func ExampleMarshal() {
 			el.Content = child.Content
 		}
 		el.Children = nil
-		chapters = append(chapters, *el)
+		chapters = append(chapters, el)
 	}
 	root.Children = chapters
 	fmt.Printf("%s\n", xmltree.MarshalIndent(root, "", "  "))
@@ -226,7 +226,7 @@ func ExampleMarshal() {
 }
 
 func ExampleMarshalNested() {
-	var input = []byte(`<?xml version="1.0" encoding="UTF-8"?>
+	input := []byte(`<?xml version="1.0" encoding="UTF-8"?>
 	<toc>
 	  <level1>
 	    <level2>

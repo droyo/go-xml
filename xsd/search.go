@@ -30,7 +30,7 @@ func or(fns ...func(el *xmltree.Element) bool) predicate {
 func hasChild(fn predicate) predicate {
 	return func(el *xmltree.Element) bool {
 		for i := range el.Children {
-			if fn(&el.Children[i]) {
+			if fn(el.Children[i]) {
 				return true
 			}
 		}

@@ -174,7 +174,6 @@ func genXSDTests(cfg xsdgen.Config, data []byte, pkg string) (code, tests *ast.F
 					xmltree.MarshalIndent(inputTree, "", "  "))
 			}
 			`, params).Decl()
-
 	if err != nil {
 		return nil, nil, err
 	}
@@ -186,10 +185,10 @@ type Element struct {
 	Name, Type xml.Name
 }
 
-func topLevelElements(root *xmltree.Element) []Element {
+func topLevelElements(root *xmltree.Element) []*Element {
 	const schemaNS = "http://www.w3.org/2001/XMLSchema"
 
-	result := make([]Element, 0)
+	result := make([]*Element, 0)
 	root = &xmltree.Element{Scope: root.Scope, Children: []xmltree.Element{*root}}
 	for _, schema := range root.Search(schemaNS, "schema") {
 		tns := schema.Attr("", "targetNamespace")

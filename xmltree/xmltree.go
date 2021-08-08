@@ -48,7 +48,7 @@ type Element struct {
 	// end tags. Uses the underlying byte array passed to Parse.
 	Content []byte
 	// Sub-elements contained within this element.
-	Children []Element
+	Children []*Element
 }
 
 // Attr gets the value of the first attribute whose name matches the
@@ -262,7 +262,7 @@ walk:
 	for scanner.scan() {
 		switch tok := scanner.tok.(type) {
 		case xml.StartElement:
-			child := Element{StartElement: tok.Copy(), Scope: el.Scope}
+			child := &Element{StartElement: tok.Copy(), Scope: el.Scope}
 			if err := child.parse(scanner, data, depth+1); err != nil {
 				return err
 			}
@@ -284,7 +284,7 @@ walk:
 // immediately.
 func (el *Element) walk(fn walkFunc) error {
 	for i := 0; i < len(el.Children); i++ {
-		fn(&el.Children[i])
+		fn(el.Children[i])
 	}
 	return nil
 }

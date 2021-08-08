@@ -48,7 +48,7 @@ func walk(root *xmltree.Element, fn func(*xmltree.Element)) {
 		if root.Children[i].Name.Space != schemaNS {
 			continue
 		}
-		fn(&root.Children[i])
+		fn(root.Children[i])
 	}
 }
 

@@ -429,10 +429,10 @@ func (cfg *Config) filterFields(t *xsd.ComplexType) ([]xsd.Attribute, []xsd.Elem
 		attributes = append(attributes, attr)
 	}
 	for _, el := range t.Elements {
-		if cfg.filterElements != nil && cfg.filterElements(&el) {
+		if cfg.filterElements != nil && cfg.filterElements(el) {
 			continue
 		}
-		elements = append(elements, el)
+		elements = append(elements, *el)
 	}
 	return attributes, elements
 }
@@ -566,7 +566,7 @@ Loop:
 		}
 		for _, v := range c.Elements {
 			if v.Wildcard {
-				elem = v
+				elem = *v
 				found = true
 				break Loop
 			}
@@ -581,12 +581,12 @@ Loop:
 	elem.Type = base
 	for i, v := range t.Elements {
 		if v.Wildcard {
-			t.Elements[i] = elem
+			t.Elements[i] = &elem
 			replaced = true
 		}
 	}
 	if !replaced {
-		t.Elements = append(t.Elements, elem)
+		t.Elements = append(t.Elements, &elem)
 	}
 	return t
 }
