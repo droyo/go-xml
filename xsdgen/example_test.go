@@ -78,8 +78,11 @@ func ExampleIgnoreAttributes() {
 	//
 	// package ws
 	//
+	// import "encoding/xml"
+	//
 	// type ArrayOfString struct {
-	// 	Items []string `xml:",any"`
+	// 	XMLName xml.Name `xml:"http://www.example.com/ ArrayOfString"`
+	// 	Items   []string `xml:",any"`
 	// }
 }
 
@@ -108,9 +111,12 @@ func ExampleIgnoreElements() {
 	//
 	// package ws
 	//
+	// import "encoding/xml"
+	//
 	// type Person struct {
-	// 	Name     string `xml:"http://www.example.com/ name"`
-	// 	Deceased bool   `xml:"http://schemas.xmlsoap.org/soap/encoding/ deceased"`
+	// 	XMLName  xml.Name `xml:"http://www.example.com/ Person"`
+	// 	Name     string   `xml:"name"`
+	// 	Deceased bool     `xml:"http://schemas.xmlsoap.org/soap/encoding/ deceased"`
 	// }
 }
 
@@ -159,7 +165,10 @@ func ExampleReplace() {
 	//
 	// package ws
 	//
+	// import "encoding/xml"
+	//
 	// type StringArray struct {
+	// 	XMLName   xml.Name `xml:"http://www.example.com/ ArrayOfString"`
 	// 	Items     []string `xml:",any"`
 	// 	ArrayType string   `xml:"arrayType,attr,omitempty"`
 	// }
@@ -188,11 +197,14 @@ func ExampleHandleSOAPArrayType() {
 	//
 	// package ws
 	//
+	// import "encoding/xml"
+	//
 	// type BoolArray struct {
-	// 	Items  []bool `xml:",any"`
-	// 	Offset string `xml:"offset,attr,omitempty"`
-	// 	Id     string `xml:"id,attr,omitempty"`
-	// 	Href   string `xml:"href,attr,omitempty"`
+	// 	XMLName xml.Name `xml:"http://www.example.com/ BoolArray"`
+	// 	Items   []bool   `xml:",any"`
+	// 	Offset  string   `xml:"offset,attr,omitempty"`
+	// 	Id      string   `xml:"id,attr,omitempty"`
+	// 	Href    string   `xml:"href,attr,omitempty"`
 	// }
 }
 
@@ -291,16 +303,17 @@ func ExampleUseFieldNames() {
 	// )
 	//
 	// type Book struct {
-	// 	Title     string    `xml:"http://www.example.com/ title"`
-	// 	Published time.Time `xml:"http://www.example.com/ published"`
-	// 	Author    string    `xml:"http://www.example.com/ author"`
+	// 	XMLName   xml.Name  `xml:"http://www.example.com/ book"`
+	// 	Title     string    `xml:"title"`
+	// 	Published time.Time `xml:"published"`
+	// 	Author    string    `xml:"author"`
 	// }
 	//
 	// func (t *Book) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 	// 	type T Book
 	// 	var layout struct {
 	// 		*T
-	// 		Published *xsdDate `xml:"http://www.example.com/ published"`
+	// 		Published *xsdDate `xml:"published"`
 	// 	}
 	// 	layout.T = (*T)(t)
 	// 	layout.Published = (*xsdDate)(&layout.T.Published)
@@ -310,7 +323,7 @@ func ExampleUseFieldNames() {
 	// 	type T Book
 	// 	var overlay struct {
 	// 		*T
-	// 		Published *xsdDate `xml:"http://www.example.com/ published"`
+	// 		Published *xsdDate `xml:"published"`
 	// 	}
 	// 	overlay.T = (*T)(t)
 	// 	overlay.Published = (*xsdDate)(&overlay.T.Published)
@@ -318,7 +331,8 @@ func ExampleUseFieldNames() {
 	// }
 	//
 	// type Library struct {
-	// 	Book []Book `xml:"http://www.example.com/ book"`
+	// 	XMLName xml.Name `xml:"http://www.example.com/ library"`
+	// 	Book    []Book   `xml:"book"`
 	// }
 	//
 	// type xsdDate time.Time

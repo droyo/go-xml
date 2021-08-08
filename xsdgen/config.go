@@ -740,11 +740,23 @@ func (cfg *Config) soapArrayToSlice(s spec) spec {
 	if !ok {
 		return s
 	}
+	var nameField *ast.Field
+	if len(str.Fields.List) == 2 {
+		// we can ignore the XMLName field
+		if ident, ok := str.Fields.List[0].Type.(*ast.Ident); ok && ident.Name == "xml.Name" {
+			nameField = str.Fields.List[0]
+			str.Fields.List = str.Fields.List[1:]
+		}
+	}
 	if len(str.Fields.List) != 1 {
 		return s
 	}
 	slice, ok := str.Fields.List[0].Type.(*ast.ArrayType)
 	if !ok {
+		// add back the name field if we removed it in the previous step
+		if nameField != nil {
+			str.Fields.List = append([]*ast.Field{nameField}, str.Fields.List...)
+		}
 		return s
 	}
 
@@ -753,6 +765,10 @@ func (cfg *Config) soapArrayToSlice(s spec) spec {
 	// element in the array with the appropriate type.
 	complex, ok := s.xsdType.(*xsd.ComplexType)
 	if !ok {
+		// add back the name field if we removed it in the previous step
+		if nameField != nil {
+			str.Fields.List = append([]*ast.Field{nameField}, str.Fields.List...)
+		}
 		return s
 	}
 
@@ -764,6 +780,10 @@ func (cfg *Config) soapArrayToSlice(s spec) spec {
 	}
 
 	if baseType.Space == "" && baseType.Local == "" {
+		// add back the name field if we removed it in the previous step
+		if nameField != nil {
+			str.Fields.List = append([]*ast.Field{nameField}, str.Fields.List...)
+		}
 		return s
 	}
 	cfg.debugf("flattening single-element slice struct type %s to []%v", s.name, slice.Elt)
@@ -831,6 +851,10 @@ func (cfg *Config) soapArrayToSlice(s spec) spec {
 	unmarshal, err := unmarshalFn.Decl()
 	if err != nil {
 		cfg.logf("error generating UnmarshalXML method of %s: %v", s.name, err)
+		// add back the name field if we removed it in the previous step
+		if nameField != nil {
+			str.Fields.List = append([]*ast.Field{nameField}, str.Fields.List...)
+		}
 		return s
 	}
 
@@ -856,6 +880,10 @@ func (cfg *Config) soapArrayToSlice(s spec) spec {
 		`, itemType, xmltag.Space, xmltag.Local, baseType.Space, baseType.Local).Decl()
 	if err != nil {
 		cfg.logf("error generating MarshalXML method of %s: %v", s.name, err)
+		// add back the name field if we removed it in the previous step
+		if nameField != nil {
+			str.Fields.List = append([]*ast.Field{nameField}, str.Fields.List...)
+		}
 		return s
 	}
 
