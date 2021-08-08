@@ -684,7 +684,13 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 		if el.Nillable || el.Optional {
 			options = ",omitempty"
 		}
-		tag := fmt.Sprintf(`xml:"%s %s%s"`, el.Name.Space, el.Name.Local, options)
+		var tag string
+		if t.Name.Space == el.Name.Space {
+			// No need to repeat the namespace if the parent already has it set
+			tag = fmt.Sprintf(`xml:"%s%s"`, el.Name.Local, options)
+		} else {
+			tag = fmt.Sprintf(`xml:"%s %s%s"`, el.Name.Space, el.Name.Local, options)
+		}
 		base, err := cfg.expr(el.Type)
 		if err != nil {
 			return nil, fmt.Errorf("%s element %s: %v", t.Name.Local, el.Name.Local, err)
@@ -771,6 +777,22 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 		}
 	}
 	expr := gen.Struct(fields...)
+
+	// add XMLName field to struct that will be used by xml.Marshal for setting the element name
+	var tag string
+	if t.Name.Space != "" {
+		tag = fmt.Sprintf(`xml:"%s %s"`, t.Name.Space, t.Name.Local)
+	} else {
+		tag = fmt.Sprintf(`xml:"%s"`, t.Name.Local)
+	}
+	xmlNameField := &ast.Field{
+		Tag:   gen.String(tag),
+		Names: []*ast.Ident{{Name: "XMLName"}},
+		Type:  &ast.Ident{Name: "xml.Name"},
+	}
+
+	expr.Fields.List = append([]*ast.Field{xmlNameField}, expr.Fields.List...)
+
 	s := spec{
 		doc:         t.Doc,
 		name:        cfg.public(t.Name),
