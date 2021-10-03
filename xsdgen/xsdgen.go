@@ -528,7 +528,21 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type), depth int) xsd.Type
 
 func (cfg *Config) genTypeSpec(t xsd.Type) (result []spec, err error) {
 	var s []spec
-	cfg.debugf("generating type spec for %q", xsd.XMLName(t).Local)
+
+	name := xsd.XMLName(t)
+	if cfg.targetNamespacesOnly {
+		found := false
+		for _, ns := range cfg.namespaces {
+			if ns == name.Space {
+				found = true
+			}
+		}
+		if !found {
+			return result, nil
+		}
+	}
+
+	cfg.debugf("generating type spec for %q", name.Local)
 
 	switch t := t.(type) {
 	case *xsd.SimpleType:
@@ -538,7 +552,7 @@ func (cfg *Config) genTypeSpec(t xsd.Type) (result []spec, err error) {
 	case xsd.Builtin:
 		// pass
 	default:
-		cfg.logf("unexpected %T %s", t, xsd.XMLName(t).Local)
+		cfg.logf("unexpected %T %s", t, name.Local)
 	}
 	if err != nil || s == nil {
 		return result, err

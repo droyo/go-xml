@@ -120,15 +120,16 @@ func (cfg *Config) GenSource(files ...string) ([]byte, error) {
 // same as those passed to the xsdgen command.
 func (cfg *Config) GenCLI(arguments ...string) error {
 	var (
-		err           error
-		replaceRules  commandline.ReplaceRuleList
-		xmlns         commandline.Strings
-		fs            = flag.NewFlagSet("xsdgen", flag.ExitOnError)
-		packageName   = fs.String("pkg", "", "name of the the generated package")
-		output        = fs.String("o", "xsdgen_output.go", "name of the output file")
-		followImports = fs.Bool("f", false, "follow import statements; load imported references recursively into scope")
-		verbose       = fs.Bool("v", false, "print verbose output")
-		debug         = fs.Bool("vv", false, "print debug output")
+		err                  error
+		replaceRules         commandline.ReplaceRuleList
+		xmlns                commandline.Strings
+		fs                   = flag.NewFlagSet("xsdgen", flag.ExitOnError)
+		packageName          = fs.String("pkg", "", "name of the the generated package")
+		output               = fs.String("o", "xsdgen_output.go", "name of the output file")
+		followImports        = fs.Bool("f", false, "follow import statements; load imported references recursively into scope")
+		targetNamespacesOnly = fs.Bool("t", false, "restict output of types to these declared in the target namespace(s) provided")
+		verbose              = fs.Bool("v", false, "print verbose output")
+		debug                = fs.Bool("vv", false, "print debug output")
 	)
 	fs.Var(&replaceRules, "r", "replacement rule 'regex -> repl' (can be used multiple times)")
 	fs.Var(&xmlns, "ns", "target namespace(s) to generate types for")
@@ -146,6 +147,7 @@ func (cfg *Config) GenCLI(arguments ...string) error {
 	}
 	cfg.Option(Namespaces(xmlns...))
 	cfg.Option(FollowImports(*followImports))
+	cfg.Option(TargetNamespacesOnly(*targetNamespacesOnly))
 	for _, r := range replaceRules {
 		cfg.Option(replaceAllNamesRegex(r.From, r.To))
 	}
