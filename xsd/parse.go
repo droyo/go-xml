@@ -582,9 +582,10 @@ func attributeDefaultType(root *xmltree.Element) {
 	var (
 		isAttr    = isElem(schemaNS, "attribute")
 		hasNoType = hasAttrValue("", "type", "")
+		hasNoRef  = hasAttrValue("", "ref", "")
 		anyType   = xml.Name{Space: schemaNS, Local: "anySimpleType"}
 	)
-	for _, el := range root.SearchFunc(and(isAttr, hasNoType)) {
+	for _, el := range root.SearchFunc(and(isAttr, hasNoType, hasNoRef)) {
 		el.SetAttr("", "type", el.Prefix(anyType))
 	}
 }
@@ -598,9 +599,10 @@ func elementDefaultType(root *xmltree.Element) {
 	var (
 		isElement = isElem(schemaNS, "element")
 		hasNoType = hasAttrValue("", "type", "")
+		hasNoRef  = hasAttrValue("", "ref", "")
 		anyType   = xml.Name{Space: schemaNS, Local: "anyType"}
 	)
-	for _, el := range root.SearchFunc(and(isElement, hasNoType)) {
+	for _, el := range root.SearchFunc(and(isElement, hasNoType, hasNoRef)) {
 		el.SetAttr("", "type", el.Prefix(anyType))
 	}
 }
