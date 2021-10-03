@@ -1,0 +1,10 @@
+<schema xmlns="http://www.w3.org/2001/XMLSchema" targetNamespace="ns2" xmlns:ns2="ns2" xmlns:cmn="common" version="0100">
+    <import namespace="common" schemaLocation="common.xsd"/>
+    <element name="ReferrableType">
+        <complexType>
+            <sequence>
+                <element name="Typed" type="cmn:Complex"/>
+            </sequence>
+        </complexType>
+    </element>
+</schema>

@@ -49,6 +49,8 @@ type Element struct {
 	Doc string
 	// The canonical name of this element
 	Name xml.Name
+	// What form of the naming to expect
+	Form FormOption
 	// True if this element can have any name. See
 	// http://www.w3.org/TR/2004/REC-xmlschema-1-20041028/structures.html#element-any
 	Wildcard bool
@@ -80,6 +82,8 @@ type Attribute struct {
 	// The canonical name of this attribute. It is uncommon for attributes
 	// to have a name space.
 	Name xml.Name
+	// What form of the naming to expect
+	Form FormOption
 	// Annotation provided for this attribute by the schema author.
 	Doc string
 	// The type of the attribute value. Must be a simple or built-in Type.
@@ -103,6 +107,10 @@ type Schema struct {
 	// The Target namespace of the schema. All types defined in this
 	// schema will be in this name space.
 	TargetNS string `xml:"targetNamespace,attr"`
+	// ElementFormDefault
+	ElementFormDefault FormOption `xml:"elementFormDefault,attr,omitempty"`
+	// AttributeFormDefault
+	AttributeFormDefault FormOption `xml:"attributeFormDefault,attr,omitempty"`
 	// Types defined in this schema declaration
 	Types map[xml.Name]Type
 	// Any annotations declared at the top-level of the schema, separated
@@ -329,3 +337,11 @@ var StandardSchema = [][]byte{
 	wsdl2003xsd,  // http://schemas.xmlsoap.org/wsdl/
 	xlinkxsd,     // http://www.w3.org/1999/xlink
 }
+
+type FormOption string
+
+const (
+	FormOptionUndefined   FormOption = ""
+	FormOptionUnqualified FormOption = "unqualified"
+	FormOptionQualified   FormOption = "qualified"
+)

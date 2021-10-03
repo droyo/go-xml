@@ -5,13 +5,13 @@
     <element name='ContactTitle' type='string'/>
     <element name='Phone' type='string'/>
     <element name='Fax' minOccurs='0' type='string'/>
-    <element name='FullAddress' ref='tns:AddressType'/>
+    <element name='FullAddress' type='tns:AddressType'/>
   </sequence>
   <attribute name='CustomerID' type='token'/>
 </complexType>
 
-<element name='AddressType'>
-<complexType>
+
+<complexType name='AddressType'>
   <sequence>
     <element name='Address' type='string'/>
     <element name='City' type='string'/>
@@ -21,4 +21,3 @@
   </sequence>
   <attribute name='CustomerID' type='token'/>
 </complexType>
-</element>

@@ -21,9 +21,10 @@ type Config struct {
 	namespaces      []string
 	pkgname         string
 	// load xsd imports recursively into memory before parsing
-	followImports   bool
-	preprocessType  typeTransform
-	postprocessType specTransform
+	followImports        bool
+	targetNamespacesOnly bool
+	preprocessType       typeTransform
+	postprocessType      specTransform
 	// Helper functions
 	helperFuncs map[string]*ast.FuncDecl
 	helperTypes map[xml.Name]spec
@@ -244,6 +245,18 @@ func FollowImports(follow bool) Option {
 		prev := cfg.followImports
 		cfg.followImports = follow
 		return FollowImports(prev)
+	}
+}
+
+// TargetNamespacesOnly specifies whether or
+// not to filter
+// to recursively read in imported schemas
+// before attempting to parse
+func TargetNamespacesOnly(tnsOnly bool) Option {
+	return func(cfg *Config) Option {
+		prev := cfg.targetNamespacesOnly
+		cfg.targetNamespacesOnly = tnsOnly
+		return TargetNamespacesOnly(prev)
 	}
 }
 

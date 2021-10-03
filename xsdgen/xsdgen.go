@@ -463,6 +463,10 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type), depth int) xsd.Type
 			t.Doc = "Must be at least " + strconv.Itoa(t.Restriction.MinLength) + " items long"
 			return t
 		}
+		if t.Restriction.Length != 0 {
+			t.Doc = "Must be exactly " + strconv.Itoa(t.Restriction.Length) + " items long"
+			return t
+		}
 		return t.Base
 	case *xsd.ComplexType:
 		// We can "unpack" a struct if it is extending a simple
@@ -524,7 +528,21 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type), depth int) xsd.Type
 
 func (cfg *Config) genTypeSpec(t xsd.Type) (result []spec, err error) {
 	var s []spec
-	cfg.debugf("generating type spec for %q", xsd.XMLName(t).Local)
+
+	name := xsd.XMLName(t)
+	if cfg.targetNamespacesOnly {
+		found := false
+		for _, ns := range cfg.namespaces {
+			if ns == name.Space {
+				found = true
+			}
+		}
+		if !found {
+			return result, nil
+		}
+	}
+
+	cfg.debugf("generating type spec for %q", name.Local)
 
 	switch t := t.(type) {
 	case *xsd.SimpleType:
@@ -534,7 +552,7 @@ func (cfg *Config) genTypeSpec(t xsd.Type) (result []spec, err error) {
 	case xsd.Builtin:
 		// pass
 	default:
-		cfg.logf("unexpected %T %s", t, xsd.XMLName(t).Local)
+		cfg.logf("unexpected %T %s", t, name.Local)
 	}
 	if err != nil || s == nil {
 		return result, err
@@ -684,7 +702,14 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 		if el.Nillable || el.Optional {
 			options = ",omitempty"
 		}
-		tag := fmt.Sprintf(`xml:"%s %s%s"`, el.Name.Space, el.Name.Local, options)
+
+		tag := ""
+		if el.Form == xsd.FormOptionQualified || t.Name.Space != el.Name.Space {
+			tag = fmt.Sprintf(`xml:"%s %s%s"`, el.Name.Space, el.Name.Local, options)
+		} else {
+			tag = fmt.Sprintf(`xml:"%s%s"`, el.Name.Local, options)
+		}
+
 		base, err := cfg.expr(el.Type)
 		if err != nil {
 			return nil, fmt.Errorf("%s element %s: %v", t.Name.Local, el.Name.Local, err)
@@ -731,14 +756,8 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 		if attr.Optional {
 			options = ",omitempty"
 		}
-		qualified := false
-		for _, attrAttr := range attr.Attr {
-			if attrAttr.Name.Space == "" && attrAttr.Name.Local == "form" && attrAttr.Value == "qualified" {
-				qualified = true
-			}
-		}
 		var tag string
-		if qualified {
+		if attr.Form == xsd.FormOptionQualified {
 			tag = fmt.Sprintf(`xml:"%s %s,attr%s"`, attr.Name.Space, attr.Name.Local, options)
 		} else {
 			tag = fmt.Sprintf(`xml:"%s,attr%s"`, attr.Name.Local, options)

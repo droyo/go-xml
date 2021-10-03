@@ -131,6 +131,7 @@ func testCompare(t *testing.T, prefix []string, got, want interface{}) bool {
 	}
 	if got != want {
 		t.Errorf("%s: got %#v, wanted %#v", path, got, want)
+		return false
 	}
 	return true
 }

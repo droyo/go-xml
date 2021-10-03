@@ -146,7 +146,10 @@ func Parse(docs ...[]byte) ([]Schema, error) {
 
 	for _, root := range schema {
 		tns := root.Attr("", "targetNamespace")
-		s := Schema{TargetNS: tns, Types: make(map[xml.Name]Type)}
+		efd := parseForm(root.Attr("", "elementFormDefault"), FormOptionUndefined)
+		afd := parseForm(root.Attr("", "attributeFormDefault"), FormOptionUndefined)
+
+		s := Schema{TargetNS: tns, ElementFormDefault: efd, AttributeFormDefault: afd, Types: make(map[xml.Name]Type)}
 		if err := s.parse(root); err != nil {
 			return nil, err
 		}
@@ -404,7 +407,7 @@ func deref(ref, real *xmltree.Element) *xmltree.Element {
 	el := new(xmltree.Element)
 	el.Scope = ref.Scope
 	el.Name = real.Name
-	el.StartElement.Attr = append([]xml.Attr{}, real.StartElement.Attr...)
+	el.StartElement.Attr = []xml.Attr{}
 	el.Content = append([]byte{}, real.Content...)
 	el.Children = append([]xmltree.Element{}, real.Children...)
 
@@ -413,11 +416,17 @@ func deref(ref, real *xmltree.Element) *xmltree.Element {
 	hasQName := map[xml.Name]bool{
 		xml.Name{"", "type"}: true,
 	}
-	for i, attr := range el.StartElement.Attr {
+	// Some attribute should not be copied
+	dontCopy := map[xml.Name]bool{
+		xml.Name{"", "name"}: true,
+		xml.Name{"", "form"}: true,
+	}
+	for _, attr := range real.StartElement.Attr {
 		if hasQName[attr.Name] {
 			xmlname := real.Resolve(attr.Value)
-			attr.Value = ref.Prefix(xmlname)
-			el.StartElement.Attr[i] = attr
+			el.SetAttr(attr.Name.Space, attr.Name.Local, ref.Prefix(xmlname))
+		} else if !dontCopy[attr.Name] {
+			el.SetAttr(attr.Name.Space, attr.Name.Local, attr.Value)
 		}
 	}
 	// If there are child elements, rather than checking all children
@@ -429,10 +438,15 @@ func deref(ref, real *xmltree.Element) *xmltree.Element {
 	// Attributes added to the reference overwrite attributes in the
 	// referenced element.
 	for _, attr := range ref.StartElement.Attr {
-		if (attr.Name != xml.Name{"", "ref"}) {
+		if (attr.Name == xml.Name{"", "ref"}) {
+			el.SetAttr("", "name", attr.Value)
+		} else {
 			el.SetAttr(attr.Name.Space, attr.Name.Local, attr.Value)
 		}
 	}
+
+	// Referenced elements are always qualified
+	el.SetAttr("", "form", "qualified")
 
 	return el
 }
@@ -582,9 +596,10 @@ func attributeDefaultType(root *xmltree.Element) {
 	var (
 		isAttr    = isElem(schemaNS, "attribute")
 		hasNoType = hasAttrValue("", "type", "")
+		hasNoRef  = hasAttrValue("", "ref", "")
 		anyType   = xml.Name{Space: schemaNS, Local: "anySimpleType"}
 	)
-	for _, el := range root.SearchFunc(and(isAttr, hasNoType)) {
+	for _, el := range root.SearchFunc(and(isAttr, hasNoType, hasNoRef)) {
 		el.SetAttr("", "type", el.Prefix(anyType))
 	}
 }
@@ -598,9 +613,10 @@ func elementDefaultType(root *xmltree.Element) {
 	var (
 		isElement = isElem(schemaNS, "element")
 		hasNoType = hasAttrValue("", "type", "")
+		hasNoRef  = hasAttrValue("", "ref", "")
 		anyType   = xml.Name{Space: schemaNS, Local: "anyType"}
 	)
-	for _, el := range root.SearchFunc(and(isElement, hasNoType)) {
+	for _, el := range root.SearchFunc(and(isElement, hasNoType, hasNoRef)) {
 		el.SetAttr("", "type", el.Prefix(anyType))
 	}
 }
@@ -658,9 +674,9 @@ func (s *Schema) parseComplexType(root *xmltree.Element) *ComplexType {
 		case "annotation":
 			doc = doc.append(parseAnnotation(el))
 		case "simpleContent":
-			t.parseSimpleContent(s.TargetNS, el)
+			t.parseSimpleContent(s.TargetNS, s.AttributeFormDefault, el)
 		case "complexContent":
-			t.parseComplexContent(s.TargetNS, el)
+			t.parseComplexContent(s.TargetNS, s.ElementFormDefault, s.AttributeFormDefault, el)
 		default:
 			stop("unexpected element " + el.Name.Local)
 		}
@@ -671,7 +687,7 @@ func (s *Schema) parseComplexType(root *xmltree.Element) *ComplexType {
 
 // simpleContent indicates that the content model of the new type
 // contains only character data and no elements
-func (t *ComplexType) parseSimpleContent(ns string, root *xmltree.Element) {
+func (t *ComplexType) parseSimpleContent(ns string, afd FormOption, root *xmltree.Element) {
 	var doc annotation
 
 	t.Mixed = true
@@ -685,7 +701,7 @@ func (t *ComplexType) parseSimpleContent(ns string, root *xmltree.Element) {
 			t.Base = parseType(el.Resolve(el.Attr("", "base")))
 			t.Extends = true
 			for _, v := range el.Search(schemaNS, "attribute") {
-				t.Attributes = append(t.Attributes, parseAttribute(ns, v))
+				t.Attributes = append(t.Attributes, parseAttribute(ns, afd, v))
 			}
 		}
 	})
@@ -694,7 +710,7 @@ func (t *ComplexType) parseSimpleContent(ns string, root *xmltree.Element) {
 
 // The complexContent element signals that we intend to restrict or extend
 // the content model of a complex type.
-func (t *ComplexType) parseComplexContent(ns string, root *xmltree.Element) {
+func (t *ComplexType) parseComplexContent(ns string, efd FormOption, afd FormOption, root *xmltree.Element) {
 	var doc annotation
 	if mixed := root.Attr("", "mixed"); mixed != "" {
 		t.Mixed = parseBool(mixed)
@@ -714,7 +730,7 @@ func (t *ComplexType) parseComplexContent(ns string, root *xmltree.Element) {
 
 			usedElt := make(map[xml.Name]int)
 			for _, v := range el.Search(schemaNS, "element") {
-				elt := parseElement(ns, v)
+				elt := parseElement(ns, efd, afd, v)
 				if existing, ok := usedElt[elt.Name]; !ok {
 					usedElt[elt.Name] = len(t.Elements)
 					t.Elements = append(t.Elements, elt)
@@ -724,7 +740,7 @@ func (t *ComplexType) parseComplexContent(ns string, root *xmltree.Element) {
 			}
 
 			for _, v := range el.Search(schemaNS, "attribute") {
-				t.Attributes = append(t.Attributes, parseAttribute(ns, v))
+				t.Attributes = append(t.Attributes, parseAttribute(ns, afd, v))
 			}
 		case "annotation":
 			doc = doc.append(parseAnnotation(el))
@@ -814,10 +830,11 @@ func parseAnyElement(ns string, el *xmltree.Element) Element {
 	}
 }
 
-func parseElement(ns string, el *xmltree.Element) Element {
+func parseElement(ns string, efd FormOption, afd FormOption, el *xmltree.Element) Element {
 	var doc annotation
 	e := Element{
 		Name:     el.ResolveDefault(el.Attr("", "name"), ns),
+		Form:     parseForm(el.Attr("", "form"), efd),
 		Type:     parseType(el.Resolve(el.Attr("", "type"))),
 		Default:  el.Attr("", "default"),
 		Abstract: parseBool(el.Attr("", "abstract")),
@@ -838,16 +855,12 @@ func parseElement(ns string, el *xmltree.Element) Element {
 			doc = doc.append(parseAnnotation(el))
 		}
 	})
-	t, ok := e.Type.(linkedType)
-	if ok {
-		e.Name.Space = t.Space
-	}
 	e.Doc = string(doc)
 	e.Attr = el.StartElement.Attr
 	return e
 }
 
-func parseAttribute(ns string, el *xmltree.Element) Attribute {
+func parseAttribute(ns string, afd FormOption, el *xmltree.Element) Attribute {
 	var a Attribute
 	var doc annotation
 	// Non-QName xml attributes explicitly do *not* have a namespace.
@@ -855,8 +868,9 @@ func parseAttribute(ns string, el *xmltree.Element) Attribute {
 		a.Name = el.Resolve(el.Attr("", "name"))
 	} else {
 		a.Name.Local = name
+		a.Name.Space = ns
 	}
-	a.Name.Space = ns
+	a.Form = parseForm(el.Attr("", "form"), afd)
 	a.Type = parseType(el.Resolve(el.Attr("", "type")))
 	a.Default = el.Attr("", "default")
 	a.Scope = el.Scope
@@ -1106,4 +1120,16 @@ func (s *Schema) lookupType(name linkedType, ext map[xml.Name]Type) (Type, bool)
 	}
 	v, ok := s.Types[xml.Name(name)]
 	return v, ok
+}
+
+func parseForm(s string, d FormOption) FormOption {
+	s = strings.TrimSpace(s)
+	form := FormOption(s)
+
+	if form == FormOptionUndefined {
+		return d
+	} else {
+		return form
+	}
+
 }
