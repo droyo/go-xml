@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"go/ast"
 	"io/ioutil"
+	"path/filepath"
 	"strings"
 
 	"aqwari.net/xml/internal/commandline"
@@ -62,22 +63,31 @@ func (cfg *Config) GenAST(files ...string) (*ast.File, error) {
 	return code.GenAST()
 }
 
-func (cfg *Config) readFiles(files ...string) ([][]byte,error) {
+func (cfg *Config) readFiles(files ...string) ([][]byte, error) {
 	data := make([][]byte, 0, len(files))
 	for _, filename := range files {
-		b, err := ioutil.ReadFile(filename)
+		path, err := filepath.Abs(filename)
 		if err != nil {
 			return nil, err
 		}
-		cfg.debugf("read %s", filename)
+		b, err := ioutil.ReadFile(path)
+		if err != nil {
+			return nil, err
+		}
+		cfg.debugf("read %s(%s)", path, filename)
 		if cfg.followImports {
+			dir := filepath.Dir(path)
 			importedRefs, err := xsd.Imports(b)
 			if err != nil {
 				return nil, fmt.Errorf("error discovering imports: %v", err)
 			}
 			importedFiles := make([]string, 0, len(importedRefs))
 			for _, r := range importedRefs {
-				importedFiles = append(importedFiles, r.Location)
+				if filepath.IsAbs(r.Location) {
+					importedFiles = append(importedFiles, r.Location)
+				} else {
+					importedFiles = append(importedFiles, filepath.Join(dir, r.Location))
+				}
 			}
 			referencedData, err := cfg.readFiles(importedFiles...)
 			if err != nil {
