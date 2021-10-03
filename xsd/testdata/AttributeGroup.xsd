@@ -9,7 +9,7 @@
 
 <complexType name="myElementType">
   <attributeGroup ref="tns:myAttributeGroup"/>
-  <element name="Field1" ref="tns:SomeElement" />
+  <element ref="tns:Field1" />
 </complexType>
 
-<element name="SomeElement" type="string" />
+<element name="Field1" type="string" />

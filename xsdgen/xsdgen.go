@@ -463,6 +463,10 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type), depth int) xsd.Type
 			t.Doc = "Must be at least " + strconv.Itoa(t.Restriction.MinLength) + " items long"
 			return t
 		}
+		if t.Restriction.Length != 0 {
+			t.Doc = "Must be exactly " + strconv.Itoa(t.Restriction.Length) + " items long"
+			return t
+		}
 		return t.Base
 	case *xsd.ComplexType:
 		// We can "unpack" a struct if it is extending a simple

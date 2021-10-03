@@ -1,27 +1,27 @@
 {
   "CustomerType": {
     "Elements": [
-      {"Name": {"Local": "CompanyName"}, "Type": 38},
-      {"Name": {"Local": "ContactName"}, "Type": 38},
-      {"Name": {"Local": "ContactTitle"}, "Type": 38},
-      {"Name": {"Local": "Phone"}, "Type": 38},
-      {"Name": {"Local": "Fax"}, "Type": 38},
+      {"Name": {"Local": "CompanyName", "Space": "tns"}, "Type": 38},
+      {"Name": {"Local": "ContactName", "Space": "tns"}, "Type": 38},
+      {"Name": {"Local": "ContactTitle", "Space": "tns"}, "Type": 38},
+      {"Name": {"Local": "Phone", "Space": "tns"}, "Type": 38},
+      {"Name": {"Local": "Fax", "Space": "tns"}, "Type": 38},
       {
-        "Name": {"Local": "FullAddress"},
+        "Name": {"Local": "FullAddress", "Space": "tns"},
         "Type": {
           "Elements": [
-            {"Name": {"Local": "Address"}, "Type": 38},
-            {"Name": {"Local": "City"}, "Type": 38},
-            {"Name": {"Local": "Region"}, "Type": 38},
-            {"Name": {"Local": "PostalCode"}, "Type": 38},
-            {"Name": {"Local": "Country"}, "Type": 38}
+            {"Name": {"Local": "Address", "Space": "tns"}, "Type": 38},
+            {"Name": {"Local": "City", "Space": "tns"}, "Type": 38},
+            {"Name": {"Local": "Region", "Space": "tns"}, "Type": 38},
+            {"Name": {"Local": "PostalCode", "Space": "tns"}, "Type": 38},
+            {"Name": {"Local": "Country", "Space": "tns"}, "Type": 38}
           ],
-          "Attributes": [{"Name": {"Local": "CustomerID"}, "Type": 40}]
+          "Attributes": [{"Name": {"Local": "CustomerID", "Space": "tns"}, "Type": 40}]
         }
       }
     ],
     "Attributes": [
-      {"Name": {"Local": "CustomerID"}, "Type": 40}
+      {"Name": {"Local": "CustomerID", "Space": "tns"}, "Type": 40}
     ]
   }
 }
