@@ -689,15 +689,8 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 			options = ",omitempty"
 		}
 
-		qualified := false
-		for _, attr := range el.Attr {
-			if attr.Name.Space == "" && attr.Name.Local == "form" && attr.Value == "qualified" {
-				qualified = true
-			}
-		}
-
 		tag := ""
-		if qualified || t.Name.Space != el.Name.Space {
+		if el.Form == xsd.FormOptionQualified || t.Name.Space != el.Name.Space {
 			tag = fmt.Sprintf(`xml:"%s %s%s"`, el.Name.Space, el.Name.Local, options)
 		} else {
 			tag = fmt.Sprintf(`xml:"%s%s"`, el.Name.Local, options)
@@ -749,14 +742,8 @@ func (cfg *Config) genComplexType(t *xsd.ComplexType) ([]spec, error) {
 		if attr.Optional {
 			options = ",omitempty"
 		}
-		qualified := false
-		for _, attrAttr := range attr.Attr {
-			if attrAttr.Name.Space == "" && attrAttr.Name.Local == "form" && attrAttr.Value == "qualified" {
-				qualified = true
-			}
-		}
 		var tag string
-		if qualified {
+		if attr.Form == xsd.FormOptionQualified {
 			tag = fmt.Sprintf(`xml:"%s %s,attr%s"`, attr.Name.Space, attr.Name.Local, options)
 		} else {
 			tag = fmt.Sprintf(`xml:"%s,attr%s"`, attr.Name.Local, options)
