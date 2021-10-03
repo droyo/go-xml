@@ -404,7 +404,7 @@ func deref(ref, real *xmltree.Element) *xmltree.Element {
 	el := new(xmltree.Element)
 	el.Scope = ref.Scope
 	el.Name = real.Name
-	el.StartElement.Attr = append([]xml.Attr{}, real.StartElement.Attr...)
+	el.StartElement.Attr = []xml.Attr{}
 	el.Content = append([]byte{}, real.Content...)
 	el.Children = append([]xmltree.Element{}, real.Children...)
 
@@ -413,11 +413,17 @@ func deref(ref, real *xmltree.Element) *xmltree.Element {
 	hasQName := map[xml.Name]bool{
 		xml.Name{"", "type"}: true,
 	}
-	for i, attr := range el.StartElement.Attr {
+	// Some attribute should not be copied
+	dontCopy := map[xml.Name]bool{
+		xml.Name{"", "name"}: true,
+		xml.Name{"", "form"}: true,
+	}
+	for _, attr := range real.StartElement.Attr {
 		if hasQName[attr.Name] {
 			xmlname := real.Resolve(attr.Value)
-			attr.Value = ref.Prefix(xmlname)
-			el.StartElement.Attr[i] = attr
+			el.SetAttr(attr.Name.Space, attr.Name.Local, ref.Prefix(xmlname))
+		} else if !dontCopy[attr.Name] {
+			el.SetAttr(attr.Name.Space, attr.Name.Local, attr.Value)
 		}
 	}
 	// If there are child elements, rather than checking all children
@@ -429,10 +435,15 @@ func deref(ref, real *xmltree.Element) *xmltree.Element {
 	// Attributes added to the reference overwrite attributes in the
 	// referenced element.
 	for _, attr := range ref.StartElement.Attr {
-		if (attr.Name != xml.Name{"", "ref"}) {
+		if (attr.Name == xml.Name{"", "ref"}) {
+			el.SetAttr("", "name", attr.Value)
+		} else {
 			el.SetAttr(attr.Name.Space, attr.Name.Local, attr.Value)
 		}
 	}
+
+	// Referenced elements are always qualified
+	el.SetAttr("", "form", "qualified")
 
 	return el
 }
@@ -840,10 +851,6 @@ func parseElement(ns string, el *xmltree.Element) Element {
 			doc = doc.append(parseAnnotation(el))
 		}
 	})
-	t, ok := e.Type.(linkedType)
-	if ok {
-		e.Name.Space = t.Space
-	}
 	e.Doc = string(doc)
 	e.Attr = el.StartElement.Attr
 	return e
@@ -857,8 +864,8 @@ func parseAttribute(ns string, el *xmltree.Element) Attribute {
 		a.Name = el.Resolve(el.Attr("", "name"))
 	} else {
 		a.Name.Local = name
+		a.Name.Space = ns
 	}
-	a.Name.Space = ns
 	a.Type = parseType(el.Resolve(el.Attr("", "type")))
 	a.Default = el.Attr("", "default")
 	a.Scope = el.Scope

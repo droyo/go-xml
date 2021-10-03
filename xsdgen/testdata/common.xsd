@@ -1,0 +1,14 @@
+<schema xmlns="http://www.w3.org/2001/XMLSchema" targetNamespace="common" xmlns:cmn="common" version="0100">
+    <simpleType name="Simple">
+        <restriction base="string">
+            <minLength value="1"/>
+            <maxLength value="20"/>
+        </restriction>
+    </simpleType>
+    <complexType name="Complex">
+        <sequence>
+            <element name="Simple1" type="cmn:Simple"/>
+            <element name="Simple2" type="cmn:Simple"/>
+        </sequence>
+    </complexType>
+</schema>

@@ -1,0 +1,12 @@
+<schema xmlns="http://www.w3.org/2001/XMLSchema" targetNamespace="ns1" xmlns:ns1="ns1" xmlns:ns2="ns2" xmlns:cmn="common" version="0100">
+    <import namespace="ns2" schemaLocation="ns2.xsd"/>
+    <import namespace="common" schemaLocation="common.xsd"/>
+    <element name="CombinedType">
+        <complexType>
+            <sequence>
+                <element name="Typed" type="cmn:Simple"/>
+                <element ref="ns2:ReferrableType"/>
+            </sequence>
+        </complexType>
+    </element>
+</schema>

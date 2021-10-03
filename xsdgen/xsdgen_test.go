@@ -47,7 +47,7 @@ func testGen(t *testing.T, ns string, files ...string) string {
 	cfg.Option(DefaultOptions...)
 	cfg.Option(LogOutput((*testLogger)(t)))
 
-	args := []string{"-v", "-o", file.Name(), "-ns", ns}
+	args := []string{"-v", "-o", file.Name(), "-ns", ns, "-f"}
 	err = cfg.GenCLI(append(args, files...)...)
 	if err != nil {
 		t.Error(err)
@@ -74,4 +74,8 @@ func TestBase64Binary(t *testing.T) {
 
 func TestSimpleUnion(t *testing.T) {
 	t.Logf("%s\n", testGen(t, "http://example.org/", "testdata/simple-union.xsd"))
+}
+
+func TestImports(t *testing.T) {
+	t.Logf("%s\n", testGen(t, "ns1", "testdata/ns1.xsd"))
 }
