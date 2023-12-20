@@ -1,8 +1,9 @@
 package wsdlgen
 
 import (
-	"io/ioutil"
+	"errors"
 	"os"
+	"path"
 	"testing"
 
 	"aqwari.net/xml/xsdgen"
@@ -15,7 +16,7 @@ type testLogger struct {
 func (t testLogger) Printf(format string, args ...interface{}) { t.Logf(format, args...) }
 
 func testGen(t *testing.T, files ...string) {
-	output_file, err := ioutil.TempFile("", "wsdlgen")
+	output_file, err := os.CreateTemp("", "wsdlgen")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -33,10 +34,32 @@ func testGen(t *testing.T, files ...string) {
 		t.Error(err)
 		return
 	}
-	if data, err := ioutil.ReadFile(output_file.Name()); err != nil {
+	data, err := os.ReadFile(output_file.Name())
+	if err != nil {
 		t.Error(err)
 	} else {
-		t.Logf("\n%s\n", data)
+		compareToGolden(t, data)
+	}
+}
+
+func compareToGolden(t *testing.T, data []byte) {
+	goldenPath := path.Join("testdata/output/", t.Name()+".xml.golden")
+	expected, err := os.ReadFile(goldenPath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			err := os.WriteFile(goldenPath, data, 0644)
+			if err != nil {
+				t.Errorf("could not create golden file, %v", err)
+			}
+		} else {
+			t.Errorf("could not read golden file, %v", err)
+		}
+		return
+	}
+	expectedString := string(expected)
+	actualString := string(data)
+	if expectedString != actualString {
+		t.Error("output does not match golden file")
 	}
 }
 
@@ -46,6 +69,10 @@ func TestNationalWeatherForecast(t *testing.T) {
 
 func TestGlobalWeather(t *testing.T) {
 	testGen(t, "../testdata/webservicex-globalweather-ws.wsdl")
+}
+
+func TestGlobalWeatherPortFilter(t *testing.T) {
+	testGen(t, "-port", "GlobalWeatherSoap", "../testdata/webservicex-globalweather-ws.wsdl")
 }
 
 func TestHello(t *testing.T) {

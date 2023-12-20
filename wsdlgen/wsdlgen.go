@@ -142,6 +142,9 @@ func (cfg *Config) genAST(def *wsdl.Definition, code *xsdgen.Code) (*ast.File, e
 func (p *printer) genAST() (*ast.File, error) {
 	p.addHelpers()
 	for _, port := range p.wsdl.Ports {
+		if p.portFilter != nil && !p.portFilter(port) {
+			continue
+		}
 		if err := p.port(port); err != nil {
 			return nil, err
 		}
