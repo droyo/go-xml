@@ -402,6 +402,54 @@ func dedup(types []xsd.Type) (unique []xsd.Type) {
 	return unique
 }
 
+// for now, bustUnion only resolves simple cases like a union of a builtin and an enum of the same builtin, e.g. in
+// this case redundantUnionType will be replaced with enumType
+//
+//    <xs:simpleType name="enumType">
+//        <xs:restriction base="xs:string">
+//            <xs:enumeration value="A"/>
+//            <xs:enumeration value="B"/>
+//        </xs:restriction>
+//    </xs:simpleType>
+//
+//    <xs:simpleType name="redundantUnionType">
+//        <xs:union memberTypes="enumType xs:string"/>
+//    </xs:simpleType>
+func (cfg *Config) bustUnion(t *xsd.SimpleType) xsd.Type {
+	var underlying xsd.Type
+	var actual xsd.Type
+	for _, member := range t.Union {
+		switch ut := member.(type) {
+		case xsd.Builtin:
+			if underlying != nil && underlying != ut {
+				// can't simplify
+				return t
+			}
+			underlying = ut
+		case *xsd.SimpleType:
+			base := xsd.Base(ut)
+			if underlying != nil && underlying != ut {
+				// can't simplify
+				return t
+			}
+			if actual != nil && actual != ut {
+				// TODO: can we simplify this case?
+				return t
+			}
+			underlying = base
+			actual = ut
+		default:
+			// TODO: handle more union member types
+			return t
+		}
+	}
+
+	if actual != nil {
+		return actual
+	}
+	return underlying
+}
+
 func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type), depth int) xsd.Type {
 	const maxDepth = 1000
 	if depth > maxDepth {
@@ -414,7 +462,12 @@ func (cfg *Config) flatten1(t xsd.Type, push func(xsd.Type), depth int) xsd.Type
 			base, builtin xsd.Type
 			ok            bool
 		)
-		// TODO: handle list/union types
+		// TODO: handle list types
+
+		if len(t.Union) > 0 {
+			return cfg.bustUnion(t)
+		}
+
 		for base = xsd.Base(t); base != nil; base = xsd.Base(base) {
 			if builtin, ok = base.(xsd.Builtin); ok {
 				break
