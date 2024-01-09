@@ -12,7 +12,7 @@ func Equal(a, b *Element) bool {
 	return equal(a, b, 0)
 }
 
-type byName []Element
+type byName []*Element
 
 func (l byName) Len() int { return len(l) }
 func (l byName) Less(i, j int) bool {
@@ -37,7 +37,7 @@ func equal(a, b *Element, depth int) bool {
 	sort.Sort(byName(a.Children))
 	sort.Sort(byName(b.Children))
 	for i := range a.Children {
-		if !equal(&a.Children[i], &b.Children[i], depth+1) {
+		if !equal(a.Children[i], b.Children[i], depth+1) {
 			return false
 		}
 	}
