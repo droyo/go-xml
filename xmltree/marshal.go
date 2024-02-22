@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"io"
 	"text/template"
+	"strings"
 )
 
 // NOTE(droyo) As of go1.5.1, the encoding/xml package does not resolve
@@ -143,6 +144,23 @@ func (e *encoder) encodeOpenTag(el *Element, scope Scope, depth int) error {
 		*Element
 		NS []xml.Name
 	}{Element: el, NS: scope.ns}
+
+	// XML escape attribute strings
+	attrs := tag.StartElement.Attr
+	for i := 0; i < len(attrs) ; i++ {
+		attrStr := attrs[i].Value
+		mBytes, mErr := xml.Marshal(attrStr)
+		if mErr != nil {
+			return mErr
+		}
+		mStr := string(mBytes)
+		// <string>xyz</string> -> xyz
+		mStr = strings.Replace(mStr, "<string>", "", 1)
+		mStr = strings.Replace(mStr, "</string>", "", 1)
+		attrs[i].Value = mStr
+	}
+	tag.StartElement.Attr = attrs
+
 	if err := tagTmpl.ExecuteTemplate(e.w, "start", tag); err != nil {
 		return err
 	}
