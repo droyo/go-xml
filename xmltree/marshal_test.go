@@ -183,3 +183,46 @@ func TestXMLParseEscapedValueXMLTree(t *testing.T) {
 	}
 }
 
+
+// Parse/Format with xmltree methods, does not modifiy contents of node
+
+func TestXMLParseEscapedAmpersandQuotedAttributeWithXMLTreeReadOnly(t *testing.T) {
+	var err error
+
+	xmlBytes := []byte(`<module name='&amp;'></module>`)
+
+	rootNode, err := xmltree.Parse(xmlBytes)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Verify that the above call to xmltree.Parse() has properly
+	// decoded "&amp;" -> to "&"
+
+	{
+		have := string(rootNode.StartElement.Attr[0].Value)
+		want := `&`
+
+		if have != want {
+			t.Fatalf("!Match : want : have :\n-----\n%v\n-----\n%v\n-----", want, have)
+		}
+	}
+
+	// Invoke xmltree.MarshalIndent()
+
+	xmlOutBytes := xmltree.MarshalIndent(rootNode, "", "  ")
+	// Ignore xmlOutBytes
+	xmlOutBytes = xmlOutBytes
+
+	// Verify that MarshalIndent() does not modify the contents of rootNode
+
+	{
+		have := string(rootNode.StartElement.Attr[0].Value)
+		want := `&`
+
+		if have != want {
+			t.Fatalf("!Match : want : have :\n-----\n%v\n-----\n%v\n-----", want, have)
+		}
+	}
+}
+
