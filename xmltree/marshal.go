@@ -5,6 +5,7 @@ import (
 	"encoding/xml"
 	"io"
 	"text/template"
+	"strings"
 )
 
 // NOTE(droyo) As of go1.5.1, the encoding/xml package does not resolve
@@ -139,10 +140,39 @@ func (e *encoder) encodeOpenTag(el *Element, scope Scope, depth int) error {
 			io.WriteString(e.w, e.indent)
 		}
 	}
+	// Note that a copy of el is used here so that XML encoded attributes are generated
+	var elCopy *Element = &Element{}
+	elCopy.StartElement = xml.StartElement{}
+	elCopy.StartElement.Name = el.StartElement.Name
+	elCopy.StartElement.Attr = make([]xml.Attr, len(el.StartElement.Attr))
+	for i:=0; i < len(el.StartElement.Attr); i++ {
+		elCopy.StartElement.Attr[i] = el.StartElement.Attr[i]
+	}
+	elCopy.Scope = el.Scope
+	elCopy.Content = el.Content
+	elCopy.Children = el.Children
+
 	var tag = struct {
 		*Element
 		NS []xml.Name
-	}{Element: el, NS: scope.ns}
+	}{Element: elCopy, NS: scope.ns}
+
+	// XML escape attribute strings held in copy
+	attrs := tag.StartElement.Attr
+	for i := 0; i < len(attrs) ; i++ {
+		attrStr := attrs[i].Value
+		mBytes, mErr := xml.Marshal(attrStr)
+		if mErr != nil {
+			return mErr
+		}
+		mStr := string(mBytes)
+		// <string>xyz</string> -> xyz
+		mStr = strings.Replace(mStr, "<string>", "", 1)
+		mStr = strings.Replace(mStr, "</string>", "", 1)
+		attrs[i].Value = mStr
+	}
+	tag.StartElement.Attr = attrs
+
 	if err := tagTmpl.ExecuteTemplate(e.w, "start", tag); err != nil {
 		return err
 	}
