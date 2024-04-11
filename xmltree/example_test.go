@@ -190,7 +190,7 @@ func ExampleMarshal() {
 	      <number>2</number>
 	    </chapter>
 	    <chapter>
-	      <title>A Good Going-over.Grace Triumphant."One of Tom Sawyers's Lies".</title>
+	      <title>A Good Going-over.Grace Triumphant.&quot;One of Tom Sawyers's Lies&quot;.</title>
 	      <number>3</number>
 	    </chapter>
 	    <chapter>
@@ -220,7 +220,7 @@ func ExampleMarshal() {
 	// <toc>
 	//   <chapter>Civilizing Huck.Miss Watson.Tom Sawyer Waits.</chapter>
 	//   <chapter>The Boys Escape Jim.Torn Sawyer's Gang.Deep-laid Plans.</chapter>
-	//   <chapter>A Good Going-over.Grace Triumphant."One of Tom Sawyers's Lies".</chapter>
+	//   <chapter>A Good Going-over.Grace Triumphant.&quot;One of Tom Sawyers's Lies&quot;.</chapter>
 	//   <chapter>Huck and the Judge.Superstition.</chapter>
 	// </toc>
 }

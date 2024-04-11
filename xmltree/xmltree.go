@@ -272,6 +272,12 @@ walk:
 				return fmt.Errorf("Expecting </%s>, got </%s>", el.Prefix(el.Name), el.Prefix(tok.Name))
 			}
 			el.Content = data[int(begin):int(end)]
+			contentStr := string(el.Content)
+			encStr, encErr := xmlDecodeString(contentStr)
+			if encErr != nil {
+				return encErr
+			}
+			el.Content = []byte(encStr)
 			break walk
 		}
 		end = scanner.InputOffset()
