@@ -135,7 +135,7 @@ func ExamplePackageName() {
 	//
 	// package postal
 	//
-	// // May be no more than 10 items long
+	// // Must be equal 10 items long
 	// type Zipcode string
 }
 
