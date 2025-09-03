@@ -9,17 +9,17 @@ import (
 	"regexp"
 	"strings"
 
-	"aqwari.net/xml/internal/gen"
-	"aqwari.net/xml/xsd"
+	"github.com/anicoll/go-xml/internal/gen"
+	"github.com/anicoll/go-xml/xsd"
 )
 
 // A Config holds user-defined overrides and filters that are used when
 // generating Go source code from an xsd document.
 type Config struct {
-	logger          Logger
-	loglevel        int
-	namespaces      []string
-	pkgname         string
+	logger     Logger
+	loglevel   int
+	namespaces []string
+	pkgname    string
 	// load xsd imports recursively into memory before parsing
 	followImports   bool
 	preprocessType  typeTransform
@@ -44,15 +44,18 @@ type Config struct {
 	allowTypes map[xml.Name]bool
 }
 
-type typeTransform func(xsd.Schema, xsd.Type) xsd.Type
-type propertyFilter func(interface{}) bool
-type specTransform func(spec) spec
+type (
+	typeTransform  func(xsd.Schema, xsd.Type) xsd.Type
+	propertyFilter func(interface{}) bool
+	specTransform  func(spec) spec
+)
 
 func (cfg *Config) logf(format string, v ...interface{}) {
 	if cfg.logger != nil && cfg.loglevel > 0 {
 		cfg.logger.Printf(format, v...)
 	}
 }
+
 func (cfg *Config) debugf(format string, v ...interface{}) {
 	if cfg.logger != nil && cfg.loglevel > 3 {
 		cfg.logger.Printf(format, v...)
@@ -383,19 +386,19 @@ func HandleSOAPArrayType() Option {
 
 // SOAP 1.1 defines an Array as
 //
-// 	<xs:complexType name="Array">
-// 	  <xs:any maxOccurs="unbounded" />
-// 	  <xs:attribute name="arrayType" type="xs:string" />
-// 	  <!-- common attributes ellided -->
-// 	</xs:complexType>
+//	<xs:complexType name="Array">
+//	  <xs:any maxOccurs="unbounded" />
+//	  <xs:attribute name="arrayType" type="xs:string" />
+//	  <!-- common attributes ellided -->
+//	</xs:complexType>
 //
 // Following the normal procedure of the xsdgen package, this
 // would map to the following Go source (with arrayType as 'int'):
 //
-// 	type Array struct {
-// 		Item      []int  `xml:",any"`
-// 		ArrayType string `xml:"http://schemas.xmlsoap.org/soap/encoding/ arrayType"`
-// 	}
+//	type Array struct {
+//		Item      []int  `xml:",any"`
+//		ArrayType string `xml:"http://schemas.xmlsoap.org/soap/encoding/ arrayType"`
+//	}
 //
 // While the encoding/xml package can easily marshal and unmarshal to
 // and from such a Go type, it is not ideal to use. When using the
@@ -481,20 +484,20 @@ func (cfg *Config) public(name xml.Name) string {
 
 // SOAP arrays are declared as follows (unimportant fields ellided):
 //
-// 	<xs:complexType name="Array">
-// 	  <xs:attribute name="arrayType" type="xs:string" />
-// 	  <xs:any namespace="##any" minOccurs="0" maxOccurs="unbounded" />
-// 	</xs:complexType>
+//	<xs:complexType name="Array">
+//	  <xs:attribute name="arrayType" type="xs:string" />
+//	  <xs:any namespace="##any" minOccurs="0" maxOccurs="unbounded" />
+//	</xs:complexType>
 //
 // Then schemas that want to declare a fixed-type soap array do so like this:
 //
-// 	<xs:complexType name="IntArray">
-// 	  <xs:complexContent>
-// 	    <xs:restriction base="soapenc:Array>
-// 	      <xs:attribute ref="soapenc:arrayType" wsdl:arrayType="xs:int[]" />
-// 	    </xs:restriction>
-// 	  </xs:complexContent>
-// 	</xs:complexType>
+//	<xs:complexType name="IntArray">
+//	  <xs:complexContent>
+//	    <xs:restriction base="soapenc:Array>
+//	      <xs:attribute ref="soapenc:arrayType" wsdl:arrayType="xs:int[]" />
+//	    </xs:restriction>
+//	  </xs:complexContent>
+//	</xs:complexType>
 //
 // XML Schema is wonderful, aint it?
 func (cfg *Config) parseSOAPArrayType(s xsd.Schema, t xsd.Type) xsd.Type {

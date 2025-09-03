@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"aqwari.net/xml/xmltree"
+	"github.com/anicoll/go-xml/xmltree"
 )
 
 func ExampleElement_Search() {
@@ -119,7 +119,7 @@ func ExampleElement_SearchFunc() {
 }
 
 func ExampleUnmarshal() {
-	var input = []byte(`<mediawiki xml:lang="en">
+	input := []byte(`<mediawiki xml:lang="en">
 	  <page>
 	    <title>Page title</title>
 	    <restrictions>edit=sysop:move=sysop</restrictions>
@@ -178,7 +178,7 @@ func ExampleUnmarshal() {
 }
 
 func ExampleMarshal() {
-	var input = []byte(`<?xml version="1.0" encoding="UTF-8"?>
+	input := []byte(`<?xml version="1.0" encoding="UTF-8"?>
 	<toc>
 	  <chapter-list>
 	    <chapter>
@@ -226,7 +226,7 @@ func ExampleMarshal() {
 }
 
 func ExampleMarshalNested() {
-	var input = []byte(`<?xml version="1.0" encoding="UTF-8"?>
+	input := []byte(`<?xml version="1.0" encoding="UTF-8"?>
 	<toc>
 	  <level1>
 	    <level2>

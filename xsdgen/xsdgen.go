@@ -1,4 +1,4 @@
-package xsdgen // import "aqwari.net/xml/xsdgen"
+package xsdgen // import "github.com/anicoll/go-xml/xsdgen"
 
 import (
 	"bytes"
@@ -11,10 +11,10 @@ import (
 	"strconv"
 	"strings"
 
-	"aqwari.net/xml/internal/dependency"
-	"aqwari.net/xml/internal/gen"
-	"aqwari.net/xml/xmltree"
-	"aqwari.net/xml/xsd"
+	"github.com/anicoll/go-xml/internal/dependency"
+	"github.com/anicoll/go-xml/internal/gen"
+	"github.com/anicoll/go-xml/xmltree"
+	"github.com/anicoll/go-xml/xsd"
 )
 
 type orderedStringMap interface {
@@ -359,11 +359,11 @@ func (cfg *Config) expandComplexTypes(types []xsd.Type) []xsd.Type {
 // type that the user wants included in the Go source. In affect, what we
 // want to do is take the linked list:
 //
-// 	t1 -> t2 -> t3 -> builtin
+//	t1 -> t2 -> t3 -> builtin
 //
 // And produce a set of tuples:
 //
-// 	t1 -> builtin, t2 -> builtin, t3 -> builtin
+//	t1 -> builtin, t2 -> builtin, t3 -> builtin
 //
 // This is a heuristic that tends to generate better-looking Go code.
 func (cfg *Config) flatten(types map[xml.Name]xsd.Type) []xsd.Type {

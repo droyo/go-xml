@@ -7,9 +7,9 @@ import (
 	"log"
 	"os"
 
-	"aqwari.net/xml/internal/commandline"
-	"aqwari.net/xml/internal/gen"
-	"aqwari.net/xml/xsdgen"
+	"github.com/anicoll/go-xml/internal/commandline"
+	"github.com/anicoll/go-xml/internal/gen"
+	"github.com/anicoll/go-xml/xsdgen"
 )
 
 // The GenSource method converts the AST returned by GenAST to formatted
@@ -73,7 +73,7 @@ func (cfg *Config) GenCLI(arguments ...string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(*output, data, 0666)
+	return ioutil.WriteFile(*output, data, 0o666)
 }
 
 // The GenCLI function generates Go source code using the default

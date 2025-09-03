@@ -8,9 +8,9 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"aqwari.net/xml/internal/commandline"
-	"aqwari.net/xml/internal/gen"
-	"aqwari.net/xml/xsd"
+	"github.com/anicoll/go-xml/internal/commandline"
+	"github.com/anicoll/go-xml/internal/gen"
+	"github.com/anicoll/go-xml/xsd"
 )
 
 // GenCode reads all xml schema definitions from the provided
@@ -62,7 +62,7 @@ func (cfg *Config) GenAST(files ...string) (*ast.File, error) {
 	return code.GenAST()
 }
 
-func (cfg *Config) readFiles(files ...string) ([][]byte,error) {
+func (cfg *Config) readFiles(files ...string) ([][]byte, error) {
 	data := make([][]byte, 0, len(files))
 	for _, filename := range files {
 		b, err := ioutil.ReadFile(filename)
@@ -152,5 +152,5 @@ func (cfg *Config) GenCLI(arguments ...string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(*output, data, 0666)
+	return ioutil.WriteFile(*output, data, 0o666)
 }

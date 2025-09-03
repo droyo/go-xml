@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"aqwari.net/xml/xmltree"
+	"github.com/anicoll/go-xml/xmltree"
 )
 
 func TestBooks(t *testing.T) {

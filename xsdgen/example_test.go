@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"aqwari.net/xml/xsdgen"
+	"github.com/anicoll/go-xml/xsdgen"
 )
 
 func tmpfile() *os.File {
@@ -357,5 +357,4 @@ func ExampleUseFieldNames() {
 	// func _marshalTime(t time.Time, format string) ([]byte, error) {
 	// 	return []byte(t.Format(format + "Z07:00")), nil
 	// }
-
 }

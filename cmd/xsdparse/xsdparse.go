@@ -1,4 +1,4 @@
-package main // import "aqwari.net/xml/cmd/xsdparse"
+package main // import "github.com/anicoll/go-xml/cmd/xsdparse"
 
 import (
 	"flag"
@@ -7,13 +7,11 @@ import (
 	"log"
 	"os"
 
-	"aqwari.net/xml/xmltree"
-	"aqwari.net/xml/xsd"
+	"github.com/anicoll/go-xml/xmltree"
+	"github.com/anicoll/go-xml/xsd"
 )
 
-var (
-	TargetNS = flag.String("ns", "", "Namespace of schea to print")
-)
+var TargetNS = flag.String("ns", "", "Namespace of schea to print")
 
 func main() {
 	log.SetFlags(0)
